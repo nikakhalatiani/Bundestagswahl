@@ -1,12 +1,4 @@
-﻿# (c) Die Bundeswahlleiterin, Wiesbaden 2025;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-# Datenlizenz Deutschland – Namensnennung – Version 2.0 (https://www.govdata.de/dl-de/by-2-0);;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-# ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-# Wahlbewerberinnen und Wahlbewerber für die Wahl zum 21. Deutschen Bundestag (23. Februar 2025);;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-# Stand:;07.02.2025;15:25;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-# ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-# Format: CSV. Trennzeichen: Semikolon. Zeichensatz: UTF-8 mit BOM;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-# ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-Wahlart;Wahltag;Titel;Namenszusatz;Nachname;Vornamen;Rufname;Künstlername;Geschlecht;Geburtsjahr;PLZ;Wohnort;Staat;WohnortLandAbk;Geburtsort;Staatsangehörigkeit;Beruf;Berufsschlüssel;Kennzeichen;Gebietsart;Gebietsnummer;Gebietsname;GebietLandAbk;GruppennameKurz;Gruppenname;Listenplatz;Gruppenreihenfolge;VerknKennzeichen;VerknGebietsart;VerknGebietsnummer;VerknGebietsname;VerknGebietLandAbk;VerknGruppenname;VerknListenplatz;VorpGewaehlt
+﻿Wahlart;Wahltag;Titel;Namenszusatz;Nachname;Vornamen;Rufname;Künstlername;Geschlecht;Geburtsjahr;PLZ;Wohnort;Staat;WohnortLandAbk;Geburtsort;Staatsangehörigkeit;Beruf;Berufsschlüssel;Kennzeichen;Gebietsart;Gebietsnummer;Gebietsname;GebietLandAbk;GruppennameKurz;Gruppenname;Listenplatz;Gruppenreihenfolge;VerknKennzeichen;VerknGebietsart;VerknGebietsnummer;VerknGebietsname;VerknGebietLandAbk;VerknGruppenname;VerknListenplatz;VorpGewaehlt
 BT;23.02.2025;;;Klüssendorf;Tim;Tim;;m;1991;23568;Lübeck;;SH;Lübeck;;MdB, Volks- und Betriebswirt;71;Landesliste;Land;1;Schleswig-Holstein;SH;SPD;Sozialdemokratische Partei Deutschlands;1;1;Kreiswahlvorschlag;Wahlkreis;11;Lübeck;SH;Sozialdemokratische Partei Deutschlands;;X
 BT;23.02.2025;Dr.;;Scheer;Nina;Nina;;w;1971;21502;Geesthacht;;SH;Berlin;;Juristin, Politikwissenschaftlerin, Musikerin;73;Landesliste;Land;1;Schleswig-Holstein;SH;SPD;Sozialdemokratische Partei Deutschlands;2;1;Kreiswahlvorschlag;Wahlkreis;10;Herzogtum Lauenburg – Stormarn-Süd;SH;Sozialdemokratische Partei Deutschlands;;X
 BT;23.02.2025;Dr.;;Stegner;Ralf Alexander;Ralf;;m;1959;24582;Bordesholm;;SH;Bad Dürkheim;;MdB, Politikwissenschaftler;71;Landesliste;Land;1;Schleswig-Holstein;SH;SPD;Sozialdemokratische Partei Deutschlands;3;1;Kreiswahlvorschlag;Wahlkreis;7;Pinneberg;SH;Sozialdemokratische Partei Deutschlands;;X

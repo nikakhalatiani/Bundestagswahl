@@ -1,12 +1,4 @@
-﻿# (c) Der Bundeswahlleiter, Wiesbaden 2021;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-# Datenlizenz Deutschland – Namensnennung – Version 2.0 (https://www.govdata.de/dl-de/by-2-0);;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-# ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-# Wahlbewerberinnen und Wahlbewerber für die Wahl zum 20. Deutschen Bundestag (26. September 2021);;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-# Stand:;18.09.2021;22:32;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-# ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-# Format: CSV. Trennzeichen: Semikolon. Zeichensatz: UTF-8 mit BOM;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-# ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-Wahlart;Wahltag;Titel;Namenszusatz;Nachname;Vornamen;Künstlername;Geschlecht;Geburtsjahr;PLZ;Wohnort;Staat;WohnortLandAbk;Geburtsort;Staatsangehörigkeit;Beruf;Berufsschluessel;Kennzeichen;Gebietsart;Gebietsnummer;Gebietsname;GebietLandAbk;Gruppenname;GruppennameLang;Listenplatz;VerknKennzeichen;VerknGebietsart;VerknGebietsnummer;VerknGebietsname;VerknGebietLandAbk;VerknGruppenname;VerknListenplatz;VorpGewaehlt
+﻿Wahlart;Wahltag;Titel;Namenszusatz;Nachname;Vornamen;Künstlername;Geschlecht;Geburtsjahr;PLZ;Wohnort;Staat;WohnortLandAbk;Geburtsort;Staatsangehörigkeit;Beruf;Berufsschluessel;Kennzeichen;Gebietsart;Gebietsnummer;Gebietsname;GebietLandAbk;Gruppenname;GruppennameLang;Listenplatz;VerknKennzeichen;VerknGebietsart;VerknGebietsnummer;VerknGebietsname;VerknGebietLandAbk;VerknGruppenname;VerknListenplatz;VorpGewaehlt
 BT;26.09.2021;;;Nicolaisen;Petra;;w;1965;24997;Wanderup;;SH;Schleswig;DE;MdB, Industriekauffrau;71;Kreiswahlvorschlag;Wahlkreis;1;Flensburg – Schleswig;SH;CDU;Christlich Demokratische Union Deutschlands;;Landesliste;Land;1;Schleswig-Holstein;SH;CDU;4;X
 BT;26.09.2021;;;Brzezicha;Franziska Maria;;w;1993;24896;Treia;;SH;Lüneburg;DE;wiss. Mitarbeiterin;84;Kreiswahlvorschlag;Wahlkreis;1;Flensburg – Schleswig;SH;SPD;Sozialdemokratische Partei Deutschlands;;Landesliste;Land;1;Schleswig-Holstein;SH;SPD;6;
 BT;26.09.2021;;;Anastasiadis;Christoph Georgios;;m;1995;24943;Flensburg;;SH;Flensburg;DE;Kaufmann;61;Kreiswahlvorschlag;Wahlkreis;1;Flensburg – Schleswig;SH;FDP;Freie Demokratische Partei;;Landesliste;Land;1;Schleswig-Holstein;SH;FDP;6;
