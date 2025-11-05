@@ -1,5 +1,15 @@
 # Bundestagswahl
 
+## Data
+
+- `kand2025.csv`: Kandidaten, Wahlkreise ("VerknGebietsname"), Partei, Listenplatz
+    - Unterscheidung in Wahlkreis und Land (Aufstellung für Erst- und Zweitstimme)
+- `kerg2025.csv`: Scheint keine Einzelkandidaten zu haben
+- `kerg2025_2.csv`: Kandidaten/Parteien ("Gruppenname"), Stimmenanzahl ("Anzahl")
+    - Unterscheidung in Erst- und Zweitstimmen
+
+## Code
+
 This repository contains a small example scaffold: a TypeScript + React frontend and a TypeScript Node backend using Prisma + PostgreSQL.
 
 Goals:
