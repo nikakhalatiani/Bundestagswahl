@@ -1,0 +1,182 @@
+@startuml
+!define ENTITY class
+!define PK <<PK>>
+!define FK <<FK>>
+
+' Core Master Data
+ENTITY FederalState {
+  + stateId: Integer PK
+  --
+  stateName: String
+  stateAbbreviation: String
+  population: Integer
+}
+
+ENTITY Party {
+  + partyId: Integer PK
+  --
+  partyName: String
+  partyAbbreviation: String
+  foundedYear: Integer
+  color: String
+}
+
+ENTITY Election {
+  + electionId: Integer PK
+  --
+  electionDate: Date
+  electionYear: Integer
+  totalEligibleVoters: Integer
+  totalSeats: Integer
+  thresholdPercentage: Decimal
+}
+
+ENTITY Constituency {
+  + constituencyId: Integer PK
+  --
+  electionId: Integer FK
+  constituencyNumber: Integer
+  constituencyName: String
+  stateId: Integer FK
+  eligibleVoters: Integer
+  boundaryDescription: Text
+}
+
+note right of Constituency
+  Election-specific!
+  Same number can exist
+  across elections with
+  different boundaries
+  UNIQUE(electionId, constituencyNumber)
+end note
+
+' Candidates
+ENTITY Candidate {
+  + candidateId: Integer PK
+  --
+  firstName: String
+  lastName: String
+  partyId: Integer FK
+  constituencyId: Integer FK
+  electionId: Integer FK
+}
+
+ENTITY StatePartyList {
+  + listId: Integer PK
+  --
+  partyId: Integer FK
+  stateId: Integer FK
+  electionId: Integer FK
+}
+
+ENTITY ListPosition {
+  + positionId: Integer PK
+  --
+  listId: Integer FK
+  candidateId: Integer FK
+  position: Integer
+}
+
+' Vote Results
+ENTITY FirstVoteResult {
+  + firstVoteResultId: Integer PK
+  --
+  electionId: Integer FK
+  constituencyId: Integer FK
+  candidateId: Integer FK
+  votesReceived: Integer
+}
+
+ENTITY SecondVoteResult {
+  + secondVoteResultId: Integer PK
+  --
+  electionId: Integer FK
+  stateId: Integer FK
+  partyId: Integer FK
+  votesReceived: Integer
+}
+
+ENTITY ConstituencyTurnout {
+  + turnoutId: Integer PK
+  --
+  electionId: Integer FK
+  constituencyId: Integer FK
+  validFirstVotes: Integer
+  invalidFirstVotes: Integer
+  validSecondVotes: Integer
+  invalidSecondVotes: Integer
+  turnoutPercentage: Decimal
+}
+
+' Calculated Results
+ENTITY DirectMandate {
+  + mandateId: Integer PK
+  --
+  electionId: Integer FK
+  constituencyId: Integer FK
+  candidateId: Integer FK
+  partyId: Integer FK
+  votesReceived: Integer
+}
+
+ENTITY PartySeatAllocation {
+  + allocationId: Integer PK
+  --
+  electionId: Integer FK
+  partyId: Integer FK
+  stateId: Integer FK
+  secondVotesTotal: Integer
+  secondVotesPercentage: Decimal
+  directMandates: Integer
+  proportionalSeats: Integer
+  overhangSeats: Integer
+  levelingSeats: Integer
+  totalSeats: Integer
+}
+
+ENTITY BundestagMember {
+  + memberId: Integer PK
+  --
+  electionId: Integer FK
+  candidateId: Integer FK
+  partyId: Integer FK
+  seatType: String
+  constituencyId: Integer FK
+}
+
+' Relationships
+FederalState "1" -- "0..*" Constituency : contains
+FederalState "1" -- "0..*" StatePartyList : has
+FederalState "1" -- "0..*" SecondVoteResult : records
+FederalState "1" -- "0..*" PartySeatAllocation : allocates
+
+Party "1" -- "0..*" Candidate : nominates
+Party "1" -- "0..*" StatePartyList : creates
+Party "1" -- "0..*" SecondVoteResult : receives
+Party "1" -- "0..*" PartySeatAllocation : allocated
+Party "1" -- "0..*" DirectMandate : wins
+Party "1" -- "0..*" BundestagMember : represents
+
+Election "1" -- "0..*" Constituency : defines
+Election "1" -- "0..*" Candidate : participates
+Election "1" -- "0..*" StatePartyList : submitted
+Election "1" -- "0..*" FirstVoteResult : recorded
+Election "1" -- "0..*" SecondVoteResult : recorded
+Election "1" -- "0..*" ConstituencyTurnout : measured
+Election "1" -- "0..*" DirectMandate : produces
+Election "1" -- "0..*" PartySeatAllocation : calculates
+Election "1" -- "0..*" BundestagMember : elects
+
+Constituency "1" -- "0..*" Candidate : contests
+Constituency "1" -- "0..*" FirstVoteResult : records
+Constituency "1" -- "0..*" ConstituencyTurnout : has
+Constituency "1" -- "0..*" DirectMandate : elects
+
+Candidate "1" -- "0..*" FirstVoteResult : receives
+Candidate "1" -- "0..*" ListPosition : placed
+Candidate "1" -- "0..1" DirectMandate : wins
+Candidate "1" -- "0..1" BundestagMember : becomes
+
+StatePartyList "1" -- "1..*" ListPosition : contains
+
+@enduml
