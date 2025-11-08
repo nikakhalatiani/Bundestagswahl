@@ -14,12 +14,19 @@ try:
 
     # --- Extract unique GebietLandAbk/Gruppenname pairs ---
     state_parties_df = (
-        df[["GebietLandAbk", "Gruppenname"]]
+        df[["GebietLandAbk", "GruppennameKurz"]]
         .dropna()
         .drop_duplicates()
-        .sort_values(by=["GebietLandAbk", "Gruppenname"])
+        .sort_values(by=["GebietLandAbk", "GruppennameKurz"])
         .reset_index(drop=True)
     )
+
+    # MANUAL FIXES
+    # Brandenburg short name for Die Grünen
+    # In every line with GruppennameKurz "GRÜNE/B 90", replace with "GRÜNE" 
+    state_parties_df.loc[
+        state_parties_df["GruppennameKurz"] == "GRÜNE/B 90", "GruppennameKurz"
+    ] = "GRÜNE"
 
     # Save output
     state_parties_df.to_csv(output_filename, sep=";", index=False, encoding="utf-8")
