@@ -1,0 +1,300 @@
+Gebietsnummer;Gebietsname;GebietLandAbk
+1;Flensburg – Schleswig;SH
+2;Nordfriesland – Dithmarschen Nord;SH
+3;Steinburg – Dithmarschen Süd;SH
+4;Rendsburg-Eckernförde;SH
+5;Kiel;SH
+6;Plön – Neumünster;SH
+7;Pinneberg;SH
+8;Segeberg – Stormarn-Mitte;SH
+9;Ostholstein – Stormarn-Nord;SH
+10;Herzogtum Lauenburg – Stormarn-Süd;SH
+11;Lübeck;SH
+12;Schwerin – Ludwigslust-Parchim I – Nordwestmecklenburg I;MV
+13;Ludwigslust-Parchim II – Nordwestmecklenburg II – Landkreis Rostock I;MV
+14;Rostock – Landkreis Rostock II;MV
+15;Vorpommern-Rügen – Vorpommern-Greifswald I;MV
+16;Mecklenburgische Seenplatte I – Vorpommern-Greifswald II ;MV
+17;Mecklenburgische Seenplatte II – Landkreis Rostock III;MV
+18;Hamburg-Mitte;HH
+19;Hamburg-Altona;HH
+20;Hamburg-Eimsbüttel;HH
+21;Hamburg-Nord;HH
+22;Hamburg-Wandsbek;HH
+23;Hamburg-Bergedorf – Harburg;HH
+24;Aurich – Emden;NI
+25;Unterems;NI
+26;Friesland – Wilhelmshaven – Wittmund;NI
+27;Oldenburg – Ammerland;NI
+28;Delmenhorst – Wesermarsch – Oldenburg-Land;NI
+29;Cuxhaven – Stade II;NI
+30;Stade I – Rotenburg II;NI
+31;Mittelems;NI
+32;Cloppenburg – Vechta;NI
+33;Diepholz – Nienburg I;NI
+34;Osterholz – Verden;NI
+35;Rotenburg I – Heidekreis;NI
+36;Harburg;NI
+37;Lüchow-Dannenberg – Lüneburg;NI
+38;Osnabrück-Land;NI
+39;Stadt Osnabrück;NI
+40;Nienburg II – Schaumburg;NI
+41;Stadt Hannover I;NI
+42;Stadt Hannover II;NI
+43;Hannover-Land I;NI
+44;Celle – Uelzen;NI
+45;Gifhorn – Peine;NI
+46;Hameln-Pyrmont – Holzminden;NI
+47;Hannover-Land II;NI
+48;Hildesheim;NI
+49;Salzgitter – Wolfenbüttel;NI
+50;Braunschweig;NI
+51;Helmstedt – Wolfsburg;NI
+52;Goslar – Northeim – Göttingen II;NI
+53;Göttingen I;NI
+54;Bremen I;HB
+55;Bremen II – Bremerhaven;HB
+56;Prignitz – Ostprignitz-Ruppin – Havelland I;BB
+57;Uckermark – Barnim I;BB
+58;Oberhavel – Havelland II;BB
+59;Märkisch-Oderland – Barnim II;BB
+60;Brandenburg an der Havel – Potsdam-Mittelmark I – Havelland III – Teltow-Fläming I;BB
+61;Potsdam – Potsdam-Mittelmark II – Teltow-Fläming II;BB
+62;Dahme-Spreewald – Teltow-Fläming III;BB
+63;Frankfurt (Oder) – Oder-Spree;BB
+64;Cottbus – Spree-Neiße;BB
+65;Elbe-Elster – Oberspreewald-Lausitz;BB
+66;Altmark – Jerichower Land;ST
+67;Börde – Salzlandkreis;ST
+68;Harz;ST
+69;Magdeburg;ST
+70;Anhalt – Dessau – Wittenberg;ST
+71;Halle;ST
+72;Burgenland – Saalekreis;ST
+73;Mansfeld;ST
+74;Berlin-Mitte;BE
+75;Berlin-Pankow;BE
+76;Berlin-Reinickendorf;BE
+77;Berlin-Spandau – Charlottenburg Nord;BE
+78;Berlin-Steglitz-Zehlendorf;BE
+79;Berlin-Charlottenburg-Wilmersdorf;BE
+80;Berlin-Tempelhof-Schöneberg;BE
+81;Berlin-Neukölln;BE
+82;Berlin-Friedrichshain-Kreuzberg – Prenzlauer Berg Ost;BE
+83;Berlin-Treptow-Köpenick;BE
+84;Berlin-Marzahn-Hellersdorf;BE
+85;Berlin-Lichtenberg;BE
+86;Aachen I;NW
+87;Aachen II;NW
+88;Heinsberg;NW
+89;Düren;NW
+90;Rhein-Erft-Kreis I;NW
+91;Euskirchen – Rhein-Erft-Kreis II;NW
+92;Köln I;NW
+93;Köln II;NW
+94;Köln III;NW
+95;Bonn;NW
+96;Rhein-Sieg-Kreis I;NW
+97;Rhein-Sieg-Kreis II;NW
+98;Oberbergischer Kreis;NW
+99;Rheinisch-Bergischer Kreis;NW
+100;Leverkusen – Köln IV;NW
+101;Wuppertal I;NW
+102;Solingen – Remscheid – Wuppertal II;NW
+103;Mettmann I;NW
+104;Mettmann II;NW
+105;Düsseldorf I;NW
+106;Düsseldorf II;NW
+107;Neuss I;NW
+108;Mönchengladbach;NW
+109;Krefeld I – Neuss II;NW
+110;Viersen;NW
+111;Kleve;NW
+112;Wesel I;NW
+113;Krefeld II – Wesel II;NW
+114;Duisburg I;NW
+115;Duisburg II;NW
+116;Oberhausen – Wesel III;NW
+117;Mülheim – Essen I;NW
+118;Essen II;NW
+119;Essen III;NW
+120;Recklinghausen I;NW
+121;Recklinghausen II;NW
+122;Gelsenkirchen;NW
+123;Steinfurt I – Borken I;NW
+124;Bottrop – Recklinghausen III;NW
+125;Borken II;NW
+126;Coesfeld – Steinfurt II;NW
+127;Steinfurt III;NW
+128;Münster;NW
+129;Warendorf;NW
+130;Gütersloh I;NW
+131;Bielefeld – Gütersloh II;NW
+132;Herford – Minden-Lübbecke II;NW
+133;Minden-Lübbecke I;NW
+134;Lippe I;NW
+135;Höxter – Gütersloh III – Lippe II;NW
+136;Paderborn;NW
+137;Hagen – Ennepe-Ruhr-Kreis I;NW
+138;Ennepe-Ruhr-Kreis II;NW
+139;Bochum I;NW
+140;Herne – Bochum II;NW
+141;Dortmund I;NW
+142;Dortmund II;NW
+143;Unna I;NW
+144;Hamm – Unna II;NW
+145;Soest;NW
+146;Hochsauerlandkreis;NW
+147;Siegen-Wittgenstein;NW
+148;Olpe – Märkischer Kreis I;NW
+149;Märkischer Kreis II;NW
+150;Nordsachsen;SN
+151;Leipzig I;SN
+152;Leipzig II;SN
+153;Leipzig-Land;SN
+154;Meißen;SN
+155;Bautzen I;SN
+156;Görlitz;SN
+157;Sächsische Schweiz-Osterzgebirge;SN
+158;Dresden I;SN
+159;Dresden II – Bautzen II;SN
+160;Mittelsachsen;SN
+161;Chemnitz;SN
+162;Chemnitzer Umland – Erzgebirgskreis II;SN
+163;Erzgebirgskreis I;SN
+164;Zwickau;SN
+165;Vogtlandkreis;SN
+166;Waldeck;HE
+167;Kassel;HE
+168;Werra-Meißner – Hersfeld-Rotenburg;HE
+169;Schwalm-Eder;HE
+170;Marburg;HE
+171;Lahn-Dill;HE
+172;Gießen;HE
+173;Fulda;HE
+174;Main-Kinzig – Wetterau II – Schotten;HE
+175;Hochtaunus;HE
+176;Wetterau I;HE
+177;Rheingau-Taunus – Limburg;HE
+178;Wiesbaden;HE
+179;Hanau;HE
+180;Main-Taunus;HE
+181;Frankfurt am Main I;HE
+182;Frankfurt am Main II;HE
+183;Groß-Gerau;HE
+184;Offenbach;HE
+185;Darmstadt;HE
+186;Odenwald;HE
+187;Bergstraße;HE
+188;Eichsfeld – Nordhausen – Kyffhäuserkreis;TH
+189;Eisenach – Wartburgkreis – Unstrut-Hainich-Kreis;TH
+190;Jena – Sömmerda – Weimarer Land I;TH
+191;Gotha – Ilm-Kreis;TH
+192;Erfurt – Weimar – Weimarer Land II;TH
+193;Gera – Greiz – Altenburger Land;TH
+194;Saalfeld-Rudolstadt – Saale-Holzland-Kreis – Saale-Orla-Kreis;TH
+195;Suhl – Schmalkalden-Meiningen – Hildburghausen – Sonneberg;TH
+196;Neuwied;RP
+197;Ahrweiler;RP
+198;Koblenz;RP
+199;Mosel/Rhein-Hunsrück;RP
+200;Kreuznach;RP
+201;Bitburg;RP
+202;Trier;RP
+203;Montabaur;RP
+204;Mainz;RP
+205;Worms;RP
+206;Ludwigshafen/Frankenthal;RP
+207;Neustadt – Speyer;RP
+208;Kaiserslautern;RP
+209;Pirmasens;RP
+210;Südpfalz;RP
+211;Altötting;BY
+212;Erding – Ebersberg;BY
+213;Freising;BY
+214;Fürstenfeldbruck;BY
+215;Ingolstadt;BY
+216;München-Nord;BY
+217;München-Ost;BY
+218;München-Süd;BY
+219;München-West/Mitte;BY
+220;München-Land;BY
+221;Rosenheim;BY
+222;Bad Tölz-Wolfratshausen – Miesbach;BY
+223;Starnberg – Landsberg am Lech;BY
+224;Traunstein;BY
+225;Weilheim;BY
+226;Deggendorf;BY
+227;Landshut;BY
+228;Passau;BY
+229;Rottal-Inn;BY
+230;Straubing;BY
+231;Amberg;BY
+232;Regensburg;BY
+233;Schwandorf;BY
+234;Weiden;BY
+235;Bamberg;BY
+236;Bayreuth;BY
+237;Coburg;BY
+238;Hof;BY
+239;Kulmbach;BY
+240;Ansbach;BY
+241;Erlangen;BY
+242;Fürth;BY
+243;Nürnberg-Nord;BY
+244;Nürnberg-Süd;BY
+245;Roth;BY
+246;Aschaffenburg;BY
+247;Bad Kissingen;BY
+248;Main-Spessart;BY
+249;Schweinfurt;BY
+250;Würzburg;BY
+251;Augsburg-Stadt;BY
+252;Augsburg-Land;BY
+253;Donau-Ries;BY
+254;Neu-Ulm;BY
+255;Memmingen – Unterallgäu;BY
+256;Oberallgäu;BY
+257;Ostallgäu;BY
+258;Stuttgart I;BW
+259;Stuttgart II;BW
+260;Böblingen;BW
+261;Esslingen;BW
+262;Nürtingen;BW
+263;Göppingen;BW
+264;Waiblingen;BW
+265;Ludwigsburg;BW
+266;Neckar-Zaber;BW
+267;Heilbronn;BW
+268;Schwäbisch Hall – Hohenlohe;BW
+269;Backnang – Schwäbisch Gmünd;BW
+270;Aalen – Heidenheim;BW
+271;Karlsruhe-Stadt;BW
+272;Karlsruhe-Land;BW
+273;Rastatt;BW
+274;Heidelberg;BW
+275;Mannheim;BW
+276;Odenwald – Tauber;BW
+277;Rhein-Neckar;BW
+278;Bruchsal – Schwetzingen;BW
+279;Pforzheim;BW
+280;Calw;BW
+281;Freiburg;BW
+282;Lörrach – Müllheim;BW
+283;Emmendingen – Lahr;BW
+284;Offenburg;BW
+285;Rottweil – Tuttlingen;BW
+286;Schwarzwald-Baar;BW
+287;Konstanz;BW
+288;Waldshut;BW
+289;Reutlingen;BW
+290;Tübingen;BW
+291;Ulm;BW
+292;Biberach;BW
+293;Bodensee;BW
+294;Ravensburg;BW
+295;Zollernalb – Sigmaringen;BW
+296;Saarbrücken;SL
+297;Saarlouis;SL
+298;St. Wendel;SL
+299;Homburg;SL
