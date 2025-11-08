@@ -47,7 +47,7 @@ try:
         "Staatsangehörigkeit",
         "Beruf",
         "GebietLandAbk",
-        "Gruppenname",
+        "GruppennameKurz",
         "Listenplatz",
     ]
     base_df = df[base_cols].drop_duplicates(subset=["Nachname", "Vornamen"])
