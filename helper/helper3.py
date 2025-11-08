@@ -2,7 +2,7 @@ import pandas as pd
 from pathlib import Path
 
 # --- Configuration ---
-input_filename = Path("Bundestagswahl/rawData/kand2025.csv")
+input_filename = Path("data/rawData/kand2025.csv")
 output_dir = Path("Bundestagswahl/outputs")
 output_dir.mkdir(parents=True, exist_ok=True)
 
