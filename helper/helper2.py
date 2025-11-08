@@ -46,7 +46,6 @@ try:
         "Geburtsort",
         "Staatsangehörigkeit",
         "Beruf",
-        "Berufsschluessel",
         "GebietLandAbk",
         "Gruppenname",
         "Listenplatz",
