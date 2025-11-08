@@ -26,7 +26,11 @@ if __name__ == "__main__":
     helper_path = os.path.join(script_dir, "helper.py")
     run_script(helper_path, project_root)
     
-    # Run helper2.py through helper6.py
-    for i in range(2, 7):
+    # While a helper exists, run helper and increase helper number
+    i = 2
+    while True:
         helper_path = os.path.join(script_dir, f"helper{i}.py")
+        if not os.path.exists(helper_path):
+            break
         run_script(helper_path, project_root)
+        i += 1
