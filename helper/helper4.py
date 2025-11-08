@@ -2,9 +2,9 @@ import pandas as pd
 from pathlib import Path
 
 # --- Configuration ---
-input_candidates = Path("Bundestagswahl/outputs/candidates2025.csv")
-input_wahlkreis = Path("Bundestagswahl/outputs/wahlkreis2025.csv")
-output_candidates = Path("Bundestagswahl/outputs/candidates2025_numbered.csv")
+input_candidates = Path("Bundestagswahl/outputs/candidates.csv")
+input_wahlkreis = Path("Bundestagswahl/outputs/wahlkreis.csv")
+output_candidates = Path("Bundestagswahl/outputs/candidates_numbered.csv")
 # --- End of Configuration ---
 
 try:
