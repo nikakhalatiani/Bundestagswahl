@@ -7,217 +7,73 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Enum for seat type
-enum SeatType {
-  DIRECT // Won the constituency directly
-  LIST   // Awarded a seat from the state party list
+// States table matching states.csv
+model State {
+  id                String @id // GebietLandAbk (e.g., "BB", "BE")
+  name              String // Gebietsname (e.g., "Brandenburg", "Berlin")
+  
+  candidates        Candidate[]
+  constituencies    Constituency[]
+  stateParties      StateParty[]
 }
 
-// Core Master Data
-model FederalState {
-  stateId           Int                   @id @default(autoincrement())
-  stateName         String
-  stateAbbreviation String                @unique
-  population        Int
-
-  constituencies       Constituency[]
-  statePartyLists      StatePartyList[]
-  secondVoteResults    SecondVoteResult[]
-  partySeatAllocations PartySeatAllocation[]
-}
-
+// Parties table matching parties.csv
 model Party {
-  partyId           Int                   @id @default(autoincrement())
-  partyName         String                @unique
-  partyAbbreviation String                @unique
-  foundedYear       Int
-  color             String
-
-  candidates           Candidate[]
-  statePartyLists      StatePartyList[]
-  secondVoteResults    SecondVoteResult[]
-  partySeatAllocations PartySeatAllocation[]
-  directMandates       DirectMandate[]
-  bundestagMembers     BundestagMember[]
+  id                Int    @id // PartyID
+  shortName         String @unique // Gruppenname
+  longName          String // GruppennameLang
+  
+  candidates        Candidate[]
+  stateParties      StateParty[]
 }
 
-model Election {
-  electionId          Int                   @id @default(autoincrement())
-  electionDate        DateTime              @db.Date
-  electionYear        Int                   @unique // Assuming one federal election per year
-  totalEligibleVoters Int
-  totalSeats          Int
-  thresholdPercentage Decimal
-
-  constituencies       Constituency[]
-  candidates           Candidate[]
-  statePartyLists      StatePartyList[]
-  firstVoteResults     FirstVoteResult[]
-  secondVoteResults    SecondVoteResult[]
-  constituencyTurnouts ConstituencyTurnout[]
-  directMandates       DirectMandate[]
-  partySeatAllocations PartySeatAllocation[]
-  bundestagMembers     BundestagMember[]
-}
-
+// Constituencies (Wahlkreis) table matching wahlkreis.csv
 model Constituency {
-  constituencyId      Int     @id @default(autoincrement())
-  electionId          Int
-  constituencyNumber  Int
-  constituencyName    String
-  stateId             Int
-  eligibleVoters      Int
-  boundaryDescription String  @db.Text
-
-  election      Election    @relation(fields: [electionId], references: [electionId])
-  state         FederalState @relation(fields: [stateId], references: [stateId])
-
-  candidates       Candidate[]
-  firstVoteResults FirstVoteResult[]
-  turnout          ConstituencyTurnout? // One-to-one
-  directMandate    DirectMandate?       // One-to-one
-  bundestagMembers BundestagMember[]
-
-  @@unique([electionId, constituencyNumber])
+  number            Int    @id // Gebietsnummer
+  name              String // Gebietsname
+  stateId           String // GebietLandAbk
+  
+  state             State  @relation(fields: [stateId], references: [id])
+  candidates        Candidate[]
 }
 
-// Candidates
+// Candidates table matching candidates.csv
 model Candidate {
-  candidateId    Int     @id @default(autoincrement())
-  firstName      String
-  lastName       String
-  partyId        Int? // Nullable for independent candidates
-  constituencyId Int     // Constituency they run in for the first vote
-  electionId     Int
-
-  party            Party?            @relation(fields: [partyId], references: [partyId])
-  constituency     Constituency      @relation(fields: [constituencyId], references: [constituencyId])
-  election         Election          @relation(fields: [electionId], references: [electionId])
-
-  firstVoteResults FirstVoteResult[]
-  listPositions    ListPosition[]
-  directMandateWon DirectMandate?
-  bundestagMember  BundestagMember?
+  id                Int      @id @default(autoincrement())
+  title             String?  // Titel
+  nameAddition      String?  // Namenszusatz
+  lastName          String   // Nachname
+  firstName         String   // Vornamen
+  artistName        String?  // Künstlername
+  gender            String?  // Geschlecht
+  birthYear         Int?     // Geburtsjahr
+  postalCode        String?  // PLZ
+  city              String?  // Wohnort
+  cityStateAbbr     String?  // WohnortLandAbk
+  birthPlace        String?  // Geburtsort
+  nationality       String?  // Staatsangehörigkeit
+  profession        String?  // Beruf
+  stateId           String   // GebietLandAbk
+  partyShortName    String?  // GruppennameKurz
+  listPosition      Float?   // Listenplatz
+  constituencyNum   Int?     // Wahlkreis
+  stateName         String?  // State
+  firstVotes        Float?   // Erststimmen
+  
+  state             State         @relation(fields: [stateId], references: [id])
+  party             Party?        @relation(fields: [partyShortName], references: [shortName])
+  constituency      Constituency? @relation(fields: [constituencyNum], references: [number])
 }
 
-model StatePartyList {
-  listId     Int    @id @default(autoincrement())
-  partyId    Int
-  stateId    Int
-  electionId Int
-
-  party    Party    @relation(fields: [partyId], references: [partyId])
-  state    FederalState @relation(fields: [stateId], references: [stateId])
-  election Election @relation(fields: [electionId], references: [electionId])
-
-  positions ListPosition[]
-
-  @@unique([partyId, stateId, electionId])
-}
-
-model ListPosition {
-  positionId  Int @id @default(autoincrement())
-  listId      Int
-  candidateId Int
-  position    Int
-
-  list      StatePartyList @relation(fields: [listId], references: [listId])
-  candidate Candidate      @relation(fields: [candidateId], references: [candidateId])
-
-  @@unique([listId, position])
-  @@unique([listId, candidateId]) // A candidate can only be on a list once
-}
-
-// Vote Results
-model FirstVoteResult {
-  firstVoteResultId Int @id @default(autoincrement())
-  electionId        Int
-  constituencyId    Int
-  candidateId       Int
-  votesReceived     Int
-
-  election     Election     @relation(fields: [electionId], references: [electionId])
-  constituency Constituency @relation(fields: [constituencyId], references: [constituencyId])
-  candidate    Candidate    @relation(fields: [candidateId], references: [candidateId])
-
-  @@unique([electionId, constituencyId, candidateId])
-}
-
-model SecondVoteResult {
-  secondVoteResultId Int @id @default(autoincrement())
-  electionId         Int
-  stateId            Int
-  partyId            Int
-  votesReceived      Int
-
-  election Election     @relation(fields: [electionId], references: [electionId])
-  state    FederalState @relation(fields: [stateId], references: [stateId])
-  party    Party        @relation(fields: [partyId], references: [partyId])
-
-  @@unique([electionId, stateId, partyId])
-}
-
-model ConstituencyTurnout {
-  turnoutId         Int     @id @default(autoincrement())
-  electionId        Int
-  constituencyId    Int     @unique // One-to-one with Constituency
-  validFirstVotes   Int
-  invalidFirstVotes Int
-  validSecondVotes  Int
-  invalidSecondVotes Int
-  turnoutPercentage Decimal
-
-  election     Election     @relation(fields: [electionId], references: [electionId])
-  constituency Constituency @relation(fields: [constituencyId], references: [constituencyId])
-}
-
-// Calculated Results
-model DirectMandate {
-  mandateId     Int  @id @default(autoincrement())
-  electionId    Int
-  constituencyId Int  @unique // One winner per constituency
-  candidateId   Int  @unique // A candidate can only win one direct mandate
-  partyId       Int? // Nullable for independent winner
-  votesReceived Int
-
-  election     Election     @relation(fields: [electionId], references: [electionId])
-  constituency Constituency @relation(fields: [constituencyId], references: [constituencyId])
-  candidate    Candidate    @relation(fields: [candidateId], references: [candidateId])
-  party        Party?       @relation(fields: [partyId], references: [partyId])
-}
-
-model PartySeatAllocation {
-  allocationId          Int     @id @default(autoincrement())
-  electionId            Int
-  partyId               Int
-  stateId               Int
-  secondVotesTotal      Int
-  secondVotesPercentage Decimal
-  directMandates        Int
-  proportionalSeats     Int
-  overhangSeats         Int
-  levelingSeats         Int
-  totalSeats            Int
-
-  election Election     @relation(fields: [electionId], references: [electionId])
-  party    Party        @relation(fields: [partyId], references: [partyId])
-  state    FederalState @relation(fields: [stateId], references: [stateId])
-
-  @@unique([electionId, partyId, stateId])
-}
-
-model BundestagMember {
-  memberId       Int        @id @default(autoincrement())
-  electionId     Int
-  candidateId    Int        @unique // A candidate can only be one member
-  partyId        Int?       // Nullable for independent members
-  seatType       SeatType
-  constituencyId Int?       // Constituency of origin (nullable for pure list candidates)
-
-  election     Election      @relation(fields: [electionId], references: [electionId])
-  candidate    Candidate     @relation(fields: [candidateId], references: [candidateId])
-  party        Party?        @relation(fields: [partyId], references: [partyId])
-  constituency Constituency? @relation(fields: [constituencyId], references: [constituencyId])
-
-  @@unique([electionId, candidateId]) // Extra check: a candidate can only be a member once per election
+// State parties (Zweitstimmen) table matching state_parties.csv
+model StateParty {
+  id                Int    @id @default(autoincrement())
+  stateId           String // GebietLandAbk
+  partyShortName    String // GruppennameKurz
+  secondVotes       Float  // Anzahl
+  
+  state             State  @relation(fields: [stateId], references: [id])
+  party             Party  @relation(fields: [partyShortName], references: [shortName])
+  
+  @@unique([stateId, partyShortName])
 }
