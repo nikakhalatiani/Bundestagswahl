@@ -35,6 +35,7 @@ model Constituency {
   
   state             State  @relation(fields: [stateId], references: [id])
   candidates        Candidate[]
+  ballots           Ballot[]
 }
 
 // Candidates table matching candidates.csv
@@ -63,6 +64,7 @@ model Candidate {
   state             State         @relation(fields: [stateId], references: [id])
   party             Party?        @relation(fields: [partyShortName], references: [shortName])
   constituency      Constituency? @relation(fields: [constituencyNum], references: [number])
+  firstVoteBallots  Ballot[]      @relation("FirstVoteCandidate")
 }
 
 // State parties (Zweitstimmen) table matching state_parties.csv
@@ -76,4 +78,23 @@ model StateParty {
   party             Party  @relation(fields: [partyShortName], references: [shortName])
   
   @@unique([stateId, partyShortName])
+}
+
+// Individual ballots (einzelne Stimmzettel)
+model Ballot {
+  id                Int       @id @default(autoincrement())
+  constituencyNum   Int       // Wahlkreis
+  voterId           Int       // Anonymized voter ID for this constituency
+  firstVoteCandidateId Int?   // Erststimme (can be null for invalid vote)
+  secondVoteParty   String?   // Zweitstimme party shortName (can be null for invalid vote)
+  isFirstVoteValid  Boolean   @default(true)
+  isSecondVoteValid Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  
+  constituency      Constituency @relation(fields: [constituencyNum], references: [number])
+  firstVoteCandidate Candidate? @relation("FirstVoteCandidate", fields: [firstVoteCandidateId], references: [id])
+  
+  @@index([constituencyNum])
+  @@index([firstVoteCandidateId])
+  @@index([secondVoteParty])
 }
