@@ -3,9 +3,9 @@ from pathlib import Path
 
 # --- Configuration ---
 input_results = Path("data/rawData/kerg2025_2.csv")
-input_candidates = Path("Bundestagswahl/outputs/candidates_numbered.csv")
+input_candidates = Path("Bundestagswahl/outputs/candidates.csv")
 input_wahlkreis = Path("Bundestagswahl/outputs/wahlkreis.csv")
-output_candidates = Path("Bundestagswahl/outputs/candidates_with_votes.csv")
+output_candidates = Path("Bundestagswahl/outputs/candidates.csv")
 # --- End of Configuration ---
 
 try:

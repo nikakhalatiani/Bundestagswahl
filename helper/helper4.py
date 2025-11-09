@@ -4,7 +4,7 @@ from pathlib import Path
 # --- Configuration ---
 input_candidates = Path("Bundestagswahl/outputs/candidates.csv")
 input_wahlkreis = Path("Bundestagswahl/outputs/wahlkreis.csv")
-output_candidates = Path("Bundestagswahl/outputs/candidates_numbered.csv")
+output_candidates = Path("Bundestagswahl/outputs/candidates.csv")
 # --- End of Configuration ---
 
 try:
