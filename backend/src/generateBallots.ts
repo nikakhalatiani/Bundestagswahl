@@ -55,8 +55,9 @@ async function generateBallots(options: BallotGenerationOptions = {}) {
       
       // Fastest approach: DROP and recreate the entire table
       await prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS "Ballot" CASCADE;`);
+      // Use UNLOGGED for speed
       await prisma.$executeRawUnsafe(`
-        CREATE TABLE "Ballot" (
+        CREATE UNLOGGED TABLE "Ballot" (
           "id" SERIAL PRIMARY KEY,
           "constituencyNum" INTEGER NOT NULL,
           "voterId" INTEGER NOT NULL,
@@ -67,38 +68,24 @@ async function generateBallots(options: BallotGenerationOptions = {}) {
           "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
       `);
-      // Add foreign key constraints back
-      await prisma.$executeRawUnsafe(`
-        ALTER TABLE "Ballot" 
-        ADD CONSTRAINT "Ballot_constituencyNum_fkey" 
-        FOREIGN KEY ("constituencyNum") REFERENCES "Constituency"("number") ON DELETE RESTRICT ON UPDATE CASCADE;
-      `);
-      await prisma.$executeRawUnsafe(`
-        ALTER TABLE "Ballot" 
-        ADD CONSTRAINT "Ballot_firstVoteCandidateId_fkey" 
-        FOREIGN KEY ("firstVoteCandidateId") REFERENCES "Candidate"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-      `);
       
       // Reset timeout
       await prisma.$executeRawUnsafe(`SET statement_timeout = 0;`);
       
-      console.log('Table ready!\n');
+      console.log('Table ready (UNLOGGED mode)!\n');
     }
 
     console.log('\nGenerating ballots...\n');
     
     // Process in chunks for progress feedback
-    const chunkSize = 10; // Process 10 constituencies at a time
+    const chunkSize = 5; // Smaller chunks per thread
+    const concurrency = 4; // Parallel threads
     let totalProcessed = 0;
 
-    for (let i = 0; i < constituencies.length; i += chunkSize) {
-      const chunk = constituencies.slice(i, Math.min(i + chunkSize, constituencies.length));
-      const chunkStart = Date.now();
-      
-      // Build WHERE clause for this chunk
+    // Helper to generate SQL for a chunk
+    const generateChunkSql = (chunk: number[]) => {
       const whereClause = `WHERE const.number IN (${chunk.join(',')})`;
-      
-      await prisma.$executeRawUnsafe(`
+      return `
         INSERT INTO "Ballot" (
             "constituencyNum",
             "voterId",
@@ -123,7 +110,7 @@ async function generateBallots(options: BallotGenerationOptions = {}) {
                 const_num,
                 state_id,
                 candidate_id,
-                ROW_NUMBER() OVER (PARTITION BY const_num ORDER BY random()) as ballot_id
+                ROW_NUMBER() OVER (PARTITION BY const_num) as ballot_id
             FROM constituency_data
             CROSS JOIN LATERAL generate_series(1, FLOOR(COALESCE(first_votes, 0))::INTEGER)
             WHERE first_votes > 0
@@ -148,7 +135,7 @@ async function generateBallots(options: BallotGenerationOptions = {}) {
             SELECT 
                 const_num,
                 "partyShortName",
-                ROW_NUMBER() OVER (PARTITION BY const_num ORDER BY random()) as ballot_id
+                ROW_NUMBER() OVER (PARTITION BY const_num) as ballot_id
             FROM second_votes_calculated
             CROSS JOIN LATERAL generate_series(1, vote_count)
             WHERE vote_count > 0
@@ -165,24 +152,58 @@ async function generateBallots(options: BallotGenerationOptions = {}) {
         LEFT JOIN second_votes_expanded sv 
             ON fv.const_num = sv.const_num 
             AND fv.ballot_id = sv.ballot_id
-      `);
+      `;
+    };
 
-      totalProcessed += chunk.length;
-      const chunkDuration = ((Date.now() - chunkStart) / 1000).toFixed(1);
+    for (let i = 0; i < constituencies.length; i += chunkSize * concurrency) {
+      const promises = [];
+      
+      for (let j = 0; j < concurrency; j++) {
+        const startIdx = i + (j * chunkSize);
+        if (startIdx < constituencies.length) {
+          const chunk = constituencies.slice(startIdx, Math.min(startIdx + chunkSize, constituencies.length));
+          promises.push(
+            (async () => {
+              const start = Date.now();
+              await prisma.$executeRawUnsafe(generateChunkSql(chunk));
+              return { count: chunk.length, duration: Date.now() - start };
+            })()
+          );
+        }
+      }
+
+      const results = await Promise.all(promises);
+      
+      totalProcessed += results.reduce((acc, r) => acc + r.count, 0);
+      const batchDuration = Math.max(...results.map(r => r.duration)); // Max duration of the batch
+      
       const progress = ((totalProcessed / constituencies.length) * 100).toFixed(1);
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(0);
       const eta = totalProcessed > 0 
         ? Math.round(((Date.now() - startTime) / totalProcessed) * (constituencies.length - totalProcessed) / 1000)
         : 0;
       
-      console.log(`[${progress}%] Processed ${totalProcessed}/${constituencies.length} constituencies (${chunkDuration}s) | Elapsed: ${elapsed}s | ETA: ${eta}s`);
+      console.log(`[${progress}%] Processed ${totalProcessed}/${constituencies.length} constituencies (Batch: ${(batchDuration/1000).toFixed(1)}s) | Elapsed: ${elapsed}s | ETA: ${eta}s`);
     }
 
-    // Recreate indexes
-    console.log('\nRecreating indexes on Ballot table...');
+    // Recreate indexes and constraints
+    console.log('\nRecreating indexes and constraints on Ballot table...');
     await prisma.$executeRawUnsafe(`CREATE INDEX "Ballot_constituencyNum_idx" ON "Ballot"("constituencyNum");`);
     await prisma.$executeRawUnsafe(`CREATE INDEX "Ballot_firstVoteCandidateId_idx" ON "Ballot"("firstVoteCandidateId");`);
     await prisma.$executeRawUnsafe(`CREATE INDEX "Ballot_secondVoteParty_idx" ON "Ballot"("secondVoteParty");`);
+    
+    // Add foreign key constraints back
+    console.log('Adding foreign key constraints...');
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE "Ballot" 
+      ADD CONSTRAINT "Ballot_constituencyNum_fkey" 
+      FOREIGN KEY ("constituencyNum") REFERENCES "Constituency"("number") ON DELETE RESTRICT ON UPDATE CASCADE;
+    `);
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE "Ballot" 
+      ADD CONSTRAINT "Ballot_firstVoteCandidateId_fkey" 
+      FOREIGN KEY ("firstVoteCandidateId") REFERENCES "Candidate"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+    `);
 
     const totalDuration = ((Date.now() - startTime) / 1000).toFixed(1);
     console.log(`\n✅ Generation complete in ${totalDuration}s!`);
