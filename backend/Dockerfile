@@ -8,8 +8,8 @@ RUN npm install --production
 # copy source
 COPY . .
 
-# generate prisma client if prisma files exist
-RUN npx prisma generate || true
+# generate drizzle types / client if needed (no-op if not configured)
+RUN npx drizzle-kit generate || true
 
 EXPOSE 4000
 CMD ["npm", "run", "start"]

@@ -1,6 +1,5 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import dbModule from './db';
+const { pool, disconnect } = dbModule;
 
 interface VerificationOptions {
   constituencyNumber?: number;
@@ -13,13 +12,10 @@ async function verifyBallots(options: VerificationOptions = {}) {
   console.log('='.repeat(60));
 
   // Get constituencies to verify
-  const constituencies = constituencyNumber
-    ? await prisma.constituency.findMany({
-        where: { number: constituencyNumber },
-      })
-    : await prisma.constituency.findMany({
-        orderBy: { number: 'asc' },
-      });
+  const constituenciesRes = constituencyNumber
+    ? await pool.query('SELECT * FROM constituencies WHERE number = $1', [constituencyNumber])
+    : await pool.query('SELECT * FROM constituencies ORDER BY number ASC');
+  const constituencies = constituenciesRes.rows;
 
   if (constituencies.length === 0) {
     console.log('No constituencies found.');
@@ -30,9 +26,8 @@ async function verifyBallots(options: VerificationOptions = {}) {
   let totalMismatches = 0;
 
   for (const constituency of constituencies) {
-    const ballotsCount = await prisma.ballot.count({
-      where: { constituencyNum: constituency.number },
-    });
+    const ballotsCountRes = await pool.query('SELECT COUNT(*)::int as cnt FROM ballots WHERE constituency_num = $1', [constituency.number]);
+    const ballotsCount = ballotsCountRes.rows[0].cnt;
 
     if (ballotsCount === 0) {
       console.log(
@@ -48,23 +43,24 @@ async function verifyBallots(options: VerificationOptions = {}) {
 
     // Verify First Votes
     console.log('\nFirst Votes Verification:');
-    const ballotFirstVotes = await prisma.ballot.groupBy({
-      by: ['firstVoteCandidateId'],
-      where: {
-        constituencyNum: constituency.number,
-        isFirstVoteValid: true,
-      },
-      _count: true,
-    });
+    const ballotFirstVotesRes = await pool.query(
+      `SELECT first_vote_candidate_id, COUNT(*)::int as cnt
+       FROM ballots
+       WHERE constituency_num = $1 AND is_first_vote_valid = true
+       GROUP BY first_vote_candidate_id`,
+      [constituency.number]
+    );
+    const ballotFirstVotes = ballotFirstVotesRes.rows;
 
-    const candidates = await prisma.candidate.findMany({
-      where: {
-        constituencyNum: constituency.number,
-        firstVotes: { not: null },
-      },
-      include: { party: true },
-      orderBy: { firstVotes: 'desc' },
-    });
+    const candidatesRes = await pool.query(
+      `SELECT c.*, p.short_name as party_short_name
+       FROM candidates c
+       LEFT JOIN parties p ON p.short_name = c.party_short_name
+       WHERE c.constituency_num = $1 AND c.first_votes IS NOT NULL
+       ORDER BY c.first_votes DESC`,
+      [constituency.number]
+    );
+    const candidates = candidatesRes.rows;
 
     let constituencyMismatches = 0;
     const topCandidates = candidates.slice(0, 5);
@@ -95,20 +91,16 @@ async function verifyBallots(options: VerificationOptions = {}) {
 
     // Verify Second Votes
     console.log('\nSecond Votes Distribution:');
-    const ballotSecondVotes = await prisma.ballot.groupBy({
-      by: ['secondVoteParty'],
-      where: {
-        constituencyNum: constituency.number,
-        isSecondVoteValid: true,
-      },
-      _count: true,
-      orderBy: {
-        _count: {
-          secondVoteParty: 'desc',
-        },
-      },
-      take: 5,
-    });
+    const ballotSecondVotesRes = await pool.query(
+      `SELECT second_vote_party, COUNT(*)::int as cnt
+       FROM ballots
+       WHERE constituency_num = $1 AND is_second_vote_valid = true
+       GROUP BY second_vote_party
+       ORDER BY cnt DESC
+       LIMIT 5`,
+      [constituency.number]
+    );
+    const ballotSecondVotes = ballotSecondVotesRes.rows;
 
     console.log('\nTop 5 parties by second votes:');
     for (const vote of ballotSecondVotes) {
@@ -116,19 +108,17 @@ async function verifyBallots(options: VerificationOptions = {}) {
     }
 
     // Invalid votes
-    const invalidFirstVotes = await prisma.ballot.count({
-      where: {
-        constituencyNum: constituency.number,
-        isFirstVoteValid: false,
-      },
-    });
+    const invalidFirstVotesRes = await pool.query(
+      'SELECT COUNT(*)::int as cnt FROM ballots WHERE constituency_num = $1 AND is_first_vote_valid = false',
+      [constituency.number]
+    );
+    const invalidFirstVotes = invalidFirstVotesRes.rows[0].cnt;
 
-    const invalidSecondVotes = await prisma.ballot.count({
-      where: {
-        constituencyNum: constituency.number,
-        isSecondVoteValid: false,
-      },
-    });
+    const invalidSecondVotesRes = await pool.query(
+      'SELECT COUNT(*)::int as cnt FROM ballots WHERE constituency_num = $1 AND is_second_vote_valid = false',
+      [constituency.number]
+    );
+    const invalidSecondVotes = invalidSecondVotesRes.rows[0].cnt;
 
     console.log(`\nInvalid votes:`);
     console.log(`  First votes: ${invalidFirstVotes.toLocaleString()}`);
@@ -137,7 +127,7 @@ async function verifyBallots(options: VerificationOptions = {}) {
 
   console.log('\n' + '='.repeat(60));
   console.log(`\nTotal ballots across all constituencies: ${totalBallotsCount.toLocaleString()}`);
-  
+
   if (totalMismatches === 0) {
     console.log('✅ All ballots match the original aggregated data!');
   } else {
@@ -164,7 +154,7 @@ async function main() {
     console.error('Error verifying ballots:', error);
     throw error;
   } finally {
-    await prisma.$disconnect();
+    await disconnect();
   }
 }
 

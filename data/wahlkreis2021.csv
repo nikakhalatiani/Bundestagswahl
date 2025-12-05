@@ -1,87 +1,87 @@
 Gebietsnummer;Gebietsname;GebietLandAbk
-1;Flensburg – Schleswig;SH
-2;Nordfriesland – Dithmarschen Nord;SH
-3;Steinburg – Dithmarschen Süd;SH
+1;Flensburg - Schleswig;SH
+2;Nordfriesland - Dithmarschen Nord;SH
+3;Steinburg - Dithmarschen Süd;SH
 4;Rendsburg-Eckernförde;SH
 5;Kiel;SH
-6;Plön – Neumünster;SH
+6;Plön - Neumünster;SH
 7;Pinneberg;SH
-8;Segeberg – Stormarn-Mitte;SH
-9;Ostholstein – Stormarn-Nord;SH
-10;Herzogtum Lauenburg – Stormarn-Süd;SH
+8;Segeberg - Stormarn-Mitte;SH
+9;Ostholstein - Stormarn-Nord;SH
+10;Herzogtum Lauenburg - Stormarn-Süd;SH
 11;Lübeck;SH
-12;Schwerin – Ludwigslust-Parchim I – Nordwestmecklenburg I;MV
-13;Ludwigslust-Parchim II – Nordwestmecklenburg II – Landkreis Rostock I;MV
-14;Rostock – Landkreis Rostock II;MV
-15;Vorpommern-Rügen – Vorpommern-Greifswald I;MV
-16;Mecklenburgische Seenplatte I – Vorpommern-Greifswald II;MV
-17;Mecklenburgische Seenplatte II – Landkreis Rostock III;MV
+12;Schwerin - Ludwigslust-Parchim I - Nordwestmecklenburg I;MV
+13;Ludwigslust-Parchim II - Nordwestmecklenburg II - Landkreis Rostock I;MV
+14;Rostock - Landkreis Rostock II;MV
+15;Vorpommern-Rügen - Vorpommern-Greifswald I;MV
+16;Mecklenburgische Seenplatte I - Vorpommern-Greifswald II;MV
+17;Mecklenburgische Seenplatte II - Landkreis Rostock III;MV
 18;Hamburg-Mitte;HH
 19;Hamburg-Altona;HH
 20;Hamburg-Eimsbüttel;HH
 21;Hamburg-Nord;HH
 22;Hamburg-Wandsbek;HH
-23;Hamburg-Bergedorf – Harburg;HH
-24;Aurich – Emden;NI
+23;Hamburg-Bergedorf - Harburg;HH
+24;Aurich - Emden;NI
 25;Unterems;NI
-26;Friesland – Wilhelmshaven – Wittmund;NI
-27;Oldenburg – Ammerland;NI
-28;Delmenhorst – Wesermarsch – Oldenburg-Land;NI
-29;Cuxhaven – Stade II;NI
-30;Stade I – Rotenburg II;NI
+26;Friesland - Wilhelmshaven - Wittmund;NI
+27;Oldenburg - Ammerland;NI
+28;Delmenhorst - Wesermarsch - Oldenburg-Land;NI
+29;Cuxhaven - Stade II;NI
+30;Stade I - Rotenburg II;NI
 31;Mittelems;NI
-32;Cloppenburg – Vechta;NI
-33;Diepholz – Nienburg I;NI
-34;Osterholz – Verden;NI
-35;Rotenburg I – Heidekreis;NI
+32;Cloppenburg - Vechta;NI
+33;Diepholz - Nienburg I;NI
+34;Osterholz - Verden;NI
+35;Rotenburg I - Heidekreis;NI
 36;Harburg;NI
-37;Lüchow-Dannenberg – Lüneburg;NI
+37;Lüchow-Dannenberg - Lüneburg;NI
 38;Osnabrück-Land;NI
 39;Stadt Osnabrück;NI
-40;Nienburg II – Schaumburg;NI
+40;Nienburg II - Schaumburg;NI
 41;Stadt Hannover I;NI
 42;Stadt Hannover II;NI
 43;Hannover-Land I;NI
-44;Celle – Uelzen;NI
-45;Gifhorn – Peine;NI
-46;Hameln-Pyrmont – Holzminden;NI
+44;Celle - Uelzen;NI
+45;Gifhorn - Peine;NI
+46;Hameln-Pyrmont - Holzminden;NI
 47;Hannover-Land II;NI
 48;Hildesheim;NI
-49;Salzgitter – Wolfenbüttel;NI
+49;Salzgitter - Wolfenbüttel;NI
 50;Braunschweig;NI
-51;Helmstedt – Wolfsburg;NI
-52;Goslar – Northeim – Osterode;NI
+51;Helmstedt - Wolfsburg;NI
+52;Goslar - Northeim - Osterode;NI
 53;Göttingen;NI
 54;Bremen I;HB
-55;Bremen II – Bremerhaven;HB
-56;Prignitz – Ostprignitz-Ruppin – Havelland I;BB
-57;Uckermark – Barnim I;BB
-58;Oberhavel – Havelland II;BB
-59;Märkisch-Oderland – Barnim II;BB
-60;Brandenburg an der Havel – Potsdam-Mittelmark I – Havelland III – Teltow-Fläming I;BB
-61;Potsdam – Potsdam-Mittelmark II – Teltow-Fläming II;BB
-62;Dahme-Spreewald – Teltow-Fläming III – Oberspreewald-Lausitz I;BB
-63;Frankfurt (Oder) – Oder-Spree;BB
-64;Cottbus – Spree-Neiße;BB
-65;Elbe-Elster – Oberspreewald-Lausitz II;BB
+55;Bremen II - Bremerhaven;HB
+56;Prignitz - Ostprignitz-Ruppin - Havelland I;BB
+57;Uckermark - Barnim I;BB
+58;Oberhavel - Havelland II;BB
+59;Märkisch-Oderland - Barnim II;BB
+60;Brandenburg an der Havel - Potsdam-Mittelmark I - Havelland III - Teltow-Fläming I;BB
+61;Potsdam - Potsdam-Mittelmark II - Teltow-Fläming II;BB
+62;Dahme-Spreewald - Teltow-Fläming III - Oberspreewald-Lausitz I;BB
+63;Frankfurt (Oder) - Oder-Spree;BB
+64;Cottbus - Spree-Neiße;BB
+65;Elbe-Elster - Oberspreewald-Lausitz II;BB
 66;Altmark;ST
-67;Börde – Jerichower Land;ST
+67;Börde - Jerichower Land;ST
 68;Harz;ST
 69;Magdeburg;ST
-70;Dessau – Wittenberg;ST
+70;Dessau - Wittenberg;ST
 71;Anhalt;ST
 72;Halle;ST
-73;Burgenland – Saalekreis;ST
+73;Burgenland - Saalekreis;ST
 74;Mansfeld;ST
 75;Berlin-Mitte;BE
 76;Berlin-Pankow;BE
 77;Berlin-Reinickendorf;BE
-78;Berlin-Spandau – Charlottenburg Nord;BE
+78;Berlin-Spandau - Charlottenburg Nord;BE
 79;Berlin-Steglitz-Zehlendorf;BE
 80;Berlin-Charlottenburg-Wilmersdorf;BE
 81;Berlin-Tempelhof-Schöneberg;BE
 82;Berlin-Neukölln;BE
-83;Berlin-Friedrichshain-Kreuzberg – Prenzlauer Berg Ost;BE
+83;Berlin-Friedrichshain-Kreuzberg - Prenzlauer Berg Ost;BE
 84;Berlin-Treptow-Köpenick;BE
 85;Berlin-Marzahn-Hellersdorf;BE
 86;Berlin-Lichtenberg;BE
@@ -90,7 +90,7 @@ Gebietsnummer;Gebietsname;GebietLandAbk
 89;Heinsberg;NW
 90;Düren;NW
 91;Rhein-Erft-Kreis I;NW
-92;Euskirchen – Rhein-Erft-Kreis II;NW
+92;Euskirchen - Rhein-Erft-Kreis II;NW
 93;Köln I;NW
 94;Köln II;NW
 95;Köln III;NW
@@ -99,55 +99,55 @@ Gebietsnummer;Gebietsname;GebietLandAbk
 98;Rhein-Sieg-Kreis II;NW
 99;Oberbergischer Kreis;NW
 100;Rheinisch-Bergischer Kreis;NW
-101;Leverkusen – Köln IV;NW
+101;Leverkusen - Köln IV;NW
 102;Wuppertal I;NW
-103;Solingen – Remscheid – Wuppertal II;NW
+103;Solingen - Remscheid - Wuppertal II;NW
 104;Mettmann I;NW
 105;Mettmann II;NW
 106;Düsseldorf I;NW
 107;Düsseldorf II;NW
 108;Neuss I;NW
 109;Mönchengladbach;NW
-110;Krefeld I – Neuss II;NW
+110;Krefeld I - Neuss II;NW
 111;Viersen;NW
 112;Kleve;NW
 113;Wesel I;NW
-114;Krefeld II – Wesel II;NW
+114;Krefeld II - Wesel II;NW
 115;Duisburg I;NW
 116;Duisburg II;NW
-117;Oberhausen – Wesel III;NW
-118;Mülheim – Essen I;NW
+117;Oberhausen - Wesel III;NW
+118;Mülheim - Essen I;NW
 119;Essen II;NW
 120;Essen III;NW
 121;Recklinghausen I;NW
 122;Recklinghausen II;NW
 123;Gelsenkirchen;NW
-124;Steinfurt I – Borken I;NW
-125;Bottrop – Recklinghausen III;NW
+124;Steinfurt I - Borken I;NW
+125;Bottrop - Recklinghausen III;NW
 126;Borken II;NW
-127;Coesfeld – Steinfurt II;NW
+127;Coesfeld - Steinfurt II;NW
 128;Steinfurt III;NW
 129;Münster;NW
 130;Warendorf;NW
 131;Gütersloh I;NW
-132;Bielefeld – Gütersloh II;NW
-133;Herford – Minden-Lübbecke II;NW
+132;Bielefeld - Gütersloh II;NW
+133;Herford - Minden-Lübbecke II;NW
 134;Minden-Lübbecke I;NW
 135;Lippe I;NW
-136;Höxter – Gütersloh III – Lippe II;NW
+136;Höxter - Gütersloh III - Lippe II;NW
 137;Paderborn;NW
-138;Hagen – Ennepe-Ruhr-Kreis I;NW
+138;Hagen - Ennepe-Ruhr-Kreis I;NW
 139;Ennepe-Ruhr-Kreis II;NW
 140;Bochum I;NW
-141;Herne – Bochum II;NW
+141;Herne - Bochum II;NW
 142;Dortmund I;NW
 143;Dortmund II;NW
 144;Unna I;NW
-145;Hamm – Unna II;NW
+145;Hamm - Unna II;NW
 146;Soest;NW
 147;Hochsauerlandkreis;NW
 148;Siegen-Wittgenstein;NW
-149;Olpe – Märkischer Kreis I;NW
+149;Olpe - Märkischer Kreis I;NW
 150;Märkischer Kreis II;NW
 151;Nordsachsen;SN
 152;Leipzig I;SN
@@ -158,25 +158,25 @@ Gebietsnummer;Gebietsname;GebietLandAbk
 157;Görlitz;SN
 158;Sächsische Schweiz-Osterzgebirge;SN
 159;Dresden I;SN
-160;Dresden II – Bautzen II;SN
+160;Dresden II - Bautzen II;SN
 161;Mittelsachsen;SN
 162;Chemnitz;SN
-163;Chemnitzer Umland – Erzgebirgskreis II;SN
+163;Chemnitzer Umland - Erzgebirgskreis II;SN
 164;Erzgebirgskreis I;SN
 165;Zwickau;SN
 166;Vogtlandkreis;SN
 167;Waldeck;HE
 168;Kassel;HE
-169;Werra-Meißner – Hersfeld-Rotenburg;HE
+169;Werra-Meißner - Hersfeld-Rotenburg;HE
 170;Schwalm-Eder;HE
 171;Marburg;HE
 172;Lahn-Dill;HE
 173;Gießen;HE
 174;Fulda;HE
-175;Main-Kinzig – Wetterau II – Schotten;HE
+175;Main-Kinzig - Wetterau II - Schotten;HE
 176;Hochtaunus;HE
 177;Wetterau I;HE
-178;Rheingau-Taunus – Limburg;HE
+178;Rheingau-Taunus - Limburg;HE
 179;Wiesbaden;HE
 180;Hanau;HE
 181;Main-Taunus;HE
@@ -187,14 +187,14 @@ Gebietsnummer;Gebietsname;GebietLandAbk
 186;Darmstadt;HE
 187;Odenwald;HE
 188;Bergstraße;HE
-189;Eichsfeld – Nordhausen – Kyffhäuserkreis;TH
-190;Eisenach – Wartburgkreis – Unstrut-Hainich-Kreis;TH
-191;Jena – Sömmerda – Weimarer Land I;TH
-192;Gotha – Ilm-Kreis;TH
-193;Erfurt – Weimar – Weimarer Land II;TH
-194;Gera – Greiz – Altenburger Land;TH
-195;Saalfeld-Rudolstadt – Saale-Holzland-Kreis – Saale-Orla-Kreis;TH
-196;Suhl – Schmalkalden-Meiningen – Hildburghausen – Sonneberg;TH
+189;Eichsfeld - Nordhausen - Kyffhäuserkreis;TH
+190;Eisenach - Wartburgkreis - Unstrut-Hainich-Kreis;TH
+191;Jena - Sömmerda - Weimarer Land I;TH
+192;Gotha - Ilm-Kreis;TH
+193;Erfurt - Weimar - Weimarer Land II;TH
+194;Gera - Greiz - Altenburger Land;TH
+195;Saalfeld-Rudolstadt - Saale-Holzland-Kreis - Saale-Orla-Kreis;TH
+196;Suhl - Schmalkalden-Meiningen - Hildburghausen - Sonneberg;TH
 197;Neuwied;RP
 198;Ahrweiler;RP
 199;Koblenz;RP
@@ -206,12 +206,12 @@ Gebietsnummer;Gebietsname;GebietLandAbk
 205;Mainz;RP
 206;Worms;RP
 207;Ludwigshafen/Frankenthal;RP
-208;Neustadt – Speyer;RP
+208;Neustadt - Speyer;RP
 209;Kaiserslautern;RP
 210;Pirmasens;RP
 211;Südpfalz;RP
 212;Altötting;BY
-213;Erding – Ebersberg;BY
+213;Erding - Ebersberg;BY
 214;Freising;BY
 215;Fürstenfeldbruck;BY
 216;Ingolstadt;BY
@@ -221,8 +221,8 @@ Gebietsnummer;Gebietsname;GebietLandAbk
 220;München-West/Mitte;BY
 221;München-Land;BY
 222;Rosenheim;BY
-223;Bad Tölz-Wolfratshausen – Miesbach;BY
-224;Starnberg – Landsberg am Lech;BY
+223;Bad Tölz-Wolfratshausen - Miesbach;BY
+224;Starnberg - Landsberg am Lech;BY
 225;Traunstein;BY
 226;Weilheim;BY
 227;Deggendorf;BY
@@ -266,24 +266,24 @@ Gebietsnummer;Gebietsname;GebietLandAbk
 265;Ludwigsburg;BW
 266;Neckar-Zaber;BW
 267;Heilbronn;BW
-268;Schwäbisch Hall – Hohenlohe;BW
-269;Backnang – Schwäbisch Gmünd;BW
-270;Aalen – Heidenheim;BW
+268;Schwäbisch Hall - Hohenlohe;BW
+269;Backnang - Schwäbisch Gmünd;BW
+270;Aalen - Heidenheim;BW
 271;Karlsruhe-Stadt;BW
 272;Karlsruhe-Land;BW
 273;Rastatt;BW
 274;Heidelberg;BW
 275;Mannheim;BW
-276;Odenwald – Tauber;BW
+276;Odenwald - Tauber;BW
 277;Rhein-Neckar;BW
-278;Bruchsal – Schwetzingen;BW
+278;Bruchsal - Schwetzingen;BW
 279;Pforzheim;BW
 280;Calw;BW
 281;Freiburg;BW
-282;Lörrach – Müllheim;BW
-283;Emmendingen – Lahr;BW
+282;Lörrach - Müllheim;BW
+283;Emmendingen - Lahr;BW
 284;Offenburg;BW
-285;Rottweil – Tuttlingen;BW
+285;Rottweil - Tuttlingen;BW
 286;Schwarzwald-Baar;BW
 287;Konstanz;BW
 288;Waldshut;BW
@@ -293,7 +293,7 @@ Gebietsnummer;Gebietsname;GebietLandAbk
 292;Biberach;BW
 293;Bodensee;BW
 294;Ravensburg;BW
-295;Zollernalb – Sigmaringen;BW
+295;Zollernalb - Sigmaringen;BW
 296;Saarbrücken;SL
 297;Saarlouis;SL
 298;St. Wendel;SL

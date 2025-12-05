@@ -1,27 +1,23 @@
-import { PrismaClient } from '@prisma/client';
-import * as fs from 'fs';
-import * as path from 'path';
-import { parse } from 'csv-parse/sync';
-
-const prisma = new PrismaClient();
+import dbModule from "./db";
+const { pool, disconnect } = dbModule;
+import * as fs from "fs";
+import * as path from "path";
+import { parse } from "csv-parse/sync";
 
 interface StateRow {
   GebietLandAbk: string;
   Gebietsname: string;
 }
-
 interface PartyRow {
   PartyID: string;
   Gruppenname: string;
   GruppennameLang: string;
 }
-
 interface ConstituencyRow {
   Gebietsnummer: string;
   Gebietsname: string;
   GebietLandAbk: string;
 }
-
 interface CandidateRow {
   Titel: string;
   Namenszusatz: string;
@@ -43,192 +39,165 @@ interface CandidateRow {
   State: string;
   Erststimmen: string;
 }
-
 interface StatePartyRow {
   GebietLandAbk: string;
   GruppennameKurz: string;
   Anzahl: string;
 }
 
-function readCsv<T>(filePath: string): T[] {
-  const content = fs.readFileSync(filePath, 'utf-8');
-  return parse(content, {
+function readCsv<T>(pathToFile: string): T[] {
+  const csv = fs.readFileSync(pathToFile, "utf-8");
+  return parse(csv, {
     columns: true,
-    delimiter: ';',
-    skip_empty_lines: true,
+    delimiter: ";",
     trim: true,
+    skip_empty_lines: true,
+    // Allow records with an unexpected number of columns (e.g. trailing semicolons)
+    relax_column_count: true,
   });
 }
 
-function parseFloat(value: string): number | null {
-  if (!value || value === '') return null;
-  const parsed = Number(value);
-  return isNaN(parsed) ? null : parsed;
-}
+// ELECTION_YEAR controls which set of CSV files to use (e.g. '2021' or '2025')
+const ELECTION_YEAR = process.env.ELECTION_YEAR || "2021";
+const DATA_DIR = path.join(__dirname, "..", "..", "data");
 
-function parseInt(value: string): number | null {
-  if (!value || value === '') return null;
-  const parsed = Number(value);
-  return isNaN(parsed) ? null : Math.floor(parsed);
+console.log(`Loading election data for ${ELECTION_YEAR}`);
+
+async function transactionalInsert(
+  label: string,
+  sql: (c: any) => Promise<void>
+): Promise<void> {
+  const client = await pool.connect();
+  try {
+    console.log(`→ Loading ${label} ...`);
+    await client.query("BEGIN");
+    await sql(client);
+    await client.query("COMMIT");
+    console.log(`✓ ${label} loaded.`);
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error(`⚠ Failed loading ${label}:`, err);
+  } finally {
+    client.release();
+  }
 }
 
 async function loadStates() {
-  console.log('Loading states...');
-  const csvPath = path.join(__dirname, '..', '..', 'Bundestagswahl', 'outputs', 'states.csv');
-  const rows = readCsv<StateRow>(csvPath);
-  
-  for (const row of rows) {
-    await prisma.state.upsert({
-      where: { id: row.GebietLandAbk },
-      update: { name: row.Gebietsname },
-      create: {
-        id: row.GebietLandAbk,
-        name: row.Gebietsname,
-      },
-    });
-  }
-  console.log(`Loaded ${rows.length} states`);
+  const p = path.join(DATA_DIR, `states${ELECTION_YEAR}.csv`);
+  const rows = readCsv<StateRow>(p);
+  await transactionalInsert("States", async (c) => {
+    for (const r of rows) {
+      await c.query(
+        `INSERT INTO states (id, name)
+         VALUES ($1,$2)
+         ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name`,
+        [r.GebietLandAbk, r.Gebietsname]
+      );
+    }
+  });
 }
 
 async function loadParties() {
-  console.log('Loading parties...');
-  const csvPath = path.join(__dirname, '..', '..', 'Bundestagswahl', 'outputs', 'parties.csv');
-  const rows = readCsv<PartyRow>(csvPath);
-  
-  const seenShortNames = new Set<string>();
-  
-  for (const row of rows) {
-    // Skip duplicates (e.g., CDU appears multiple times)
-    if (seenShortNames.has(row.Gruppenname)) {
-      console.log(`  Skipping duplicate party: ${row.Gruppenname}`);
-      continue;
+  const p = path.join(DATA_DIR, `parties${ELECTION_YEAR}.csv`);
+  const rows = readCsv<PartyRow>(p);
+  const seen = new Set<string>();
+
+  await transactionalInsert("Parties", async (c) => {
+    for (const r of rows) {
+      if (seen.has(r.Gruppenname)) continue;
+      seen.add(r.Gruppenname);
+      await c.query(
+        `INSERT INTO parties (short_name, long_name)
+         VALUES ($1,$2)
+         ON CONFLICT (short_name)
+         DO UPDATE SET long_name = EXCLUDED.long_name`,
+        [r.Gruppenname, r.GruppennameLang]
+      );
     }
-    seenShortNames.add(row.Gruppenname);
-    
-    await prisma.party.upsert({
-      where: { shortName: row.Gruppenname },
-      update: {
-        id: Number(row.PartyID),
-        longName: row.GruppennameLang,
-      },
-      create: {
-        id: Number(row.PartyID),
-        shortName: row.Gruppenname,
-        longName: row.GruppennameLang,
-      },
-    });
-  }
-  console.log(`Loaded ${seenShortNames.size} unique parties (${rows.length} total rows)`);
+  });
 }
 
 async function loadConstituencies() {
-  console.log('Loading constituencies...');
-  const csvPath = path.join(__dirname, '..', '..', 'Bundestagswahl', 'outputs', 'wahlkreis.csv');
-  const rows = readCsv<ConstituencyRow>(csvPath);
-  
-  for (const row of rows) {
-    await prisma.constituency.upsert({
-      where: { number: Number(row.Gebietsnummer) },
-      update: {
-        name: row.Gebietsname,
-        stateId: row.GebietLandAbk,
-      },
-      create: {
-        number: Number(row.Gebietsnummer),
-        name: row.Gebietsname,
-        stateId: row.GebietLandAbk,
-      },
-    });
-  }
-  console.log(`Loaded ${rows.length} constituencies`);
+  const p = path.join(DATA_DIR, `wahlkreis${ELECTION_YEAR}.csv`);
+  const rows = readCsv<ConstituencyRow>(p);
+  await transactionalInsert("Constituencies", async (c) => {
+    for (const r of rows) {
+      await c.query(
+        `INSERT INTO constituencies (number, name, state_id)
+         VALUES ($1,$2,$3)
+         ON CONFLICT (number)
+         DO UPDATE SET name = EXCLUDED.name, state_id = EXCLUDED.state_id`,
+        [Number(r.Gebietsnummer), r.Gebietsname, r.GebietLandAbk]
+      );
+    }
+  });
 }
 
 async function loadCandidates() {
-  console.log('Loading candidates...');
-  const csvPath = path.join(__dirname, '..', '..', 'Bundestagswahl', 'outputs', 'candidates.csv');
-  const rows = readCsv<CandidateRow>(csvPath);
-  
-  // Clear existing candidates
-  await prisma.candidate.deleteMany({});
-  
-  let count = 0;
-  for (const row of rows) {
-    try {
-      await prisma.candidate.create({
-        data: {
-          title: row.Titel || null,
-          nameAddition: row.Namenszusatz || null,
-          lastName: row.Nachname,
-          firstName: row.Vornamen,
-          artistName: row.Künstlername || null,
-          gender: row.Geschlecht || null,
-          birthYear: parseInt(row.Geburtsjahr),
-          postalCode: row.PLZ || null,
-          city: row.Wohnort || null,
-          cityStateAbbr: row.WohnortLandAbk || null,
-          birthPlace: row.Geburtsort || null,
-          nationality: row.Staatsangehörigkeit || null,
-          profession: row.Beruf || null,
-          stateId: row.GebietLandAbk,
-          partyShortName: row.GruppennameKurz || null,
-          listPosition: parseFloat(row.Listenplatz),
-          constituencyNum: parseInt(row.Wahlkreis),
-          stateName: row.State || null,
-          firstVotes: parseFloat(row.Erststimmen),
-        },
-      });
-      count++;
-      if (count % 500 === 0) {
-        console.log(`  Loaded ${count} candidates...`);
-      }
-    } catch (error) {
-      console.error(`Error loading candidate ${row.Vornamen} ${row.Nachname}:`, error);
+  const p = path.join(DATA_DIR, `candidates${ELECTION_YEAR}.csv`);
+  const rows = readCsv<CandidateRow>(p);
+  await transactionalInsert("Candidates", async (c) => {
+    await c.query("DELETE FROM candidates");
+    let i = 0;
+    for (const r of rows) {
+      await c.query(
+        `INSERT INTO candidates (title, name_addition, last_name, first_name, artist_name, gender,
+          birth_year, postal_code, city, city_state_abbr, birth_place,
+          profession, state_id, party_short_name, list_position,
+          constituency_num, state_name, first_votes)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
+        [
+          r.Titel || null,
+          r.Namenszusatz || null,
+          r.Nachname,
+          r.Vornamen,
+          r.Künstlername || null,
+          r.Geschlecht || null,
+          r.Geburtsjahr ? Number(r.Geburtsjahr) : null,
+          r.PLZ || null,
+          r.Wohnort || null,
+          r.WohnortLandAbk || null,
+          r.Geburtsort || null,
+          r.Beruf || null,
+          r.GebietLandAbk,
+          r.GruppennameKurz || null,
+          r.Listenplatz ? Number(r.Listenplatz) : null,
+          r.Wahlkreis ? Number(r.Wahlkreis) : null,
+          r.State || null,
+          r.Erststimmen ? Number(r.Erststimmen) : null,
+        ]
+      );
+      if (++i % 1000 === 0) process.stdout.write(`\r  inserted ${i}`);
     }
-  }
-  console.log(`Loaded ${count} candidates`);
+  });
 }
 
 async function loadStateParties() {
-  console.log('Loading state parties...');
-  const csvPath = path.join(__dirname, '..', '..', 'Bundestagswahl', 'outputs', 'state_parties.csv');
-  const rows = readCsv<StatePartyRow>(csvPath);
-  
-  // Clear existing state parties
-  await prisma.stateParty.deleteMany({});
-  
-  for (const row of rows) {
-    try {
-      await prisma.stateParty.create({
-        data: {
-          stateId: row.GebietLandAbk,
-          partyShortName: row.GruppennameKurz,
-          secondVotes: parseFloat(row.Anzahl) || 0,
-        },
-      });
-    } catch (error) {
-      console.error(`Error loading state party ${row.GebietLandAbk} - ${row.GruppennameKurz}:`, error);
+  const p = path.join(DATA_DIR, `state_parties${ELECTION_YEAR}.csv`);
+  const rows = readCsv<StatePartyRow>(p);
+  await transactionalInsert("State Parties", async (c) => {
+    for (const r of rows) {
+      await c.query(
+        `INSERT INTO state_parties (state_id, party_short_name, second_votes)
+       VALUES ($1,$2,$3)
+       ON CONFLICT (state_id, party_short_name)
+       DO UPDATE SET second_votes = EXCLUDED.second_votes`,
+        [r.GebietLandAbk, r.GruppennameKurz, Number(r.Anzahl) || 0]
+      );
     }
-  }
-  console.log(`Loaded ${rows.length} state party records`);
+  });
 }
 
 async function main() {
   try {
-    console.log('Starting CSV data import...\n');
-    
     await loadStates();
     await loadParties();
     await loadConstituencies();
     await loadCandidates();
     await loadStateParties();
-    
-    console.log('\n✅ All CSV data loaded successfully!');
-  } catch (error) {
-    console.error('Error loading CSV data:', error);
-    throw error;
+    console.log("\n✅ CSV data loaded successfully");
   } finally {
-    await prisma.$disconnect();
+    await disconnect();
   }
 }
-
 main();

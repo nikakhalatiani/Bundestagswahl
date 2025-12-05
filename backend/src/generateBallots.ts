@@ -1,32 +1,69 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import dbModule from "./db";
+const { pool, disconnect } = dbModule;
 
 interface BallotGenerationOptions {
-  constituencyNumber?: number; // Optional: Generate only for specific constituency
-  batchSize?: number; // Number of ballots to insert at once
+  constituencyNumber?: number; // Optional: limit generation to one constituency
+  batchSize?: number; // Number of ballots inserted per DB batch
+}
+
+async function insertBallotsBatch(batch: any[]) {
+  // Inserts a batch of ballots in one SQL statement (very fast)
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const placeholders = batch
+      .map(
+        (_, i) =>
+          `($${i * 6 + 1},$${i * 6 + 2},$${i * 6 + 3},$${i * 6 + 4},$${i * 6 + 5},$${i * 6 + 6})`
+      )
+      .join(",");
+
+    const values = batch.flatMap((b) => [
+      b.constituencyNum,
+      b.voterId,
+      b.firstVoteCandidateId,
+      b.secondVoteParty,
+      b.isFirstVoteValid,
+      b.isSecondVoteValid,
+    ]);
+
+    await client.query(
+      `INSERT INTO ballots
+       (constituency_num, voter_id, first_vote_candidate_id, second_vote_party, 
+        is_first_vote_valid, is_second_vote_valid)
+       VALUES ${placeholders}`,
+      values
+    );
+
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("⚠ Batch insert failed:", err);
+  } finally {
+    client.release();
+  }
 }
 
 /**
- * Generates individual ballots from aggregated vote data.
- * The generated ballots, when counted, will match the original aggregated results.
+ * Generates individual ballots that statistically reflect aggregated results.
+ * Uses batched inserts for speed.
  */
 async function generateBallots(options: BallotGenerationOptions = {}) {
   const { constituencyNumber, batchSize = 5000 } = options;
 
-  console.log('Starting ballot generation...\n');
+  console.log("Starting ballot generation...\n");
 
-  // Get constituencies to process
-  const constituencies = constituencyNumber
-    ? await prisma.constituency.findMany({
-        where: { number: constituencyNumber },
-      })
-    : await prisma.constituency.findMany({
-        orderBy: { number: 'asc' },
-      });
+  const constituenciesRes = constituencyNumber
+    ? await pool.query("SELECT * FROM constituencies WHERE number = $1", [
+        constituencyNumber,
+      ])
+    : await pool.query("SELECT * FROM constituencies ORDER BY number ASC");
+
+  const constituencies = constituenciesRes.rows;
 
   if (constituencies.length === 0) {
-    console.log('No constituencies found.');
+    console.log("No constituencies found — exiting.");
     return;
   }
 
@@ -37,92 +74,85 @@ async function generateBallots(options: BallotGenerationOptions = {}) {
   for (const constituency of constituencies) {
     console.log(`\n--- Constituency ${constituency.number}: ${constituency.name} ---`);
 
-    // Delete existing ballots for this constituency
-    const deleted = await prisma.ballot.deleteMany({
-      where: { constituencyNum: constituency.number },
-    });
-    console.log(`Deleted ${deleted.count} existing ballots`);
+    await pool.query("DELETE FROM ballots WHERE constituency_num = $1", [
+      constituency.number,
+    ]);
 
-    // Get all candidates in this constituency with their first votes
-    const candidates = await prisma.candidate.findMany({
-      where: {
-        constituencyNum: constituency.number,
-        firstVotes: { not: null },
-      },
-      include: {
-        party: true,
-      },
-      orderBy: { id: 'asc' },
-    });
+    const candidatesRes = await pool.query(
+      `SELECT c.*, p.short_name AS party_short_name
+       FROM candidates c
+       LEFT JOIN parties p ON p.short_name = c.party_short_name
+       WHERE c.constituency_num = $1 AND c.first_votes IS NOT NULL
+       ORDER BY c.id ASC`,
+      [constituency.number]
+    );
+    const candidates = candidatesRes.rows;
 
     if (candidates.length === 0) {
-      console.log('No candidates with first votes found.');
+      console.log("No candidates with first votes found.");
       continue;
     }
 
-    console.log(`Found ${candidates.length} candidates with first votes`);
-
-    // Calculate total first votes
+    // --- Compute distributions ---
     const totalFirstVotes = candidates.reduce(
-      (sum, c) => sum + (c.firstVotes || 0),
+      (sum, c) => sum + (Number(c.first_votes) || 0),
       0
     );
-    console.log(`Total first votes to generate: ${totalFirstVotes}`);
+    console.log(`Total first votes to generate: ${totalFirstVotes.toLocaleString()}`);
 
-    // Get second vote distribution for this constituency's state
-    const stateParties = await prisma.stateParty.findMany({
-      where: { stateId: constituency.stateId },
-      include: { party: true },
-    });
-
-    // Calculate total second votes (using proportional distribution based on state totals)
+    const statePartiesRes = await pool.query(
+      `SELECT sp.*, p.short_name AS party_short_name
+       FROM state_parties sp
+       LEFT JOIN parties p ON p.short_name = sp.party_short_name
+       WHERE sp.state_id = $1`,
+      [constituency.state_id || constituency.stateId]
+    );
+    const stateParties = statePartiesRes.rows;
     const totalSecondVotesInState = stateParties.reduce(
-      (sum, sp) => sum + sp.secondVotes,
+      (sum, sp) => sum + (Number(sp.second_votes) || 0),
       0
     );
 
-    // We'll generate approximately the same number of ballots as first votes
-    // and distribute second votes proportionally
     const targetBallotCount = Math.floor(totalFirstVotes);
-    console.log(`Target ballot count: ${targetBallotCount}`);
+    console.log(`Target ballot count: ${targetBallotCount.toLocaleString()}`);
 
-    // Create weighted arrays for sampling
-    const firstVoteDistribution: Array<{ candidateId: number; party: string | null }> = [];
-    candidates.forEach((candidate) => {
-      const votes = Math.floor(candidate.firstVotes || 0);
+    // Build weighted arrays for randomization
+    const firstVoteDistribution: Array<{ candidateId: number; party: string | null }> =
+      [];
+    candidates.forEach((c) => {
+      const votes = Math.floor(c.first_votes || 0);
       for (let i = 0; i < votes; i++) {
         firstVoteDistribution.push({
-          candidateId: candidate.id,
-          party: candidate.partyShortName,
+          candidateId: c.id,
+          party: c.party_short_name,
         });
       }
     });
 
-    // Shuffle the first vote distribution for randomization
     shuffleArray(firstVoteDistribution);
 
-    // Create second vote distribution based on state-level results
     const secondVoteDistribution: Array<string | null> = [];
-    stateParties.forEach((stateParty) => {
-      const proportion = stateParty.secondVotes / totalSecondVotesInState;
-      const votesForThisConstituency = Math.floor(proportion * targetBallotCount);
-      
+    stateParties.forEach((sp) => {
+      const proportion = sp.second_votes / totalSecondVotesInState;
+      const votesForThisConstituency = Math.floor(
+        proportion * targetBallotCount
+      );
       for (let i = 0; i < votesForThisConstituency; i++) {
-        secondVoteDistribution.push(stateParty.partyShortName);
+        secondVoteDistribution.push(sp.party_short_name);
       }
     });
 
-    // Fill remaining ballots with null (invalid votes) if needed
     while (secondVoteDistribution.length < firstVoteDistribution.length) {
       secondVoteDistribution.push(null);
     }
-
-    // Shuffle the second vote distribution
     shuffleArray(secondVoteDistribution);
 
-    // Generate ballots in batches
-    const ballots = [];
-    const maxBallots = Math.min(firstVoteDistribution.length, targetBallotCount);
+    // --- Ballot generation + batched insert ---
+    const ballots: any[] = [];
+    const maxBallots = Math.min(
+      firstVoteDistribution.length,
+      targetBallotCount
+    );
 
     for (let i = 0; i < maxBallots; i++) {
       const firstVote = firstVoteDistribution[i];
@@ -132,124 +162,103 @@ async function generateBallots(options: BallotGenerationOptions = {}) {
         constituencyNum: constituency.number,
         voterId: i + 1,
         firstVoteCandidateId: firstVote.candidateId,
-        secondVoteParty: secondVoteParty,
+        secondVoteParty,
         isFirstVoteValid: true,
         isSecondVoteValid: secondVoteParty !== null,
       });
 
-      // Insert in batches
       if (ballots.length >= batchSize) {
-        await prisma.ballot.createMany({
-          data: ballots,
-        });
+        await insertBallotsBatch(ballots);
         totalBallotsGenerated += ballots.length;
-        ballots.length = 0; // Clear the array
-        process.stdout.write(`\r  Generated ${totalBallotsGenerated} ballots...`);
+        ballots.length = 0;
+        process.stdout.write(
+          `\r  Inserted ${totalBallotsGenerated.toLocaleString()} ballots`
+        );
       }
     }
 
-    // Insert remaining ballots
     if (ballots.length > 0) {
-      await prisma.ballot.createMany({
-        data: ballots,
-      });
+      await insertBallotsBatch(ballots);
       totalBallotsGenerated += ballots.length;
     }
 
-    console.log(`\n  ✓ Generated ${maxBallots} ballots for constituency ${constituency.number}`);
+    console.log(
+      `\n  ✓ Generated ${maxBallots.toLocaleString()} ballots for constituency ${constituency.number}`
+    );
 
-    // Verify the results
     await verifyConstituency(constituency.number);
   }
 
-  console.log(`\n\n✅ Total ballots generated: ${totalBallotsGenerated}`);
+  console.log(`\n\n✅ Total ballots generated: ${totalBallotsGenerated.toLocaleString()}`);
 }
 
-/**
- * Verifies that the generated ballots match the original aggregated data
- */
+// --- Helpers -----------------------------
+
 async function verifyConstituency(constituencyNum: number) {
-  // Count first votes from ballots
-  const ballotFirstVotes = await prisma.ballot.groupBy({
-    by: ['firstVoteCandidateId'],
-    where: {
-      constituencyNum,
-      isFirstVoteValid: true,
-    },
-    _count: true,
-  });
+  const ballotFirstVotesRes = await pool.query(
+    `SELECT first_vote_candidate_id, COUNT(*)::int AS cnt
+     FROM ballots
+     WHERE constituency_num = $1 AND is_first_vote_valid = true
+     GROUP BY first_vote_candidate_id`,
+    [constituencyNum]
+  );
+  const ballotFirstVotes = ballotFirstVotesRes.rows;
 
-  // Get original first votes
-  const candidates = await prisma.candidate.findMany({
-    where: {
-      constituencyNum,
-      firstVotes: { not: null },
-    },
-    select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      firstVotes: true,
-    },
-  });
+  const candidatesRes = await pool.query(
+    `SELECT id, first_name, last_name, first_votes
+     FROM candidates
+     WHERE constituency_num = $1 AND first_votes IS NOT NULL`,
+    [constituencyNum]
+  );
+  const candidates = candidatesRes.rows;
 
-  console.log('\n  Verification (First Votes):');
-  let isValid = true;
-  
-  for (const candidate of candidates) {
-    const ballotCount = ballotFirstVotes.find(
-      (b) => b.firstVoteCandidateId === candidate.id
-    )?._count || 0;
-    const originalVotes = Math.floor(candidate.firstVotes || 0);
-    const match = ballotCount === originalVotes;
-    
-    if (!match) {
-      isValid = false;
+  let valid = true;
+  for (const c of candidates) {
+    const ballotsCount =
+      ballotFirstVotes.find((b) => b.first_vote_candidate_id === c.id)?.cnt ||
+      0;
+    const expected = Math.floor(c.first_votes || 0);
+    if (ballotsCount !== expected) {
+      valid = false;
       console.log(
-        `    ⚠ ${candidate.firstName} ${candidate.lastName}: Generated ${ballotCount}, Expected ${originalVotes}`
+        `    ⚠ ${c.first_name} ${c.last_name}: Generated ${ballotsCount}, Expected ${expected}`
       );
     }
   }
-
-  if (isValid) {
-    console.log('    ✓ All first votes match!');
+  if (valid) {
+    console.log("    ✓ First vote counts verified");
   }
 }
 
-/**
- * Fisher-Yates shuffle algorithm
- */
-function shuffleArray<T>(array: T[]): void {
-  for (let i = array.length - 1; i > 0; i--) {
+// Fisher–Yates shuffle
+function shuffleArray<T>(arr: T[]): void {
+  for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
+    [arr[i], arr[j]] = [arr[j], arr[i]];
   }
 }
 
-/**
- * Main function
- */
+// --- Entry Point -------------------------
+
 async function main() {
   const args = process.argv.slice(2);
-  const constituencyArg = args.find((arg) => arg.startsWith('--constituency='));
-  
+  const constituencyArg = args.find((a) => a.startsWith("--constituency="));
   const options: BallotGenerationOptions = {};
 
   if (constituencyArg) {
-    const constituencyNum = parseInt(constituencyArg.split('=')[1]);
-    if (!isNaN(constituencyNum)) {
-      options.constituencyNumber = constituencyNum;
-      console.log(`Generating ballots only for constituency ${constituencyNum}\n`);
+    const num = parseInt(constituencyArg.split("=")[1]);
+    if (!isNaN(num)) {
+      options.constituencyNumber = num;
+      console.log(`Generating ballots only for constituency ${num}`);
     }
   }
 
   try {
     await generateBallots(options);
-  } catch (error) {
-    console.error('Error generating ballots:', error);
-    throw error;
+  } catch (err) {
+    console.error("Error generating ballots:", err);
   } finally {
-    await prisma.$disconnect();
+    await disconnect();
   }
 }
 

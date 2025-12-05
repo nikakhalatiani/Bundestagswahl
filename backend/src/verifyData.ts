@@ -1,61 +1,66 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import dbModule from './db';
+const { pool, disconnect } = dbModule;
 
 async function main() {
   console.log('Database Statistics:\n');
-  
-  const stateCount = await prisma.state.count();
-  console.log(`✓ States: ${stateCount}`);
-  
-  const partyCount = await prisma.party.count();
-  console.log(`✓ Parties: ${partyCount}`);
-  
-  const constituencyCount = await prisma.constituency.count();
-  console.log(`✓ Constituencies: ${constituencyCount}`);
-  
-  const candidateCount = await prisma.candidate.count();
-  console.log(`✓ Candidates: ${candidateCount}`);
-  
-  const statePartyCount = await prisma.stateParty.count();
-  console.log(`✓ State Party Results: ${statePartyCount}`);
-  
+
+  const stateCountRes = await pool.query('SELECT COUNT(*)::int as cnt FROM states');
+  console.log(`✓ States: ${stateCountRes.rows[0].cnt}`);
+
+  const partyCountRes = await pool.query('SELECT COUNT(*)::int as cnt FROM parties');
+  console.log(`✓ Parties: ${partyCountRes.rows[0].cnt}`);
+
+  const constituencyCountRes = await pool.query('SELECT COUNT(*)::int as cnt FROM constituencies');
+  console.log(`✓ Constituencies: ${constituencyCountRes.rows[0].cnt}`);
+
+  const candidateCountRes = await pool.query('SELECT COUNT(*)::int as cnt FROM candidates');
+  console.log(`✓ Candidates: ${candidateCountRes.rows[0].cnt}`);
+
+  const statePartyCountRes = await pool.query('SELECT COUNT(*)::int as cnt FROM state_parties');
+  console.log(`✓ State Party Results: ${statePartyCountRes.rows[0].cnt}`);
+
   console.log('\n--- Sample Data ---\n');
-  
+
   // Sample states
-  const states = await prisma.state.findMany({ take: 3 });
+  const states = await pool.query('SELECT id, name FROM states LIMIT 3');
   console.log('Sample States:');
-  states.forEach(s => console.log(`  ${s.id}: ${s.name}`));
-  
+  states.rows.forEach((s: any) => console.log(`  ${s.id}: ${s.name}`));
+
   // Sample parties
-  const parties = await prisma.party.findMany({ take: 5, orderBy: { id: 'asc' } });
+  const parties = await pool.query('SELECT id, short_name, long_name FROM parties ORDER BY id ASC LIMIT 5');
   console.log('\nSample Parties:');
-  parties.forEach(p => console.log(`  ${p.shortName}: ${p.longName}`));
-  
+  parties.rows.forEach((p: any) => console.log(`  ${p.short_name}: ${p.long_name}`));
+
   // Sample candidates with party info
-  const candidates = await prisma.candidate.findMany({
-    take: 3,
-    where: { partyShortName: { not: null } },
-    include: { party: true, state: true }
-  });
+  const candidates = await pool.query(`
+    SELECT c.*, p.short_name as party_short_name, s.name as state_name
+    FROM candidates c
+    LEFT JOIN parties p ON p.short_name = c.party_short_name
+    LEFT JOIN states s ON s.id = c.state_id
+    WHERE c.party_short_name IS NOT NULL
+    LIMIT 3
+  `);
   console.log('\nSample Candidates:');
-  candidates.forEach(c => 
-    console.log(`  ${c.firstName} ${c.lastName} (${c.party?.shortName}) - ${c.state.name}`)
+  candidates.rows.forEach((c: any) =>
+    console.log(`  ${c.first_name} ${c.last_name} (${c.party_short_name}) - ${c.state_name}`)
   );
-  
+
   // Top parties by second votes
-  const topParties = await prisma.stateParty.groupBy({
-    by: ['partyShortName'],
-    _sum: { secondVotes: true },
-    orderBy: { _sum: { secondVotes: 'desc' } },
-    take: 5
-  });
+  const topParties = await pool.query(`
+    SELECT party_short_name, SUM(second_votes)::int as total
+    FROM state_parties
+    GROUP BY party_short_name
+    ORDER BY total DESC
+    LIMIT 5
+  `);
   console.log('\nTop 5 Parties by Second Votes:');
-  topParties.forEach(p => 
-    console.log(`  ${p.partyShortName}: ${p._sum.secondVotes?.toLocaleString()} votes`)
+  topParties.rows.forEach((p: any) =>
+    console.log(`  ${p.party_short_name}: ${p.total.toLocaleString()} votes`)
   );
 }
 
 main()
   .catch(console.error)
-  .finally(() => prisma.$disconnect());
+  .finally(async () => {
+    await disconnect();
+  });

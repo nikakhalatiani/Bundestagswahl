@@ -10,7 +10,7 @@
 
 ## Code
 
-This repository contains a small example scaffold: a TypeScript + React frontend and a TypeScript Node backend using Prisma + PostgreSQL.
+This repository contains a small example scaffold: a TypeScript + React frontend and a TypeScript Node backend using Drizzle ORM + PostgreSQL.
 
 Goals:
 - Repeatable onboarding using Docker Compose for the database and backend.
@@ -18,7 +18,7 @@ Goals:
 
 Structure
 - `frontend/` — Vite + React + TypeScript app
-- `backend/` — Express + TypeScript backend with Prisma
+- `backend/` — Express + TypeScript backend with Drizzle ORM
 - `docker-compose.yml` — starts Postgres and the backend for local development
 
 Quick start (Windows PowerShell)
@@ -33,10 +33,10 @@ docker-compose up -d --build
 cd frontend; npm install; cd ..
 cd backend; npm install; cd ..
 
-# Generate Prisma client and run migrations (backend needs prisma installed)
+# Generate Drizzle artifacts and run migrations (backend needs drizzle-kit installed)
 cd backend
-npm run prisma:generate
-npm run prisma:migrate
+npm run drizzle:generate
+npm run drizzle:migrate
 cd ..
 
 # Start the frontend dev server
@@ -48,7 +48,7 @@ cd frontend; npm run dev
 Notes
 - The backend exposes basic endpoints at `/api/items` and `/api/health`.
 - Edit `backend/.env.example` and copy it to `backend/.env` if you need to change the database URL.
-- The project uses Prisma for schema management and type-safe DB access. The Prisma schema is in `backend/prisma/schema.prisma`.
+- The project uses Drizzle ORM for schema management and type-safe DB access. Drizzle schema/migrations live in `backend/drizzle` (or use `drizzle-kit` commands to generate/migrate).
 
 ## Database Setup & CSV Data Loading
 
@@ -84,7 +84,7 @@ The `verify` script displays database statistics and sample data, including top 
 
 ### Database Schema Overview
 
-The simplified schema (`backend/prisma/schema.prisma`) directly maps to the CSV structure:
+The simplified schema (Drizzle migration/schema files) should map to the CSV structure:
 - `State`: Uses state abbreviation (e.g., "BB", "NW") as primary key
 - `Party`: Indexed by PartyID with unique shortName (e.g., "SPD", "CDU")
 - `Constituency`: Uses constituency number as primary key
