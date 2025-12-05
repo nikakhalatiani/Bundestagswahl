@@ -143,9 +143,9 @@ async function loadCandidates() {
       await c.query(
         `INSERT INTO candidates (title, name_addition, last_name, first_name, artist_name, gender,
           birth_year, postal_code, city, city_state_abbr, birth_place,
-          profession, state_id, party_short_name, list_position,
-          constituency_num, state_name, first_votes)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
+          profession, party_short_name, list_position,
+          constituency_num, first_votes)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
         [
           r.Titel || null,
           r.Namenszusatz || null,
@@ -159,11 +159,9 @@ async function loadCandidates() {
           r.WohnortLandAbk || null,
           r.Geburtsort || null,
           r.Beruf || null,
-          r.GebietLandAbk,
           r.GruppennameKurz || null,
           r.Listenplatz ? Number(r.Listenplatz) : null,
           r.Wahlkreis ? Number(r.Wahlkreis) : null,
-          r.State || null,
           r.Erststimmen ? Number(r.Erststimmen) : null,
         ]
       );

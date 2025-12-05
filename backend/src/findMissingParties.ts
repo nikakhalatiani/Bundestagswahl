@@ -11,7 +11,7 @@ interface PartyRow {
 }
 
 // ELECTION_YEAR same as loader
-const ELECTION_YEAR = process.env.ELECTION_YEAR || "2021";
+const ELECTION_YEAR = process.env.ELECTION_YEAR || "2025";
 const DATA_DIR = path.join(__dirname, "..", "..", "data");
 const csvPath = path.join(DATA_DIR, `parties${ELECTION_YEAR}.csv`);
 

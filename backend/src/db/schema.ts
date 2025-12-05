@@ -48,9 +48,6 @@ export const candidates = pgTable("candidates", {
   city_state_abbr: text("city_state_abbr"),
   birth_place: text("birth_place"),
   profession: text("profession"),
-  state_id: varchar("state_id", { length: 5 })
-    .notNull()
-    .references(() => states.id, { onDelete: "restrict", onUpdate: "cascade" }),
   party_short_name: varchar("party_short_name", { length: 120 }).references(
     () => parties.short_name,
     { onDelete: "set null", onUpdate: "cascade" }
@@ -60,7 +57,6 @@ export const candidates = pgTable("candidates", {
     () => constituencies.number,
     { onDelete: "set null", onUpdate: "cascade" }
   ),
-  state_name: text("state_name"),
   first_votes: doublePrecision("first_votes"),
 });
 

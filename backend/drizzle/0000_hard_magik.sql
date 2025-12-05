@@ -23,11 +23,9 @@ CREATE TABLE "candidates" (
 	"city_state_abbr" text,
 	"birth_place" text,
 	"profession" text,
-	"state_id" varchar(5) NOT NULL,
 	"party_short_name" varchar(120),
 	"list_position" double precision,
 	"constituency_num" integer,
-	"state_name" text,
 	"first_votes" double precision
 );
 --> statement-breakpoint
@@ -56,7 +54,6 @@ CREATE TABLE "states" (
 --> statement-breakpoint
 ALTER TABLE "ballots" ADD CONSTRAINT "ballots_constituency_num_constituencies_number_fk" FOREIGN KEY ("constituency_num") REFERENCES "public"."constituencies"("number") ON DELETE restrict ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "ballots" ADD CONSTRAINT "ballots_first_vote_candidate_id_candidates_id_fk" FOREIGN KEY ("first_vote_candidate_id") REFERENCES "public"."candidates"("id") ON DELETE set null ON UPDATE cascade;--> statement-breakpoint
-ALTER TABLE "candidates" ADD CONSTRAINT "candidates_state_id_states_id_fk" FOREIGN KEY ("state_id") REFERENCES "public"."states"("id") ON DELETE restrict ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "candidates" ADD CONSTRAINT "candidates_party_short_name_parties_short_name_fk" FOREIGN KEY ("party_short_name") REFERENCES "public"."parties"("short_name") ON DELETE set null ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "candidates" ADD CONSTRAINT "candidates_constituency_num_constituencies_number_fk" FOREIGN KEY ("constituency_num") REFERENCES "public"."constituencies"("number") ON DELETE set null ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "constituencies" ADD CONSTRAINT "constituencies_state_id_states_id_fk" FOREIGN KEY ("state_id") REFERENCES "public"."states"("id") ON DELETE restrict ON UPDATE cascade;--> statement-breakpoint
