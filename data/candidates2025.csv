@@ -152,7 +152,7 @@ Dr.;;Babendererde;Cornell-Anette;;w;1971;21423;Winsen (Luhe);NI;Neumünster;Hist
 ;;Bader;Susanne Doris;;w;1956;22765;Hamburg;HH;Wernau;Erzieherin;MLPD;5.0;;
 ;;Badum;Lisa Hildegard;;w;1983;91301;Forchheim;BY;Forchheim;Mitglied des Deutschen Bundestages;GRÜNE;5.0;235.0;20762.0
 ;;Badura;Jörg;;m;1961;51375;Leverkusen;NW;Munster;Rentner;FREIE WÄHLER;;100.0;1984.0
-;;Baerbock;Annalena Charlotte Alma;;w;1980;14467;Potsdam;BB;Hannover;MdB, Völkerrechtlerin;GRÜNE/B 90;1.0;61.0;
+;;Baerbock;Annalena Charlotte Alma;;w;1980;14467;Potsdam;BB;Hannover;MdB, Völkerrechtlerin;GRÜNE;1.0;61.0;31619.0
 ;;Baetke;Stefan;;m;1980;23936;Grevesmühlen;MV;Grevesmühlen;rechtl. Betreuer;SPD;8.0;;
 ;;Baghaei;Faraz;;m;1988;40223;Düsseldorf;NW;Teheran, Iran;Theaterschaffender;MERA25;6.0;;
 ;;Bahr;Ulrike;;w;1964;86157;Augsburg;BY;Nördlingen;Mitglied des Deutschen Bundestages;SPD;20.0;251.0;20701.0
@@ -1586,7 +1586,7 @@ Dr.;;Horn;Hans Werner;;m;1953;77654;Offenburg;BW;Waldbröl;Professor i. R.;BSW;1
 ;;Hostert-Hack;Carolin;;w;1996;54616;Winterspelt;RP;Prüm;Theologin;CDU;28.0;;
 ;;Housseinoglu;Cihan Cengiz;;m;1987;58093;Hagen;NW;Hagen;Angestellter im öffentlichen Dienst;Die Gerechtigkeitspartei - Team Todenhöfer;20.0;;
 ;;Howad;Niklas;;m;1990;26123;Oldenburg (Oldenburg);NI;Düsseldorf;Wirtschaftsinformatiker;CDU;42.0;;
-;;Howel;Jenifer;;w;1986;3222;Lübbenau/Spreewald;BB;Luckau;Wirtschaftsingenieurin;GRÜNE/B 90;;65.0;
+;;Howel;Jenifer;;w;1986;3222;Lübbenau/Spreewald;BB;Luckau;Wirtschaftsingenieurin;GRÜNE;;65.0;2703.0
 ;;Hoß;Luke Rolf;;m;2001;94032;Passau;BY;Stuttgart - Bad Cannstatt;Student;Die Linke;4.0;228.0;4172.0
 ;;Hradecky;Denise Marie;;w;1981;73035;Göppingen;BW;Aruba;Geschäftsführerin;CDU;27.0;;
 ;;Huber;Adolf;;m;1961;77704;Oberkirch;BW;Oberkirch;Bautechniker, Maurermeister;FREIE WÄHLER;;284.0;7685.0
@@ -1812,7 +1812,7 @@ Prof. Dr.;;Kaufmann;Michael Heinz;;m;1964;7407;Rudolstadt;TH;Gera;Ingenieur;AfD;
 ;;Keller;Christian Marc Anton;;m;1985;64646;Heppenheim (Bergstraße);HE;Frankfurt am Main;selbständig;Die PARTEI;15.0;;
 ;;Keller;Marcel;;m;1993;87779;Trunkelsberg;BY;Memmingen;Lehrer;SPD;41.0;255.0;12674.0
 ;;Keller;Martin;;m;1970;76228;Karlsruhe;BW;Hüttental;Softwareberater;Die PARTEI;20.0;;
-;;Kellner;Michael;;m;1977;17291;Oberuckersee;BB;Gera;Mitglied des Deutschen Bundestages;GRÜNE/B 90;2.0;57.0;
+;;Kellner;Michael;;m;1977;17291;Oberuckersee;BB;Gera;Mitglied des Deutschen Bundestages;GRÜNE;2.0;57.0;5460.0;
 ;;Kellner;Robert;;m;1999;3130;Spremberg;BB;Spremberg;Steuerfachangestellter;FDP;4.0;64.0;3559.0
 ;;Kelm;Nadine;;w;1986;23966;Wismar;MV;Güstrow;Wirtschaftsjuristin;FDP;5.0;;
 ;;Kemmer;Andreas;;m;1979;55481;Kirchberg (Hunsrück);RP;Traben-Trarbach;Fliesenleger;FREIE WÄHLER;24.0;;
@@ -2080,7 +2080,7 @@ Dr.;;Kuchlbauer;Simon;;m;1976;86415;Mering;BY;Bad Reichenhall;wissenschaftl. Ref
 ;;Kuhlmann;Helge Georg Theodor;;m;1992;63165;Mühlheim am Main;HE;Norden;Angestellter;Die PARTEI;6.0;;
 ;;Kuhne;Finn;;m;1997;14612;Falkensee;BB;Magdeburg;Tischler;SPD;19.0;;
 ;;Kuhnert;Jan;;m;1966;17033;Neubrandenburg;MV;Neubrandenburg;Gewerkschaftssekretär;BSW;7.0;;
-;;Kuiper;Jelle Jurrie;;m;1970;15569;Woltersdorf;BB;Sleen, Niederlande;Besucher-Referent;GRÜNE/B 90;;63.0;
+;;Kuiper;Jelle Jurrie;;m;1970;15569;Woltersdorf;BB;Sleen, Niederlande;Besucher-Referent;GRÜNE;;63.0;4463.0
 ;;Kullack;Maximilian;;m;1999;6126;Halle (Saale);ST;Halle (Saale);Kommunalbeamter;FREIE WÄHLER;10.0;;
 ;;Kumschlies;Matthias;;m;1963;66953;Pirmasens;RP;Landstuhl;Straßenbaumeister;Tierschutzpartei;6.0;;
 ;;Kunick;Peter Volker;;m;1956;38106;Braunschweig;NI;Braunschweig;Elektriker;MLPD;2.0;51.0;214.0
@@ -2340,7 +2340,7 @@ Dr.;;Ludwig;Saskia;;w;1968;14476;Potsdam;BB;Potsdam;Dipl.-Kauffrau;CDU;3.0;60.0;
 ;;Lötsch;Nils Christopher;;m;1968;23562;Lübeck;SH;Lübeck;Architekt;CDU;13.0;11.0;33695.0
 ;;Löwe;Karin Elke;;w;1957;1968;Schipkau;BB;Lauchhammer;Landschaftsarchitektin;BSW;5.0;;
 ;;Lübbert;Maike;;w;1961;22844;Norderstedt;SH;Hamburg;Rentnerin;Die PARTEI;21.0;;
-Dr.;;Lübcke;Andrea;;w;1978;15732;Eichwalde;BB;Grevesmühlen;Physikerin;GRÜNE/B 90;3.0;62.0;
+Dr.;;Lübcke;Andrea;;w;1978;15732;Eichwalde;BB;Grevesmühlen;Physikerin;GRÜNE;3.0;62.0;10248.0
 ;;Lücke;Kevin Andreas;;m;1983;22119;Hamburg;HH;Potsdam;CTO Barkeeper;BÜNDNIS DEUTSCHLAND;2.0;;
 ;;Lüdemann-Johr;Daniel;;m;1991;6484;Quedlinburg;ST;Quedlinburg;IT-Administrator;Die PARTEI;;68.0;2332.0
 ;;Lüder;Justus;;m;1969;31195;Lamspringe;NI;Hildesheim;Dipl.-Kaufmann;CDU;23.0;48.0;51421.0
@@ -2368,6 +2368,7 @@ Dr.;;Machill;Marcel;;m;1968;4229;Leipzig;SN;Dortmund;Universitätsprofessor;BSW;
 ;;Mader;Christina;;w;1983;87509;Immenstadt i.Allgäu;BY;Traunstein;Lehrerin;GRÜNE;55.0;;
 Dr.;;Mahler;Robert Franz;;m;1982;90429;Nürnberg;BY;Potsdam;Polizist;FREIE WÄHLER;33.0;243.0;2962.0
 Dr.;;Mai;Nadine;;w;1983;25436;Uetersen;SH;Halle/Saale;Kunsthistorikerin;GRÜNE;17.0;94.0;43697.0
+;;Mai;Nadine;;w;1985;51065;Köln;NW;Leverkusen;Angestellte;Die Linke;;94.0;18806.0
 ;;Maiano;Julia;;w;1982;63694;Limeshain;HE;Hanau;techn. Zeichnerin;SPD;20.0;;
 ;;Maienschein;Markus;;m;1972;61169;Friedberg (Hessen);HE;Schlüchtern;Schulleiter allgemeinbildende Schulen;Volt;;176.0;2575.0
 ;;Maier;Daniel Torsten;;m;1987;88131;Lindau (Bodensee);BY;Wangen im Allgäu;IT-Koordinator;Volt;;256.0;2205.0
@@ -3756,7 +3757,7 @@ Dr.;;Sommerfeld;Frank;;m;1966;85221;Dachau;BY;Hildesheim;Orthopäde;FDP;59.0;;
 ;;Spanke;Jacob Johannes;;m;1989;35683;Dillenburg;HE;München;wissenschaftl. Referent;GRÜNE;28.0;;
 ;;Sparrer;Sebastian Josua;;m;2000;92637;Weiden i.d.OPf.;BY;Weiden i.d.OPf.;Student;ÖDP;;234.0;787.0
 ;;Specht;Jens Erik;;m;1980;67705;Trippstadt;RP;Kaiserslautern;Kfz-Meister;FREIE WÄHLER;10.0;209.0;4632.0
-;;Specht;Sylvana;;w;1979;14776;Brandenburg an der Havel;BB;Oranienburg;Verwaltungsangestellte;GRÜNE/B 90;;60.0;
+;;Specht;Sylvana;;w;1979;14776;Brandenburg an der Havel;BB;Oranienburg;Verwaltungsangestellte;GRÜNE;;60.0;5957.0
 ;;Speer;Jürgen;;m;1980;82409;Wildsteig;BY;Schongau;Landwirt;FDP;32.0;225.0;6356.0
 ;;Speicher;Tobias;;m;1997;66352;Großrosseln;SL;Püttlingen;Beamtenanwärter;CDU;17.0;;
 ;;Speiser;Patrick Chris Julian;;m;1998;72160;Horb am Neckar;BW;Freudenstadt;Student, Geschäftsführer;CDU;42.0;;
@@ -4021,7 +4022,7 @@ Dr.;;Toncar;Mark Florian Martin;;m;1979;71032;Böblingen;BW;Hamburg;Mitglied des
 ;;Treu;Nina;;w;1984;4177;Leipzig;SN;München;Politikwissenschaftlerin;Die Linke;7.0;151.0;39376.0
 ;;Treuer;Pedro Henrique;;m;2000;72074;Tübingen;BW;Kirchheim unter Teck;Student Informatik;Volt;12.0;290.0;1802.0
 ;;Treuheit;Bastian;;m;1998;90513;Zirndorf;BY;Fürth;Kaufmann im Groß- und Außenhandel;AfD;18.0;242.0;38338.0
-;;Triems;Viviane Cornelia;;w;1997;14482;Potsdam;BB;Dresden;Studentin;GRÜNE/B 90;4.0;;
+;;Triems;Viviane Cornelia;;w;1997;14482;Potsdam;BB;Dresden;Studentin;GRÜNE;4.0;;
 ;;Trinh;Thea Thuy Nga;;w;1992;78652;Deißlingen;BW;Hanoi;Juristin;GRÜNE;36.0;280.0;13187.0
 ;;Trinks;Gizem Jaqueline;;w;1995;42697;Solingen;NW;Solingen;Ökonomin;Die Gerechtigkeitspartei - Team Todenhöfer;8.0;;
 ;;Trippe;Christof;;m;1971;58708;Menden (Sauerland);NW;Menden;Maschinenbautechniker;BÜNDNIS DEUTSCHLAND;11.0;149.0;1317.0
@@ -4184,7 +4185,7 @@ Dr.;;Walper;Ralf;;m;1963;1307;Dresden;SN;Osterburg;Arzt;SPD;;160.0;13320.0
 ;;Walz;Thomas Markus;;m;1992;71134;Aidlingen;BW;Böblingen;Historiker;Die Linke;;260.0;9936.0
 ;;Wamser;Michael;;m;1961;25541;Brunsbüttel;SH;Stenderupau;techn. Betriebswirt;FDP;8.0;3.0;5647.0
 ;;Wandel;Michael;;m;1978;55469;Simmern/ Hunsrück;RP;Simmern/Hunsrück;selbständig;FDP;28.0;;
-;;Wandrey;Martin;;m;1993;14471;Potsdam;BB;Nauen;Arzt;GRÜNE/B 90;;56.0;
+;;Wandrey;Martin;;m;1993;14471;Potsdam;BB;Nauen;Arzt;GRÜNE;;56.0;4025.0
 ;;Wanger;Svea;;w;1981;24939;Flensburg;SH;Flensburg;Dipl.-Pädagogin (Erziehungswissenschaftlerin);SSW;6.0;;
 ;;Wanke;Hanna;;w;2001;91052;Erlangen;BY;Erlangen;Soziologin;Die Linke;11.0;;
 ;;Wanner;Sebastian Thomas;;m;2002;93142;Maxhütte-Haidhof;BY;Burglengenfeld;Vermittler;Die Linke;12.0;232.0;9721.0
@@ -4254,7 +4255,7 @@ Dr.;;Weisgerber;Anja;;w;1976;97525;Schwebheim;BY;Schweinfurt;MdB, Rechtsanwälti
 ;;Weiss;Claudia;;w;1975;6406;Bernburg (Saale);ST;Bernburg;Referentin Gesundheit und Soziales;AfD;5.0;69.0;55457.0
 Dr.;;Weiss;Maria-Lena;;w;1981;78570;Mühlheim an der Donau;BW;Tuttlingen;Mitglied des Deutschen Bundestages;CDU;;285.0;62241.0
 ;;Weist;Leonhard Bernd;;m;2005;1445;Radebeul;SN;Dresden;Freiwilligendienstleistender;SPD;13.0;154.0;11412.0
-;;Weiß;Linda;;w;1983;16515;Oranienburg;BB;Pirna;Projektmanagerin;GRÜNE/B 90;5.0;58.0;
+;;Weiß;Linda;;w;1983;16515;Oranienburg;BB;Pirna;Projektmanagerin;GRÜNE;5.0;58.0;13889.0
 ;;Weiß;Michael Adam;;m;1969;96199;Zapfendorf;BY;Bamberg;Kaufmann;AfD;25.0;235.0;28887.0
 ;;Weiß;Stefan;;m;1989;64521;Groß-Gerau;HE;Torgau;Instandhaltungsleiter;Die PARTEI;14.0;;
 ;;Weiß;Stephan Michael;;m;1969;10783;Berlin;BE;Berlin;Kosmetiker;FREIE WÄHLER;6.0;78.0;1905.0
@@ -4353,7 +4354,7 @@ Dr.;;Winkelmann-Witkowsky;Sylvia;;w;1959;6120;Halle (Saale);ST;Rostock;Orientarc
 ;;Winter;Daniel;;m;1986;65195;Wiesbaden;HE;Koblenz;Polizeibeamter;Die Linke;9.0;178.0;15412.0
 Dr.;;Winter;Felix;;m;1981;18057;Rostock;MV;Frankfurt (Oder);Wirtschaftsmathematiker;GRÜNE;2.0;14.0;9397.0
 ;;Winter;Heike;;w;1962;1067;Dresden;SN;Elsterwerda;Bibliothekarin, Unternehmerin;AfD;12.0;;
-;;Winter;Landelin;;m;2002;16230;Chorin;BB;Schwedt/Oder;Praktikant;GRÜNE/B 90;6.0;;
+;;Winter;Landelin;;m;2002;16230;Chorin;BB;Schwedt/Oder;Praktikant;GRÜNE;6.0;;
 ;;Winter;Maria Ontina;;w;1966;26723;Emden;NI;Emden;Vorstandssekretärin;SPD;50.0;;
 ;;Winter;Michael Otto;;m;1956;53757;Sankt Augustin;NW;Zweibrücken;Pensionär;WerteUnion;21.0;;
 ;;Winter;Wolfgang Franz;;m;1957;63834;Sulzbach a.Main;BY;Amorbach;Rentner;ÖDP;;248.0;1431.0
@@ -4415,7 +4416,7 @@ Dr.;;Wollmann;Herbert;;m;1951;39576;Stendal;ST;Berlin-Karlshorst;MdB, Arzt;SPD;5
 ;;Wrobel;Florian;;m;1992;24118;Kiel;SH;Kiel;Geschäftsführer;Die PARTEI;14.0;;
 ;;Wulf;Mareike Lotte;;w;1979;31860;Emmerthal;NI;Rendsburg;MdB, Dipl.-Sozialwissenschaftlerin;CDU;7.0;46.0;41013.0
 ;;Wulfert;Luis-Aaron;;m;1998;33607;Bielefeld;NW;Werne;wissenschaftl. Mitarbeiter;Volt;;131.0;1882.0
-;;Wulke;Anton Paul;;m;2000;15366;Neuenhagen bei Berlin;BB;Heidelberg;Projektmanager;GRÜNE/B 90;;59.0;
+;;Wulke;Anton Paul;;m;2000;15366;Neuenhagen bei Berlin;BB;Heidelberg;Projektmanager;GRÜNE;;59.0;7625.0
 ;;Wullenweber;Hans-Peter;;m;1952;21079;Hamburg;HH;Hamburg;Rentner;Volt;6.0;23.0;3050.0
 ;;Wunschock;Martin;;m;1979;53859;Niederkassel;NW;Seesen;Berufssoldat;FREIE WÄHLER;;96.0;3318.0
 ;;Wyszkowski;Frank;;m;1987;6406;Bernburg (Saale);ST;Halle (Saale);Hoteldirektor;CDU;7.0;73.0;34087.0
@@ -4496,7 +4497,7 @@ Dr.;;Zimmermann;Jens;;m;1981;64823;Groß-Umstadt;HE;Groß-Umstadt;Dipl.-Kaufmann
 ;;Zwintzscher;Simon;;m;2005;8491;Netzschkau;SN;Plauen;Student;Die Linke;10.0;165.0;13335.0
 ;;Zörb;Michel;;m;1997;35394;Gießen;HE;Gießen;Projektleiter;GRÜNE;10.0;172.0;15277.0
 ;;Zürcher;Andrea Susanne;;w;1983;79780;Stühlingen;BW;Singen (Hohentwiel);parl. Beraterin;AfD;;288.0;26708.0
-;;Çakmaklı-Kraft;Nuran;;w;1965;60326;Frankfurt am Main;HE;Denizli/Türkei;techn. Zeichnerin;MLPD;4.0;181.0;323.0
+;;Çakmakli-Kraft;Nuran;;w;1965;60326;Frankfurt am Main;HE;Denizli/Türkei;techn. Zeichnerin;MLPD;4.0;181.0;323.0
 ;;Örenbas;Verena;;w;1981;53498;Bad Breisig;RP;Leverkusen;Juristin;GRÜNE;11.0;197.0;14413.0
 ;;Özcan;Nalan;;w;1991;57539;Roth;RP;Altenkirchen;Zugverkehrssteuerer;BSW;6.0;196.0;6443.0
 ;;Özdemir;Cansu;;w;1988;22589;Hamburg;HH;Hamburg;Mitglied der Hamburgischen Bürgerschaft;Die Linke;2.0;;

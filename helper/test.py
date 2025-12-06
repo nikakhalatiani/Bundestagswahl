@@ -11,8 +11,8 @@ OUTPUT_DIR = Path("Bundestagswahl/outputs")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # CSV files
-csv_small = DATA_DIR / "candidates2021.csv"   # the smaller CSV (fewer rows)
-csv_large = DATA_DIR / "rawData/kand2021.csv"      # the larger CSV (potentially more rows)
+csv_small = DATA_DIR / "candidates2025.csv"   # the smaller CSV (fewer rows)
+csv_large = DATA_DIR / "rawData/kand2025.csv"      # the larger CSV (potentially more rows)
 
 out_not_in_small = OUTPUT_DIR / "missing_in_subset.csv"
 
@@ -60,7 +60,7 @@ try:
             df["Nachname"].map(norm)
             + "|" + df["Vornamen"].map(norm)
             + "|" + df["Geschlecht"].map(norm)
-            + "|" + df["Geburtsjahr"].fillna("").astype(str).str.strip()
+            # + "|" + df["Geburtsjahr"].fillna("").astype(str).str.strip()
             # + "|" + df["Geburtsort"].map(norm)
         )
 
