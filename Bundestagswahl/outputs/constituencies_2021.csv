@@ -1,0 +1,300 @@
+ConstituencyID;Number;Name;StateID
+1;56;Prignitz - Ostprignitz-Ruppin - Havelland I;1
+2;57;Uckermark - Barnim I;1
+3;58;Oberhavel - Havelland II;1
+4;59;Märkisch-Oderland - Barnim II;1
+5;60;Brandenburg an der Havel - Potsdam-Mittelmark I - Havelland III - Teltow-Fläming I;1
+6;61;Potsdam - Potsdam-Mittelmark II - Teltow-Fläming II;1
+7;62;Dahme-Spreewald - Teltow-Fläming III - Oberspreewald-Lausitz I;1
+9;63;Frankfurt (Oder) - Oder-Spree;1
+10;64;Cottbus - Spree-Neiße;1
+11;65;Elbe-Elster - Oberspreewald-Lausitz II;1
+14;75;Berlin-Mitte;2
+16;76;Berlin-Pankow;2
+18;77;Berlin-Reinickendorf;2
+20;78;Berlin-Spandau - Charlottenburg Nord;2
+22;79;Berlin-Steglitz-Zehlendorf;2
+24;80;Berlin-Charlottenburg-Wilmersdorf;2
+26;81;Berlin-Tempelhof-Schöneberg;2
+28;82;Berlin-Neukölln;2
+30;83;Berlin-Friedrichshain-Kreuzberg - Prenzlauer Berg Ost;2
+32;84;Berlin-Treptow-Köpenick;2
+34;85;Berlin-Marzahn-Hellersdorf;2
+36;86;Berlin-Lichtenberg;2
+37;258;Stuttgart I;3
+38;259;Stuttgart II;3
+39;260;Böblingen;3
+40;261;Esslingen;3
+41;262;Nürtingen;3
+42;263;Göppingen;3
+43;264;Waiblingen;3
+44;265;Ludwigsburg;3
+45;266;Neckar-Zaber;3
+46;267;Heilbronn;3
+47;268;Schwäbisch Hall - Hohenlohe;3
+48;269;Backnang - Schwäbisch Gmünd;3
+49;270;Aalen - Heidenheim;3
+50;271;Karlsruhe-Stadt;3
+51;272;Karlsruhe-Land;3
+52;273;Rastatt;3
+53;274;Heidelberg;3
+54;275;Mannheim;3
+55;276;Odenwald - Tauber;3
+56;277;Rhein-Neckar;3
+57;278;Bruchsal - Schwetzingen;3
+58;279;Pforzheim;3
+59;280;Calw;3
+60;281;Freiburg;3
+61;282;Lörrach - Müllheim;3
+62;283;Emmendingen - Lahr;3
+63;284;Offenburg;3
+64;285;Rottweil - Tuttlingen;3
+65;286;Schwarzwald-Baar;3
+66;287;Konstanz;3
+67;288;Waldshut;3
+68;289;Reutlingen;3
+69;290;Tübingen;3
+70;291;Ulm;3
+71;292;Biberach;3
+72;293;Bodensee;3
+73;294;Ravensburg;3
+74;295;Zollernalb - Sigmaringen;3
+76;212;Altötting;4
+78;213;Erding - Ebersberg;4
+80;214;Freising;4
+82;215;Fürstenfeldbruck;4
+84;216;Ingolstadt;4
+86;217;München-Nord;4
+88;218;München-Ost;4
+90;219;München-Süd;4
+92;220;München-West/Mitte;4
+94;221;München-Land;4
+96;222;Rosenheim;4
+98;223;Bad Tölz-Wolfratshausen - Miesbach;4
+100;224;Starnberg - Landsberg am Lech;4
+102;225;Traunstein;4
+104;226;Weilheim;4
+106;227;Deggendorf;4
+108;228;Landshut;4
+110;229;Passau;4
+112;230;Rottal-Inn;4
+114;231;Straubing;4
+116;232;Amberg;4
+118;233;Regensburg;4
+120;234;Schwandorf;4
+122;235;Weiden;4
+124;236;Bamberg;4
+126;237;Bayreuth;4
+128;238;Coburg;4
+130;239;Hof;4
+132;240;Kulmbach;4
+134;241;Ansbach;4
+136;242;Erlangen;4
+138;243;Fürth;4
+140;244;Nürnberg-Nord;4
+142;245;Nürnberg-Süd;4
+144;246;Roth;4
+146;247;Aschaffenburg;4
+148;248;Bad Kissingen;4
+150;249;Main-Spessart;4
+152;250;Schweinfurt;4
+154;251;Würzburg;4
+156;252;Augsburg-Stadt;4
+158;253;Augsburg-Land;4
+160;254;Donau-Ries;4
+162;255;Neu-Ulm;4
+164;256;Oberallgäu;4
+165;257;Ostallgäu;4
+166;54;Bremen I;5
+167;55;Bremen II - Bremerhaven;5
+169;167;Waldeck;6
+171;168;Kassel;6
+173;169;Werra-Meißner - Hersfeld-Rotenburg;6
+175;170;Schwalm-Eder;6
+177;171;Marburg;6
+179;172;Lahn-Dill;6
+181;173;Gießen;6
+183;174;Fulda;6
+185;175;Main-Kinzig - Wetterau II - Schotten;6
+187;176;Hochtaunus;6
+189;177;Wetterau I;6
+191;178;Rheingau-Taunus - Limburg;6
+193;179;Wiesbaden;6
+195;180;Hanau;6
+197;181;Main-Taunus;6
+199;182;Frankfurt am Main I;6
+201;183;Frankfurt am Main II;6
+203;184;Groß-Gerau;6
+205;185;Offenbach;6
+207;186;Darmstadt;6
+209;187;Odenwald;6
+211;188;Bergstraße;6
+212;18;Hamburg-Mitte;7
+213;19;Hamburg-Altona;7
+214;20;Hamburg-Eimsbüttel;7
+215;21;Hamburg-Nord;7
+216;22;Hamburg-Wandsbek;7
+217;23;Hamburg-Bergedorf - Harburg;7
+218;12;Schwerin - Ludwigslust-Parchim I - Nordwestmecklenburg I;8
+219;13;Ludwigslust-Parchim II - Nordwestmecklenburg II - Landkreis Rostock I;8
+220;14;Rostock - Landkreis Rostock II;8
+221;15;Vorpommern-Rügen - Vorpommern-Greifswald I;8
+222;16;Mecklenburgische Seenplatte I - Vorpommern-Greifswald II;8
+223;17;Mecklenburgische Seenplatte II - Landkreis Rostock III;8
+224;24;Aurich - Emden;9
+225;25;Unterems;9
+226;26;Friesland - Wilhelmshaven - Wittmund;9
+227;27;Oldenburg - Ammerland;9
+228;28;Delmenhorst - Wesermarsch - Oldenburg-Land;9
+229;29;Cuxhaven - Stade II;9
+230;30;Stade I - Rotenburg II;9
+231;31;Mittelems;9
+232;32;Cloppenburg - Vechta;9
+233;33;Diepholz - Nienburg I;9
+234;34;Osterholz - Verden;9
+235;35;Rotenburg I - Heidekreis;9
+236;36;Harburg;9
+237;37;Lüchow-Dannenberg - Lüneburg;9
+238;38;Osnabrück-Land;9
+239;39;Stadt Osnabrück;9
+240;40;Nienburg II - Schaumburg;9
+241;41;Stadt Hannover I;9
+242;42;Stadt Hannover II;9
+243;43;Hannover-Land I;9
+244;44;Celle - Uelzen;9
+245;45;Gifhorn - Peine;9
+246;46;Hameln-Pyrmont - Holzminden;9
+247;47;Hannover-Land II;9
+248;48;Hildesheim;9
+249;49;Salzgitter - Wolfenbüttel;9
+250;50;Braunschweig;9
+251;51;Helmstedt - Wolfsburg;9
+252;52;Goslar - Northeim - Osterode;9
+254;53;Göttingen;9
+257;87;Aachen I;10
+259;88;Aachen II;10
+261;89;Heinsberg;10
+263;90;Düren;10
+265;91;Rhein-Erft-Kreis I;10
+267;92;Euskirchen - Rhein-Erft-Kreis II;10
+269;93;Köln I;10
+271;94;Köln II;10
+273;95;Köln III;10
+275;96;Bonn;10
+277;97;Rhein-Sieg-Kreis I;10
+279;98;Rhein-Sieg-Kreis II;10
+281;99;Oberbergischer Kreis;10
+283;100;Rheinisch-Bergischer Kreis;10
+285;101;Leverkusen - Köln IV;10
+287;102;Wuppertal I;10
+289;103;Solingen - Remscheid - Wuppertal II;10
+291;104;Mettmann I;10
+293;105;Mettmann II;10
+295;106;Düsseldorf I;10
+297;107;Düsseldorf II;10
+299;108;Neuss I;10
+301;109;Mönchengladbach;10
+303;110;Krefeld I - Neuss II;10
+305;111;Viersen;10
+307;112;Kleve;10
+309;113;Wesel I;10
+311;114;Krefeld II - Wesel II;10
+313;115;Duisburg I;10
+315;116;Duisburg II;10
+317;117;Oberhausen - Wesel III;10
+319;118;Mülheim - Essen I;10
+321;119;Essen II;10
+323;120;Essen III;10
+325;121;Recklinghausen I;10
+327;122;Recklinghausen II;10
+329;123;Gelsenkirchen;10
+331;124;Steinfurt I - Borken I;10
+333;125;Bottrop - Recklinghausen III;10
+335;126;Borken II;10
+337;127;Coesfeld - Steinfurt II;10
+339;128;Steinfurt III;10
+341;129;Münster;10
+343;130;Warendorf;10
+345;131;Gütersloh I;10
+347;132;Bielefeld - Gütersloh II;10
+349;133;Herford - Minden-Lübbecke II;10
+351;134;Minden-Lübbecke I;10
+353;135;Lippe I;10
+355;136;Höxter - Gütersloh III - Lippe II;10
+357;137;Paderborn;10
+359;138;Hagen - Ennepe-Ruhr-Kreis I;10
+361;139;Ennepe-Ruhr-Kreis II;10
+363;140;Bochum I;10
+365;141;Herne - Bochum II;10
+367;142;Dortmund I;10
+369;143;Dortmund II;10
+371;144;Unna I;10
+373;145;Hamm - Unna II;10
+375;146;Soest;10
+377;147;Hochsauerlandkreis;10
+379;148;Siegen-Wittgenstein;10
+381;149;Olpe - Märkischer Kreis I;10
+383;150;Märkischer Kreis II;10
+385;197;Neuwied;11
+387;198;Ahrweiler;11
+389;199;Koblenz;11
+391;200;Mosel/Rhein-Hunsrück;11
+393;201;Kreuznach;11
+395;202;Bitburg;11
+397;203;Trier;11
+399;204;Montabaur;11
+401;205;Mainz;11
+403;206;Worms;11
+405;207;Ludwigshafen/Frankenthal;11
+407;208;Neustadt - Speyer;11
+409;209;Kaiserslautern;11
+411;210;Pirmasens;11
+413;211;Südpfalz;11
+414;1;Flensburg - Schleswig;12
+415;2;Nordfriesland - Dithmarschen Nord;12
+416;3;Steinburg - Dithmarschen Süd;12
+417;4;Rendsburg-Eckernförde;12
+418;5;Kiel;12
+419;6;Plön - Neumünster;12
+420;7;Pinneberg;12
+421;8;Segeberg - Stormarn-Mitte;12
+422;9;Ostholstein - Stormarn-Nord;12
+423;10;Herzogtum Lauenburg - Stormarn-Süd;12
+424;11;Lübeck;12
+425;296;Saarbrücken;13
+426;297;Saarlouis;13
+427;298;St. Wendel;13
+428;299;Homburg;13
+430;151;Nordsachsen;14
+432;152;Leipzig I;14
+434;153;Leipzig II;14
+436;154;Leipzig-Land;14
+438;155;Meißen;14
+440;156;Bautzen I;14
+442;157;Görlitz;14
+444;158;Sächsische Schweiz-Osterzgebirge;14
+446;159;Dresden I;14
+448;160;Dresden II - Bautzen II;14
+450;161;Mittelsachsen;14
+452;162;Chemnitz;14
+454;163;Chemnitzer Umland - Erzgebirgskreis II;14
+456;164;Erzgebirgskreis I;14
+458;165;Zwickau;14
+460;166;Vogtlandkreis;14
+461;66;Altmark;15
+463;67;Börde - Jerichower Land;15
+465;68;Harz;15
+466;69;Magdeburg;15
+467;70;Dessau - Wittenberg;15
+469;71;Anhalt;15
+471;72;Halle;15
+473;73;Burgenland - Saalekreis;15
+475;74;Mansfeld;15
+477;189;Eichsfeld - Nordhausen - Kyffhäuserkreis;16
+479;190;Eisenach - Wartburgkreis - Unstrut-Hainich-Kreis;16
+481;191;Jena - Sömmerda - Weimarer Land I;16
+483;192;Gotha - Ilm-Kreis;16
+485;193;Erfurt - Weimar - Weimarer Land II;16
+487;194;Gera - Greiz - Altenburger Land;16
+489;195;Saalfeld-Rudolstadt - Saale-Holzland-Kreis - Saale-Orla-Kreis;16
+491;196;Suhl - Schmalkalden-Meiningen - Hildburghausen - Sonneberg;16

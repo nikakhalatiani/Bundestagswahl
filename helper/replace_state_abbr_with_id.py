@@ -17,18 +17,21 @@ wahlkreis_files = [
 out_constituencies = OUTPUT_DIR / "constituencies.csv"
 out_elections = OUTPUT_DIR / "elections.csv"
 out_bridge = OUTPUT_DIR / "constituency_elections.csv"
+
+# NEW — year-specific outputs
+out_const_2021 = OUTPUT_DIR / "constituencies_2021.csv"
+out_const_2025 = OUTPUT_DIR / "constituencies_2025.csv"
 # ----------------------------------------------------------------------
 
 
 def normalize_name(name: str) -> str:
-    """Normalize constituency names for deduplication."""
     if not isinstance(name, str):
         return ""
     n = name.strip()
-    n = unicodedata.normalize("NFKC", n)          # normalize Unicode form
-    n = re.sub(r"[–—]", "-", n)                  # convert en/em dashes -> hyphen
-    n = re.sub(r"\s*-\s*", " - ", n)             # normalize spaces around hyphen
-    n = re.sub(r"[\s\u00A0]+", " ", n).strip()   # collapse whitespace
+    n = unicodedata.normalize("NFKC", n)
+    n = re.sub(r"[–—]", "-", n)
+    n = re.sub(r"\s*-\s*", " - ", n)
+    n = re.sub(r"[\s\u00A0]+", " ", n).strip()
     return n.lower()
 
 
@@ -40,12 +43,12 @@ try:
 
     all_dfs = []
     election_rows = []
+    dfs_by_year = {}  # store pre-combined dfs for later split
 
     for path in wahlkreis_files:
         year = int(path.stem[-4:])
         print(f"🗂 Reading {path.name} for year {year} ...")
 
-        # Read & normalize column names
         df = pd.read_csv(path, sep=";", encoding="utf-8-sig")
         df.columns = [c.strip().lower() for c in df.columns]
 
@@ -56,12 +59,10 @@ try:
         if not all([num, name, abbr]):
             raise KeyError(f"{path.name} missing Gebietsnummer/Gebietsname/GebietLandAbk")
 
-        # Keep only needed cols & rename clearly
         df = df[[num, name, abbr]].rename(
             columns={num: "Number", name: "Name", abbr: "StateAbbr"}
         )
 
-        # Map to numeric state IDs
         df["StateID"] = df["StateAbbr"].map(state_map)
         missing = df[df["StateID"].isna()]["StateAbbr"].unique()
         if len(missing) > 0:
@@ -69,14 +70,16 @@ try:
 
         df["Year"] = year
         df["NormalizedName"] = df["Name"].apply(normalize_name)
+
         all_dfs.append(df)
+        dfs_by_year[year] = df.copy()
 
         election_rows.append({"ElectionID": len(election_rows) + 1, "Year": year})
 
-    # Combine 2021 + 2025
+    # --- Combine both years ------------------------------------------
     combined = pd.concat(all_dfs, ignore_index=True)
 
-    # --- Unique constituencies ---------------------------------------
+    # --- Unique constituencies with ID --------------------------------
     unique_const = (
         combined[["Number", "Name", "NormalizedName", "StateID"]]
         .drop_duplicates(subset=["Number", "NormalizedName"])
@@ -85,31 +88,44 @@ try:
     )
     unique_const.insert(0, "ConstituencyID", unique_const.index + 1)
 
-    # --- Elections table ---------------------------------------------
+    # --- Elections ----------------------------------------------------
     elections = pd.DataFrame(election_rows)
-    # you can change these dates to the real ones later
     elections["Date"] = [f"{y}-09-26" for y in elections["Year"]]
 
-    # --- Bridge table (which constituency participated when) ----------
+    # --- Bridge table -------------------------------------------------
     bridge = combined.merge(
         unique_const[["ConstituencyID", "Number", "NormalizedName"]],
         on=["Number", "NormalizedName"],
         how="left",
         validate="many_to_one",
     )[["Year", "ConstituencyID"]].drop_duplicates().reset_index(drop=True)
+
     bridge.insert(0, "BridgeID", bridge.index + 1)
 
-    # --- Save outputs -------------------------------------------------
+    # --- Save main outputs -------------------------------------------
     unique_const.drop(columns=["NormalizedName"]).to_csv(
         out_constituencies, sep=";", index=False, encoding="utf-8"
     )
     elections.to_csv(out_elections, sep=";", index=False, encoding="utf-8")
     bridge.to_csv(out_bridge, sep=";", index=False, encoding="utf-8")
 
-    # --- Log results -------------------------------------------------
+    # --- NEW: year-specific constituency files ------------------------
+    for year, path_out in [(2021, out_const_2021), (2025, out_const_2025)]:
+        df_year = dfs_by_year[year].merge(
+            unique_const[["ConstituencyID", "Number", "NormalizedName"]],
+            on=["Number", "NormalizedName"],
+            how="left",
+        ).drop_duplicates(subset=["ConstituencyID"])
+
+        df_year_out = df_year[["ConstituencyID", "Number", "Name", "StateID"]].sort_values("ConstituencyID")
+
+        df_year_out.to_csv(path_out, sep=";", index=False, encoding="utf-8")
+        print(f"📄 Wrote {path_out.name} with {len(df_year_out)} rows.")
+
+    # --- Logs ---------------------------------------------------------
     print(f"\n✅ Wrote {len(unique_const)} constituencies → {out_constituencies.name}")
     print(f"✅ Wrote {len(elections)} elections → {out_elections.name}")
-    print(f"✅ Wrote {len(bridge)} bridge rows → {out_bridge.name}\n")
+    print(f"✅ Wrote {len(bridge)} bridge rows → {out_bridge.name}")
 
 except FileNotFoundError as e:
     print(f"❌ Missing file: {e.filename}")
