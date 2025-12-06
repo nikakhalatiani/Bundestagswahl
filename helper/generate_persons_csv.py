@@ -55,7 +55,6 @@ try:
             + "|" + sub["Vornamen"].map(norm)
             + "|" + sub["Geschlecht"].map(norm)
             + "|" + sub["Geburtsjahr"].fillna("").astype(str).str.strip()
-            # + "|" + sub["Geburtsort"].map(norm)
         )
 
         # ---- Detect duplicates within same year ----------------------
