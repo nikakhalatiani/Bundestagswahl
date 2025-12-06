@@ -1233,8 +1233,8 @@ Dr.;;Fellner;Hans;;m;1966;83377;Vachendorf;BY;Tegernsee;Arzt;AfD;;227.0;17432.0
 ;;Fichtner;Christian;;m;1984;12683;Berlin;BE;Suhl;Sänger, IT-Engineer;Die PARTEI;;196.0;2247.0
 ;;Fiedler;Gerry Max;;m;1994;7349;Lehesten;TH;Ebersdorf;Werkzeugmechaniker;Die PARTEI;;195.0;3526.0
 ;;Fiedler;Ralf Armin Klaus;;m;1966;24241;Schmalstede;SH;Hamburg;Dipl.-Ingenieur;dieBasis;11.0;;
-;;Fiedler;Sebastian;;m;1973;41749;Viersen;NW;Herdecke;Kriminalbeamter;SPD;;118.0;50168.0
-;;Fiedler;Sebastian;;m;1973;41749;Viersen;NW;Herdecke;Kriminalbeamter;SPD;;118.0;50168.0
+;;Fiedler;Sebastian;;m;1973;41749;Viersen;NW;Herdecke;Kriminalbeamter;SPD;62.0;118.0;50168.0
+;;Fiedler;Sebastian;;m;1987;12203;Berlin;BE;Nauen;Biologe;V-Partei³;1.0;;
 ;;Fiedler;Thorben;;m;1996;6749;Bitterfeld-Wolfen;ST;Wolfen;Sozialversicherungsangestellter;FDP;;71.0;10637.0
 ;;Fiegel;Cornelia;;w;1996;82110;Germering;BY;Gräfeling;Studentin;V-Partei³;;224.0;721.0
 ;;Fielsch;Michael;;m;1965;19249;Lübtheen;MV;Berlin;Rentner;EB: Fielsch;;75.0;
@@ -1842,8 +1842,8 @@ Dr.;;Hahn;André;;m;1963;1824;Gohrisch;SN;Berlin;Mitglied des Deutschen Bundesta
 ;;Hartmann;Lutz;;m;1965;1099;Dresden;SN;Dresden;Tischler;MLPD;4.0;;
 ;;Hartmann;Markus;;m;1978;85276;Pfaffenhofen a.d.Ilm;BY;München;Geschäftsführer;CSU;75.0;;
 ;;Hartmann;Martin Josef;;m;1983;83119;Obing;BY;Rosenheim;IT-Systemelektroniker;dieBasis;;225.0;4115.0
-;;Hartmann;Niklas;;m;1996;32756;Detmold;NW;Herford;Student;Die PARTEI;;135.0;3070.0
-;;Hartmann;Niklas;;m;1996;32756;Detmold;NW;Herford;Student;Die PARTEI;;172.0;2417.0
+;;Hartmann;Niklas;;m;1996;32756;Detmold;NW;Herford;Student;Die PARTEI;80.0;135.0;3070.0
+;;Hartmann;Niklas;;m;2000;35641;Schöffengrund;HE;Wetzlar;Auszubildender zum Bankkaufmann;Die PARTEI;;172;2417.0
 ;;Hartmann;Regina Luise;;w;1956;37296;Ringgau;HE;Röhrda;Hausfrau;BÜNDNIS21;13.0;;
 ;;Hartmann;Sebastian;;m;1977;53332;Bornheim;NW;Oberhausen;Mitglied des Deutschen Bundestages;SPD;;97.0;53213.0
 ;;Hartmann;Stefan;;m;1968;4105;Leipzig;SN;Erfurt;wiss. Mitarbeiter;DIE LINKE;;161.0;12164.0
@@ -3121,7 +3121,7 @@ Dr.;;Leikert;Katja Isabel;;w;1975;63486;Bruchköbel;HE;Neustadt a. d. Weinstraß
 Prof. Dr.;;Leinen;Felix Andreas;;m;1957;55129;Mainz;RP;Wiesbaden;Dipl.-Mathematiker;ÖDP;2.0;;
 ;;Leins;Stefan;;m;1962;97204;Höchberg;BY;Nördlingen;Künstler;Die PARTEI;50.0;;
 ;;Leipold;Oliver;;m;1978;94447;Plattling;BY;Deggendorf;Handelsfachwirt;BP;18.0;;
-;;Leipold;Oliver;;m;1978;94447;Plattling;BY;Deggendorf;Handelsfachwirt;BP;18.0;;
+;;Leipold;Oliver;;m;1968;13055;Berlin;BE;Magdeburg;Apotheker;Die PARTEI;19;;
 ;;Leiser;Kevin;;m;1993;74572;Blaufelden;BW;Crailsheim;Lehrer;SPD;;268.0;33568.0
 ;;Leisner;Philipp;;m;1991;55118;Mainz;RP;Lübben;Jurist;Volt;12.0;;
 Dr.;;Leitner;Torsten;;m;1979;12059;Berlin;BE;Rotthalmünster;Physiker;Die PARTEI;2.0;;
@@ -3697,8 +3697,8 @@ Dr.;;Möser;Peter;;m;1954;63679;Schotten;HE;Frankfurt am Main;Pfarrer i. R.;ÖDP
 ;;Mühl;Paula Theodora;;w;2001;40591;Düsseldorf;NW;Mainz;Studentin;Volt;3.0;;
 ;;Mühlbauer;Patrizia;;w;1959;34474;Diemelstadt;HE;Schwandorf;Pferdebereiterin;NPD;5.0;;
 ;;Mühling;Nicola Andrea;;w;1995;39108;Magdeburg;ST;Düsseldorf;Umweltpsychologin;GRÜNE;5.0;;
-;;Müller;Alexander;;m;1969;65527;Niedernhausen;HE;Bendorf/Rhein;Dipl.-Informatiker;FDP;;178.0;18126.0
-;;Müller;Alexander;;m;1969;65527;Niedernhausen;HE;Bendorf/Rhein;Dipl.-Informatiker;FDP;;178.0;18126.0
+;;Müller;Alexander;;m;1969;65527;Niedernhausen;HE;Bendorf/Rhein;Dipl.-Informatiker;FDP;4.0;178.0;18126.0
+;;Müller;Alexander;;m;1979;85570;Markt Schwaben;BY;München;kaufm. Angestellter;BP;22.0;;
 ;;Müller;Ann-Cathrin Wiebke;;w;1975;72539;Pfronstetten;BW;Reutlingen;Realschulrektorin;CDU;47.0;;
 ;;Müller;Ann-Kristin;;w;1990;60599;Frankfurt am Main;HE;Kassel;Geschäftsführerin;CDU;23.0;;
 ;;Müller;August Walter Michael;;m;1949;32457;Porta Westfalica;NW;Leipzig;Dipl.-Kaufmann;FREIE WÄHLER;;134.0;2098.0
@@ -3740,8 +3740,8 @@ Dr.;;Müller;Marianne Clara Margarete;;w;1959;88471;Laupheim;BW;Berlin;Ärztin i
 ;;Müller;Sepp;;m;1989;6773;Gräfenhainichen;ST;Lutherstadt Wittenberg;Mitglied des Deutschen Bundestages;CDU;;70.0;39042.0
 Dr.;;Müller;Silke;;w;1970;1109;Dresden;SN;Freiberg;Fachärztin Allgemeinmedizin;FDP;;160.0;20711.0
 ;;Müller;Simon Gabriel;;m;1981;10967;Berlin;BE;Zürich, Schweiz;Dipl.-Physiker;GRÜNE;14.0;;
-;;Müller;Stefan;;m;1975;91091;Großenseebach;BY;Neustadt a.d.Aisch;Mitglied des Deutschen Bundestages;CSU;;242.0;54223.0
-;;Müller;Stefan;;m;1975;91091;Großenseebach;BY;Neustadt a.d.Aisch;Mitglied des Deutschen Bundestages;CSU;;242.0;54223.0
+;;Müller;Stefan;;m;1975;91091;Großenseebach;BY;Neustadt a.d.Aisch;Mitglied des Deutschen Bundestages;CSU;9.0;242.0;54223.0
+;;Müller;Stefan;;m;1968;13189;Berlin;BE;Jena;Sprachwissenschaftler;Die PARTEI;;242.0;2578.0
 ;;Müller;Thomas;;m;1982;35066;Frankenberg (Eder);HE;Frankenberg (Eder);polit. Referent;CDU;50.0;;
 ;;Müller;Yvonne;;w;1982;50829;Köln;NW;Siegen;Disponentin;du.;1.0;;
 ;;Müller-Bohn;Andrea;;w;1971;55218;Ingelheim am Rhein;RP;Saizwedel;Angestellte;GRÜNE;11.0;;
@@ -4761,7 +4761,7 @@ Dr.;;Schmidt;Martin;;m;1984;54290;Trier;RP;Berlin;Arzt;Die PARTEI;5.0;;
 ;;Schmidt;Sibylle Christine;;w;1961;10117;Berlin;BE;Berlin;Betriebswirtin;AfD;;83.0;6598.0
 ;;Schmidt;Simone;;w;1978;91183;Abenberg;BY;Nürnberg;Angestellte;Tierschutzpartei;12.0;;
 ;;Schmidt;Stefan;;m;1981;93049;Regensburg;BY;Freystadt;MdB, Mittelschullehrer;GRÜNE;;233.0;30333.0
-;;Schmidt;Stefan;;m;1981;93049;Regensburg;BY;Freystadt;MdB, Mittelschullehrer;GRÜNE;;269.0;15587.0
+;;Schmidt;Stefan;;m;1966;73553;Alfdorf;BW;Krumbach (Schwaben);Gastronom;dieBasis;;269.0;3673.0
 ;;Schmidt;Uwe;;m;1966;27580;Bremerhaven;HB;Bremerhaven;MdB, Hafenfacharbeiter;SPD;;55.0;52498.0
 ;;Schmidt Ramos;Johannes;;m;1991;1662;Meißen;SN;Forst (Lausitz);Immobilienkaufmann;FDP;;155.0;13727.0
 Dr.;;Schmidt-Jortzig;Edzard Aurelius;;m;1969;21335;Lüneburg;NI;Lüneburg;Rechtsanwalt;FDP;;37.0;9513.0
@@ -4808,8 +4808,8 @@ Dr.;;Schneichel;Rainer Johannes Walter;;m;1955;56727;Mayen;RP;Kruft;Tierarzt;FRE
 ;;Schneider;Melissa Theresa;;w;1990;88471;Laupheim;BW;Laupheim;Wirtschaftsprüfungsassistentin;CDU;20.0;;
 ;;Schneider;Michael;;m;1964;99195;Markvippach;TH;Sömmeda;Bauleiter;FREIE WÄHLER;3.0;;
 Dr.;;Schneider;Peter Alexander;;m;1961;99998;Körner;TH;Lübbecke;Informatiker, Volkswirt;ÖDP;;190.0;567.0
-;;Schneider;Ronny;;m;1982;6780;Zörbig;ST;Wolfen;Angestellter;FREIE WÄHLER;;71.0;4845.0
-;;Schneider;Ronny;;m;1982;6780;Zörbig;ST;Wolfen;Angestellter;FREIE WÄHLER;;71.0;4845.0
+;;Schneider;Ronny;;m;1982;6780;Zörbig;ST;Wolfen;Angestellter;FREIE WÄHLER;4.0;71.0;4845.0
+;;Schneider;Ronny;;m;1971;39167;Hohe Börde;ST;Dahme/Mark;Lokführer;dieBasis;13.0;;;
 Dr.;;Schneider;Tamara;;w;1984;55124;Mainz;RP;Filderstadt;Psychologin;V-Partei³;1.0;;
 ;;Schneider;Thilo Günter;;m;1966;63825;Schöllkrippen;BY;Windecken (jetzt Nidderau);Versicherungsmakler;LKR;14.0;;
 ;;Schneider;Uwe Günther;;m;1975;21073;Hamburg;HH;Köthen (Anhalt);kaufm. Angestellter;CDU;;23.0;26483.0
@@ -4944,9 +4944,8 @@ Prof. Dr.;;Schwab;Martin Friedrich;;m;1967;33605;Bielefeld;NW;Bochum;Jurist;dieB
 ;;Schwang;Dietrich Peter;;m;1948;66113;Saarbrücken;SL;Braunschweig;Dipl.-Mathematiker;EB: Schwang;;209.0;
 ;;Schwartz;Philipp;;m;1988;38106;Braunschweig;NI;Rostock;Mechatroniker;MLPD;;50.0;101.0
 ;;Schwartze;Stefan;;m;1974;32602;Vlotho;NW;Bad Oeynhausen;MdB, Industriemechaniker;SPD;;133.0;61554.0
-;;Schwarz;Andreas;;m;1965;96129;Strullendorf;BY;Berleburg;MdB, Dipl.-Betriebswirt (FH);SPD;;236.0;28123.0
-;;Schwarz;Andreas;;m;1965;96129;Strullendorf;BY;Berleburg;MdB, Dipl.-Betriebswirt (FH);SPD;;289.0;27236.0
-;;Schwarz;Armin;;m;1968;34454;Bad Arolsen;HE;Arolsen;Mitglied des Landtages;CDU;;167.0;35734.0
+;;Schwarz;Andreas;;m;1965;96129;Strullendorf;BY;Berleburg;MdB, Dipl.-Betriebswirt (FH);SPD;11.0;236.0;28123.0
+;;Schwarz;Andreas;;m;1967;72764;Reutlingen;BW;Böblingen;Jugend- und Heimerzieher;Die PARTEI;;289.0;2747.0
 ;;Schwarz;Barbara Maria;;w;1961;66994;Dahn;RP;Rodalben;Übersetzerin;Tierschutzpartei;;210.0;3271.0
 ;;Schwarz;Bernd;;m;1980;13509;Berlin;BE;Wolmirstedt;wiss. Mitarbeiter;GRÜNE;;77.0;17621.0
 Dr.;;Schwarz;Dieter;;m;1951;74821;Mosbach;BW;Heilbronn;Arzt Hals-, Nasen-, Ohrenheilkunde;dieBasis;;276.0;3473.0

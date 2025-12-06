@@ -290,8 +290,8 @@ Dr.;;Benecke;Mark;;m;1970;50678;Köln;NW;Rosenheim;Kriminalbiologe;Die PARTEI;1.
 ;;Berghoff;Susanne Sabine Cornelia;;w;1956;27624;Geestland;NI;Bremerhaven;Rentnerin;Tierschutzpartei;4.0;;
 ;;Bergles;Dirk;;m;1969;50999;Köln;NW;Duisburg;Softwarearchitekt;dieBasis;10.0;;
 ;;Bergmann;Felix Gabriel;;m;2006;31787;Hameln;NI;Hameln;Schüler;Die Linke;;46.0;7728.0
-;;Bergmann;Frank;;m;1972;28209;Bremen;HB;Haren/Ems;Politiker;Die PARTEI;8.0;180.0;
-;;Bergmann;Frank;;m;1972;28209;Bremen;HB;Haren/Ems;Politiker;Die PARTEI;8.0;180.0;
+;;Bergmann;Frank;;m;1972;28209;Bremen;HB;Haren/Ems;Politiker;Die PARTEI;8.0;;
+;;Bergmann;Frank;;m;1975;65835;Liederbach am Taunus;HE;Dresden;Volkswirt;FREIE WÄHLER;16.0;180.0;2962.0
 ;;Bergmann;Jochen Sebastian;;m;1989;95512;Neudrossenfeld;BY;Bayreuth;Polizeibeamter;FREIE WÄHLER;7.0;239.0;8744.0
 ;;Bergmann;Miriam Sophia Zoë;;w;2002;63768;Hösbach;BY;Aschaffenburg;Studentin;GRÜNE;61.0;;
 ;;Bergmann;Silvia;;w;1959;85356;Freising;BY;Glatten;Betriebswirtin i. R.;CSU;80.0;;
@@ -2631,7 +2631,7 @@ Dr.;;Mohr;Marco;;m;1984;85560;Ebersberg;BY;Prien am Chiemsee;Wirtschaftswissensc
 ;;Möwes;Catalina;;w;1982;6126;Halle (Saale);ST;Halle (Saale);Lehrerin;Volt;1.0;;
 ;;Mühlpfordt;Steffen;;m;1983;1594;Hirschstein;SN;Riesa;Zimmerermeister;FREIE WÄHLER;;154.0;5607.0
 ;;Müller;Alexander;;m;1969;65527;Niedernhausen;HE;Bendorf am Rhein;Dipl.-Informatiker;FDP;3.0;177.0;7660.0
-;;Müller;Alexander;;m;1969;65527;Niedernhausen;HE;Bendorf am Rhein;Dipl.-Informatiker;FDP;3.0;177.0;7660.0
+;;Müller;Alexander;;m;1979;85570;Markt Schwaben;BY;München;kaufm. Angestellter;BP;6.0;;
 ;;Müller;Andreas;;m;1977;23562;Lübeck;SH;Stralsund;Verwaltungsmitarbeiter;Die Linke;;11.0;10175.0
 ;;Müller;André;;m;1965;9474;Crottendorf;SN;Annaberg- Buchholz;Versicherungsfachmann;BSW;;163.0;10287.0
 ;;Müller;Axel Karl;;m;1963;88250;Weingarten;BW;Eßlingen am Neckar;MdB, Vorsitzender Richter am LG a. D.;CDU;;294.0;60700.0
@@ -2657,8 +2657,9 @@ Dr.;;Müller;Hildegard Monika;;w;1947;57076;Siegen;NW;Wiesbaden;Dipl.-Ökonomin,
 Dr.;;Müller;Jürgen;;m;1967;89547;Gerstetten;BW;Heidenheim an der Brenz;Geschäftsführer, Physiker;AfD;;270.0;41336.0
 ;;Müller;Konstantin;;m;1996;37345;Am Ohmberg;TH;Leinefelde;Elektromeister;CDU;11.0;;
 ;;Müller;Marc;;m;1985;30173;Hannover;NI;Hannover;Fraktionsgeschäftsführer;Die PARTEI;2.0;;
-;;Müller;Michael;;m;1980;60316;Frankfurt am Main;HE;Augsburg;Angestellter;Die Linke;;182.0;18794.0
-;;Müller;Michael;;m;1980;60316;Frankfurt am Main;HE;Augsburg;Angestellter;Die Linke;;79.0;17861.0
+;;Müller;Michael;;m;1980;60316;Frankfurt am Main;HE;Augsburg;Angestellter;Die Linke;;182.0;18008.0;
+;;Müller;Michael;;m;1964;12101;Berlin;BE;Berlin;Mitglied des Deutschen Bundestages;SPD;;79.0;22871.0;
+;;Müller;Michael;;m;1984;99885;Ohrdruf;TH;Gotha;selbst. Automobilkaufmann;BÜNDNIS DEUTSCHLAND;9.0;16.0;
 ;;Müller;Mine;;w;1972;28203;Bremen;HB;Berlin;Dipl.-Ing. Elektrotechnik;BSW;5.0;;
 Dr.;;Müller;Ralf;;m;1963;89250;Senden;BY;Ulm/Donau;Humanbiologe;dieBasis;5.0;254.0;1422.0
 ;;Müller;Sandro;;m;1976;1069;Dresden;SN;Großröhrsdorf;Bürokaufmann;Tierschutzpartei;4.0;;
@@ -3448,7 +3449,7 @@ Dr.;;Schmidt;Paul;;m;1966;76133;Karlsruhe;BW;Karlsruhe;Physiker;AfD;19.0;;
 ;;Schmidt;Selina;;w;2004;78532;Tuttlingen;BW;Münsingen;Studentin;Volt;11.0;286.0;1499.0
 ;;Schmidt;Sibylle Christine;;w;1961;13435;Berlin;BE;Berlin;Betriebswirtin;AfD;;82.0;13846.0
 ;;Schmidt;Stefan;;m;1981;93049;Regensburg;BY;Freystadt;MdB, Lehrer;GRÜNE;14.0;232.0;27691.0
-;;Schmidt;Stefan;;m;1981;93049;Regensburg;BY;Freystadt;MdB, Lehrer;GRÜNE;14.0;232.0;27691.0
+;;Schmidt;Stefan;;m;1985;66265;Heusweiler;SL;Saarbrücken;Studienrat;SPD;9.0;;
 ;;Schmidt;Stefan Markus;;m;1979;91361;Pinzberg;BY;Nürnberg;Personalentwickler;Die PARTEI;26.0;;
 ;;Schmidt;Uwe;;m;1966;27580;Bremerhaven;HB;Bremerhaven;MdB, Hafenfacharbeiter;SPD;2.0;55.0;46600.0
 ;;Schmidt;Wolfgang Walter;;m;1970;20144;Hamburg;HH;Hamburg;Bundesminister, Jurist;SPD;1.0;20.0;42720.0
@@ -3557,9 +3558,7 @@ Dr.;;Schultz;Judith Karin;;w;1965;28213;Bremen;HB;Walsrode;Privatiere;Stimme fü
 ;;Schulz;Leonie Sophie Xoey;;w;1999;39288;Burg;ST;Burg;Elektrohelferin;Die PARTEI;3.0;;
 ;;Schulz;Manuela Luise;;w;1961;84405;Dorfen;BY;München;Rechtsfachwirtin;AfD;;212.0;27275.0
 ;;Schulz;Marco;;m;1986;25379;Herzhorn;SH;Schleswig;User Experience Designer;Volt;2.0;3.0;2137.0
-;;Schulz;Marco;;m;1986;25379;Herzhorn;SH;Schleswig;User Experience Designer;Volt;2.0;3.0;2137.0
-;;Schulz;Marco;;m;1986;25379;Herzhorn;SH;Schleswig;User Experience Designer;Volt;2.0;61.0;3405.0
-;;Schulz;Marco;;m;1986;25379;Herzhorn;SH;Schleswig;User Experience Designer;Volt;2.0;61.0;3405.0
+;;Schulz;Marco;;m;1968;14469;Potsdam;BB;Bonn;Dipl.-Betriebswirt;BÜNDNIS DEUTSCHLAND;3,0;61.0;1372.0;
 ;;Schulz;Marten;;m;1988;28327;Bremen;HB;Bremen;Mediengestalter Bild und Ton;Die PARTEI;6.0;;
 ;;Schulz;Marvin;;m;1994;13403;Berlin;BE;Berlin;Angestellter im öffentlichen Dienst;CDU;4.0;76.0;40864.0
 ;;Schulz;Oliver;;m;1970;16548;Glienicke/Nordbahn;BB;Brandenburg (Havel);Polizeibeamter;BSW;4.0;;
