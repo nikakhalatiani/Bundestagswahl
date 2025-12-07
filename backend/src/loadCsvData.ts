@@ -65,6 +65,7 @@ interface PartyRow {
   PartyID: string;
   ShortName: string;
   LongName: string;
+  IsMinority: string;
 }
 interface ElectionRow {
   Year: string;
@@ -159,11 +160,11 @@ async function loadParties() {
   await transactionalInsert("Parties", async (c) => {
     for (const r of rows)
       await c.query(
-        `INSERT INTO parties (id, short_name, long_name)
-         VALUES ($1,$2,$3)
+        `INSERT INTO parties (id, short_name, long_name, is_minority)
+         VALUES ($1,$2,$3,$4)
          ON CONFLICT (id)
-         DO UPDATE SET short_name=EXCLUDED.short_name, long_name=EXCLUDED.long_name`,
-        [Number(r.PartyID), r.ShortName, r.LongName]
+         DO UPDATE SET short_name=EXCLUDED.short_name, long_name=EXCLUDED.long_name, is_minority=EXCLUDED.is_minority`,
+        [Number(r.PartyID), r.ShortName, r.LongName, r.IsMinority?.toLowerCase() === "true",]
       );
   });
 }

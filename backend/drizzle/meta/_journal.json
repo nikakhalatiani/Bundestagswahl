@@ -8,6 +8,13 @@
       "when": 1765071469849,
       "tag": "0000_clean_captain_cross",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1765075151595,
+      "tag": "0001_magical_elektra",
+      "breakpoints": true
     }
   ]
 }

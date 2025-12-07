@@ -24,6 +24,7 @@ export const parties = pgTable("parties", {
   id: serial("id").primaryKey(),                // "PartyID"
   short_name: varchar("short_name", { length: 120 }).notNull().unique(),
   long_name: varchar("long_name", { length: 200 }).notNull(),
+  is_minority: boolean("is_minority").default(false).notNull(),
 });
 
 // ---------- Elections ----------
