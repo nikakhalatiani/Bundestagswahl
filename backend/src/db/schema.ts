@@ -1,41 +1,53 @@
 import {
   pgTable,
-  varchar,
-  integer,
   serial,
-  doublePrecision,
+  integer,
+  varchar,
   text,
+  doublePrecision,
   boolean,
-  timestamp,
+  date,
   primaryKey,
+  unique,
   index,
 } from "drizzle-orm/pg-core";
 
-// ---------- State ----------
+// ---------- States ----------
 export const states = pgTable("states", {
-  id: varchar("id", { length: 5 }).primaryKey(), // e.g. "BB", "BE"
-  name: varchar("name", { length: 100 }).notNull(),
+  id: serial("id").primaryKey(),        // e.g. 1,2,3,...  ("StateID" in CSV)
+  abbr: varchar("abbr", { length: 2 }).notNull().unique(), // e.g. "BB", "BE"
+  name: varchar("name", { length: 100 }).notNull().unique(), // "Brandenburg"
 });
 
-// ---------- Party ----------
+// ---------- Parties ----------
 export const parties = pgTable("parties", {
-  // Use the party short name as the primary key (e.g. "SPD", "CDU").
-  short_name: varchar("short_name", { length: 120 }).primaryKey().notNull(),
+  id: serial("id").primaryKey(),                // "PartyID"
+  short_name: varchar("short_name", { length: 120 }).notNull().unique(),
   long_name: varchar("long_name", { length: 200 }).notNull(),
 });
 
-// ---------- Constituency ----------
-export const constituencies = pgTable("constituencies", {
-  number: integer("number").primaryKey(),
-  name: varchar("name", { length: 150 }).notNull(),
-  state_id: varchar("state_id", { length: 5 })
-    .notNull()
-    .references(() => states.id, { onDelete: "restrict", onUpdate: "cascade" }),
+// ---------- Elections ----------
+export const elections = pgTable("elections", {
+  year: integer("year").primaryKey(),
+  date: date("date").notNull().unique(),
 });
 
-// ---------- Candidate ----------
-export const candidates = pgTable("candidates", {
-  id: serial("id").primaryKey(),
+// ---------- Constituencies ----------
+export const constituencies = pgTable("constituencies", {
+  id: serial("id").primaryKey(),               // "ConstituencyID"
+  number: integer("number").notNull(),
+  name: varchar("name", { length: 150 }).notNull(),
+  state_id: integer("state_id")
+    .notNull()
+    .references(() => states.id, { onDelete: "restrict", onUpdate: "cascade" }),
+},
+  (table) => [
+    unique().on(table.number, table.name),
+  ]);
+
+// ---------- Persons (Candidates) ----------
+export const persons = pgTable("persons", {
+  id: serial("id").primaryKey(), // "PersonID"
   title: text("title"),
   name_addition: text("name_addition"),
   last_name: text("last_name").notNull(),
@@ -45,74 +57,116 @@ export const candidates = pgTable("candidates", {
   birth_year: integer("birth_year"),
   postal_code: text("postal_code"),
   city: text("city"),
-  city_state_abbr: text("city_state_abbr"),
   birth_place: text("birth_place"),
   profession: text("profession"),
-  party_short_name: varchar("party_short_name", { length: 120 }).references(
-    () => parties.short_name,
-    { onDelete: "set null", onUpdate: "cascade" }
-  ),
-  list_position: doublePrecision("list_position"),
-  constituency_num: integer("constituency_num").references(
-    () => constituencies.number,
-    { onDelete: "set null", onUpdate: "cascade" }
-  ),
+},
+  // (table) => [
+  //   unique().on(table.last_name, table.first_name, table.birth_year, table.gender),
+  // ]
+);
+
+// ---------- Party Lists (Landeslisten) ----------
+export const partyLists = pgTable("party_lists", {
+  id: serial("id").primaryKey(), // PartyListID
+  year: integer("year")
+    .notNull()
+    .references(() => elections.year, { onDelete: "cascade" }),
+  state_id: integer("state_id")
+    .notNull()
+    .references(() => states.id, { onDelete: "cascade" }),
+  party_id: integer("party_id")
+    .notNull()
+    .references(() => parties.id, { onDelete: "cascade" }),
+  vote_count: doublePrecision("vote_count").notNull(),
+},
+  (table) => [
+    unique().on(table.state_id, table.party_id, table.year),
+  ]
+);
+
+// ---------- Direct Candidacy ----------
+export const directCandidacy = pgTable("direct_candidacy", {
+  person_id: integer("person_id")
+    .notNull()
+    .references(() => persons.id, { onDelete: "cascade" }),
+  year: integer("year")
+    .notNull()
+    .references(() => elections.year, { onDelete: "cascade" }),
+  constituency_id: integer("constituency_id")
+    .notNull()
+    .references(() => constituencies.id, { onDelete: "cascade" }),
   first_votes: doublePrecision("first_votes"),
-});
-
-// ---------- StateParty ----------
-export const stateParties = pgTable(
-  "state_parties",
-  {
-    state_id: varchar("state_id", { length: 5 })
-      .notNull()
-      .references(() => states.id, {
-        onDelete: "restrict",
-        onUpdate: "cascade",
-      }),
-    party_short_name: varchar("party_short_name", { length: 120 })
-      .notNull()
-      .references(() => parties.short_name, {
-        onDelete: "restrict",
-        onUpdate: "cascade",
-      }),
-    second_votes: doublePrecision("second_votes").notNull(),
-  },
+  previously_elected: boolean("previously_elected").default(false).notNull(),
+  party_id: integer("party_id")
+    .notNull()
+    .references(() => parties.id, { onDelete: "cascade" }),
+},
   (table) => [
-    primaryKey({
-      columns: [table.state_id, table.party_short_name],
-      name: "state_parties_state_id_party_short_name_pk",
-    }),
+    primaryKey({ columns: [table.person_id, table.year] }),
+  ]);
+
+// ---------- Party List Candidacy ----------
+export const partyListCandidacy = pgTable("party_list_candidacy", {
+  person_id: integer("person_id")
+    .notNull()
+    .references(() => persons.id, { onDelete: "cascade" }),
+  party_list_id: integer("party_list_id")
+    .notNull()
+    .references(() => partyLists.id, { onDelete: "cascade" }),
+  list_position: doublePrecision("list_position"),
+  previously_elected: boolean("previously_elected").default(false).notNull(),
+},
+  (table) => [
+    primaryKey({ columns: [table.person_id, table.party_list_id] }),
+  ]);
+
+// ---------- Constituency Elections ----------
+export const constituencyElections = pgTable("constituency_elections", {
+  bridge_id: serial("bridge_id").primaryKey(),    // BridgeID
+  year: integer("year")
+    .notNull()
+    .references(() => elections.year, { onDelete: "cascade" }),
+  constituency_id: integer("constituency_id")
+    .notNull()
+    .references(() => constituencies.id, { onDelete: "cascade" }),
+  eligible_voters: doublePrecision("eligible_voters"),
+  total_voters: doublePrecision("total_voters"),
+},
+  (table) => [
+    unique().on(table.constituency_id, table.year),
+  ]);
+
+// ---------- Constituency / Party Votes ----------
+export const constituencyPartyVotes = pgTable("constituency_party_votes", {
+  id: serial("id").primaryKey(),     // ID
+  bridge_id: integer("bridge_id")
+    .notNull()
+    .references(() => constituencyElections.bridge_id, { onDelete: "cascade" }),
+  party_id: integer("party_id")
+    .notNull()
+    .references(() => parties.id, { onDelete: "cascade" }),
+  vote_type: integer("vote_type").notNull(),  // 1 = Erst, 2 = Zweit
+  votes: doublePrecision("votes"),
+  percent: doublePrecision("percent"),
+  prev_votes: doublePrecision("prev_votes"),
+  prev_percent: doublePrecision("prev_percent"),
+  diff_percent_pts: doublePrecision("diff_percent_pts"),
+},
+  (table) => [
+    unique().on(table.party_id, table.bridge_id, table.vote_type),
   ]
 );
 
-
-// ---------- Ballot ----------
-export const ballots = pgTable(
-  "ballots",
-  {
-    id: serial("id").primaryKey(),
-    constituency_num: integer("constituency_num")
-      .notNull()
-      .references(() => constituencies.number, {
-        onDelete: "restrict",
-        onUpdate: "cascade",
-      }),
-    voter_id: integer("voter_id").notNull(),
-    first_vote_candidate_id: integer("first_vote_candidate_id").references(
-      () => candidates.id,
-      { onDelete: "set null", onUpdate: "cascade" }
-    ),
-    second_vote_party: varchar("second_vote_party", { length: 120 }),
-    is_first_vote_valid: boolean("is_first_vote_valid").default(true).notNull(),
-    is_second_vote_valid: boolean("is_second_vote_valid").default(true).notNull(),
-    created_at: timestamp("created_at", { mode: "date" })
-      .defaultNow()
-      .notNull(),
-  },
-  (table) => [
-    index("ballots_constituency_num_idx").on(table.constituency_num),
-    index("ballots_first_vote_candidate_id_idx").on(table.first_vote_candidate_id),
-    index("ballots_second_vote_party_idx").on(table.second_vote_party),
-  ]
-);
+// ---------- Index Helpers ---------- Later
+// export const idx_constituency_state = index("constituencies_state_idx").on(
+//   constituencies.state_id
+// );
+// export const idx_party_list_state = index("party_lists_state_idx").on(
+//   partyLists.state_id
+// );
+// export const idx_direct_person = index("direct_cand_person_idx").on(
+//   directCandidacy.person_id
+// );
+// export const idx_party_votes_party = index("const_party_votes_party_idx").on(
+//   constituencyPartyVotes.party_id
+// );

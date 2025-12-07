@@ -1,4 +1,4 @@
-﻿ID;﻿BridgeID;PartyID;VoteType;Votes;Percent;PrevVotes;PrevPercent;DiffPercentPts
+﻿ID;BridgeID;PartyID;VoteType;Votes;Percent;PrevVotes;PrevPercent;DiffPercentPts
 1;1;21;1;41721.0;23.363293;68120.0;39.995773;-16.63248
 2;1;21;2;36421.0;20.389643;58320.0;34.212302;-13.822659
 3;1;273;1;38927.0;21.798684;47711.0;28.012894;-6.21421
