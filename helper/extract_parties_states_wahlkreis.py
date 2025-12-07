@@ -2,7 +2,7 @@ import pandas as pd
 from pathlib import Path
 
 # --- Configuration ---
-input_filename = Path("data/rawData/kand2025.csv")
+input_filename = Path("data/rawData/kand2021.csv")
 output_dir = Path("Bundestagswahl/outputs")
 output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -12,16 +12,30 @@ wahlkreis_filename = output_dir / "wahlkreis.csv"
 # --- End of Configuration ---
 
 try:
-    # Read CSV (semicolon-delimited, ignore comment lines)
-    df = pd.read_csv(input_filename, delimiter=";", comment="#", encoding="utf-8")
+    # Read CSV (semicolon-delimited)
+    df = pd.read_csv(input_filename, delimiter=";", encoding="utf-8")
 
     # --- 1️⃣ Parties CSV ---
+    # detect party columns for 2025 vs 2021 formats
+    if "GruppennameKurz" in df.columns and "Gruppenname" in df.columns:
+        short_col = "GruppennameKurz"
+        long_col = "Gruppenname"
+    elif "Gruppenname" in df.columns and "GruppennameLang" in df.columns:
+        # 2021: Gruppenname (short), GruppennameLang (long)
+        short_col = "Gruppenname"
+        long_col = "GruppennameLang"
+    else:
+        raise KeyError("No recognized party name columns (expected GruppennameKurz+Gruppenname or Gruppenname+GruppennameLang)")
+
     parties_df = (
-        df[["GruppennameKurz", "Gruppenname"]]
-        .dropna(subset=["GruppennameKurz"])
+        df[[short_col, long_col]]
+        .dropna(subset=[short_col])
         .drop_duplicates()
-        .sort_values(by=["GruppennameKurz"])
+        .sort_values(by=[short_col])
     )
+
+    # Normalize output column names to (short,long) => (GruppennameKurz,Gruppenname)
+    parties_df = parties_df.rename(columns={short_col: "GruppennameKurz", long_col: "Gruppenname"})
     parties_df.to_csv(parties_filename, sep=";", index=False, encoding="utf-8")
 
     # --- 2️⃣ States CSV (only Gebietsart == 'Land') ---
