@@ -13,7 +13,7 @@ async function listTableSnapshot() {
   const cols: Record<string, number> = {};
   for (const r of colsRes.rows) cols[r.table_name] = Number(r.column_count);
 
-  // --- Exact row counts (slow on huge tables)
+  // --- Exact row counts
   const tableListSql = `
     SELECT table_name
     FROM information_schema.tables
@@ -25,7 +25,6 @@ async function listTableSnapshot() {
 
   for (const t of tablesRes.rows) {
     const name = t.table_name;
-    // count(*) can be heavy, but exact
     const countRes = await pool.query(`SELECT COUNT(*)::bigint AS cnt FROM "${name}"`);
     rowCounts[name] = Number(countRes.rows[0].cnt);
   }
@@ -54,7 +53,24 @@ async function listTableSnapshot() {
   `;
   const fkRes = await pool.query(fkSql);
   const fks: Record<string, number> = {};
-  for (const r of fkRes.rows) fks[r.table_name] = Number(r.fk_count);
+  for (const r of fkRes.rows) {
+    // conrelid::regclass might return "public.tablename" or just "tablename"
+    // We strip quotes and schema to match the other keys if necessary, 
+    // though usually standard tables return the simple name here.
+    const name = String(r.table_name).replace(/^public\./, '').replace(/"/g, '');
+    fks[name] = Number(r.fk_count);
+  }
+
+  // --- Index counts (NEW)
+  const idxSql = `
+    SELECT tablename, COUNT(*) AS index_count
+    FROM pg_indexes
+    WHERE schemaname = 'public'
+    GROUP BY tablename;
+  `;
+  const idxRes = await pool.query(idxSql);
+  const idxs: Record<string, number> = {};
+  for (const r of idxRes.rows) idxs[r.tablename] = Number(r.index_count);
 
   // --- Merge everything
   const tableNames = Array.from(
@@ -63,6 +79,7 @@ async function listTableSnapshot() {
       ...Object.keys(rowCounts),
       ...Object.keys(pks),
       ...Object.keys(fks),
+      ...Object.keys(idxs),
     ])
   ).sort();
 
@@ -72,6 +89,7 @@ async function listTableSnapshot() {
     row_count: rowCounts[t] ?? 0,
     pk_columns: pks[t] ?? "—",
     fk_count: fks[t] ?? 0,
+    index_count: idxs[t] ?? 0, // <--- New Column
   }));
 
   console.log("\n=== DATABASE SNAPSHOT (Exact Row Counts) ===");

@@ -15,6 +15,13 @@
       "when": 1765075151595,
       "tag": "0001_magical_elektra",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1765076434000,
+      "tag": "0002_nosy_jean_grey",
+      "breakpoints": true
     }
   ]
 }

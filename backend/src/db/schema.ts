@@ -10,6 +10,7 @@ import {
   primaryKey,
   unique,
   index,
+  foreignKey,
 } from "drizzle-orm/pg-core";
 
 // ---------- States ----------
@@ -156,6 +157,43 @@ export const constituencyPartyVotes = pgTable("constituency_party_votes", {
   (table) => [
     unique().on(table.party_id, table.bridge_id, table.vote_type),
   ]
+);
+
+
+export const firstVotes = pgTable("first_votes",{
+    id: serial("id").primaryKey(),
+    year: integer("year")
+      .notNull(),
+    direct_person_id: integer("direct_person_id")
+      .notNull(),
+    is_valid: boolean("is_valid").default(true).notNull(),
+    created_at: date("created_at").defaultNow(),
+  },
+  (table) => [
+  foreignKey({
+      columns: [table.direct_person_id, table.year],
+      foreignColumns: [
+        directCandidacy.person_id,
+        directCandidacy.year,
+      ],
+      name: "fk_first_vote_direct_cand",
+    }),
+  ]
+  
+);
+
+export const secondVotes = pgTable("second_votes",{
+    id: serial("id").primaryKey(),
+    // each Zweitstimme is for a party list in some state
+    party_list_id: integer("party_list_id")
+      .notNull()
+      .references(() => partyLists.id, { onDelete: "cascade" }),
+    is_valid: boolean("is_valid").default(true).notNull(),
+    created_at: date("created_at").defaultNow(),
+  },
+  // (t) => [
+  //   index("second_votes_party_idx").on(t.party_list_id),
+  // ]
 );
 
 // ---------- Index Helpers ---------- Later

@@ -1,265 +1,231 @@
-import dbModule from "./db";
-const { pool, disconnect } = dbModule;
+import * as dotenv from 'dotenv';
+import { Pool } from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { sql } from 'drizzle-orm';
 
-interface BallotGenerationOptions {
-  constituencyNumber?: number; // Optional: limit generation to one constituency
-  batchSize?: number; // Number of ballots inserted per DB batch
+dotenv.config();
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+const db = drizzle(pool);
+
+interface GenerationOptions {
+  useUnloggedTables?: boolean;
+  dropAndRecreateTables?: boolean;
+  skipVerification?: boolean;
 }
 
-async function insertBallotsBatch(batch: any[]) {
-  // Inserts a batch of ballots in one SQL statement (very fast)
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
+async function main() {
+  await generateBallots({
+    useUnloggedTables: true,
+    dropAndRecreateTables: true,
+    skipVerification: true,
+  });
+  await pool.end();
+}
 
-    const placeholders = batch
-      .map(
-        (_, i) =>
-          `($${i * 6 + 1},$${i * 6 + 2},$${i * 6 + 3},$${i * 6 + 4},$${i * 6 + 5},$${i * 6 + 6})`
-      )
-      .join(",");
+async function generateBallots(options: GenerationOptions) {
+  const {
+    useUnloggedTables = true,
+    dropAndRecreateTables = true,
+    skipVerification = true,
+  } = options;
 
-    const values = batch.flatMap((b) => [
-      b.constituencyNum,
-      b.voterId,
-      b.firstVoteCandidateId,
-      b.secondVoteParty,
-      b.isFirstVoteValid,
-      b.isSecondVoteValid,
-    ]);
+  console.log('Starting ballot generation (all years)...');
+  const start = Date.now();
 
-    await client.query(
-      `INSERT INTO ballots
-       (constituency_num, voter_id, first_vote_candidate_id, second_vote_party, 
-        is_first_vote_valid, is_second_vote_valid)
-       VALUES ${placeholders}`,
-      values
-    );
+  await db.execute(sql`SET LOCAL synchronous_commit = 'off';`);
 
-    await client.query("COMMIT");
-  } catch (err) {
-    await client.query("ROLLBACK");
-    console.error("⚠ Batch insert failed:", err);
-  } finally {
-    client.release();
+  if (dropAndRecreateTables) {
+    console.log('Dropping and recreating tables...');
+    await recreateFirstVotesTable(useUnloggedTables);
+    await recreateSecondVotesTable(useUnloggedTables);
+  } else {
+    console.log('Truncating existing first_votes and second_votes...');
+    await db.execute(sql.raw('TRUNCATE TABLE first_votes, second_votes RESTART IDENTITY CASCADE;'));
+  }
+
+  console.log('\nGenerating first_votes...');
+  await insertFirstVotes();
+
+  console.log('\nGenerating second_votes...');
+  await insertSecondVotes();
+
+  console.log('\nRecreating indexes and foreign keys...');
+  await recreateIndexesAndFKs();
+
+  const total = ((Date.now() - start) / 1000).toFixed(1);
+  console.log(`✅ Ballot generation complete in ${total}s`);
+
+  if (!skipVerification) {
+    console.log('\nVerifying consistency...');
+    await verifyCounts();
   }
 }
 
 /**
- * Generates individual ballots that statistically reflect aggregated results.
- * Uses batched inserts for speed.
+ * Drop and recreate first_votes table (optionally as UNLOGGED)
  */
-async function generateBallots(options: BallotGenerationOptions = {}) {
-  const { constituencyNumber, batchSize = 5000 } = options;
-
-  console.log("Starting ballot generation...\n");
-
-  const constituenciesRes = constituencyNumber
-    ? await pool.query("SELECT * FROM constituencies WHERE number = $1", [
-        constituencyNumber,
-      ])
-    : await pool.query("SELECT * FROM constituencies ORDER BY number ASC");
-
-  const constituencies = constituenciesRes.rows;
-
-  if (constituencies.length === 0) {
-    console.log("No constituencies found — exiting.");
-    return;
-  }
-
-  console.log(`Processing ${constituencies.length} constituency/constituencies...\n`);
-
-  let totalBallotsGenerated = 0;
-
-  for (const constituency of constituencies) {
-    console.log(`\n--- Constituency ${constituency.number}: ${constituency.name} ---`);
-
-    await pool.query("DELETE FROM ballots WHERE constituency_num = $1", [
-      constituency.number,
-    ]);
-
-    const candidatesRes = await pool.query(
-      `SELECT c.*, p.short_name AS party_short_name
-       FROM candidates c
-       LEFT JOIN parties p ON p.short_name = c.party_short_name
-       WHERE c.constituency_num = $1 AND c.first_votes IS NOT NULL
-       ORDER BY c.id ASC`,
-      [constituency.number]
+async function recreateFirstVotesTable(unlogged: boolean) {
+  const definition = `
+    DROP TABLE IF EXISTS first_votes CASCADE;
+    CREATE ${unlogged ? 'UNLOGGED ' : ''}TABLE first_votes (
+      id serial PRIMARY KEY,
+      year integer NOT NULL,
+      direct_person_id integer NOT NULL,
+      is_valid boolean NOT NULL DEFAULT true,
+      created_at date DEFAULT now()
     );
-    const candidates = candidatesRes.rows;
-
-    if (candidates.length === 0) {
-      console.log("No candidates with first votes found.");
-      continue;
-    }
-
-    // --- Compute distributions ---
-    const totalFirstVotes = candidates.reduce(
-      (sum, c) => sum + (Number(c.first_votes) || 0),
-      0
-    );
-    console.log(`Total first votes to generate: ${totalFirstVotes.toLocaleString()}`);
-
-    const statePartiesRes = await pool.query(
-      `SELECT sp.*, p.short_name AS party_short_name
-       FROM state_parties sp
-       LEFT JOIN parties p ON p.short_name = sp.party_short_name
-       WHERE sp.state_id = $1`,
-      [constituency.state_id || constituency.stateId]
-    );
-    const stateParties = statePartiesRes.rows;
-    const totalSecondVotesInState = stateParties.reduce(
-      (sum, sp) => sum + (Number(sp.second_votes) || 0),
-      0
-    );
-
-    const targetBallotCount = Math.floor(totalFirstVotes);
-    console.log(`Target ballot count: ${targetBallotCount.toLocaleString()}`);
-
-    // Build weighted arrays for randomization
-    const firstVoteDistribution: Array<{ candidateId: number; party: string | null }> =
-      [];
-    candidates.forEach((c) => {
-      const votes = Math.floor(c.first_votes || 0);
-      for (let i = 0; i < votes; i++) {
-        firstVoteDistribution.push({
-          candidateId: c.id,
-          party: c.party_short_name,
-        });
-      }
-    });
-
-    shuffleArray(firstVoteDistribution);
-
-    const secondVoteDistribution: Array<string | null> = [];
-    stateParties.forEach((sp) => {
-      const proportion = sp.second_votes / totalSecondVotesInState;
-      const votesForThisConstituency = Math.floor(
-        proportion * targetBallotCount
-      );
-      for (let i = 0; i < votesForThisConstituency; i++) {
-        secondVoteDistribution.push(sp.party_short_name);
-      }
-    });
-
-    while (secondVoteDistribution.length < firstVoteDistribution.length) {
-      secondVoteDistribution.push(null);
-    }
-    shuffleArray(secondVoteDistribution);
-
-    // --- Ballot generation + batched insert ---
-    const ballots: any[] = [];
-    const maxBallots = Math.min(
-      firstVoteDistribution.length,
-      targetBallotCount
-    );
-
-    for (let i = 0; i < maxBallots; i++) {
-      const firstVote = firstVoteDistribution[i];
-      const secondVoteParty = secondVoteDistribution[i] || null;
-
-      ballots.push({
-        constituencyNum: constituency.number,
-        voterId: i + 1,
-        firstVoteCandidateId: firstVote.candidateId,
-        secondVoteParty,
-        isFirstVoteValid: true,
-        isSecondVoteValid: secondVoteParty !== null,
-      });
-
-      if (ballots.length >= batchSize) {
-        await insertBallotsBatch(ballots);
-        totalBallotsGenerated += ballots.length;
-        ballots.length = 0;
-        process.stdout.write(
-          `\r  Inserted ${totalBallotsGenerated.toLocaleString()} ballots`
-        );
-      }
-    }
-
-    if (ballots.length > 0) {
-      await insertBallotsBatch(ballots);
-      totalBallotsGenerated += ballots.length;
-    }
-
-    console.log(
-      `\n  ✓ Generated ${maxBallots.toLocaleString()} ballots for constituency ${constituency.number}`
-    );
-
-    await verifyConstituency(constituency.number);
-  }
-
-  console.log(`\n\n✅ Total ballots generated: ${totalBallotsGenerated.toLocaleString()}`);
+  `;
+  await db.execute(sql.raw(definition));
 }
 
-// --- Helpers -----------------------------
+/**
+ * Drop and recreate second_votes table (optionally as UNLOGGED)
+ */
+async function recreateSecondVotesTable(unlogged: boolean) {
+  const definition = `
+    DROP TABLE IF EXISTS second_votes CASCADE;
+    CREATE ${unlogged ? 'UNLOGGED ' : ''}TABLE second_votes (
+      id serial PRIMARY KEY,
+      party_list_id integer NOT NULL,
+      is_valid boolean NOT NULL DEFAULT true,
+      created_at date DEFAULT now()
+    );
+  `;
+  await db.execute(sql.raw(definition));
+}
 
-async function verifyConstituency(constituencyNum: number) {
-  const ballotFirstVotesRes = await pool.query(
-    `SELECT first_vote_candidate_id, COUNT(*)::int AS cnt
-     FROM ballots
-     WHERE constituency_num = $1 AND is_first_vote_valid = true
-     GROUP BY first_vote_candidate_id`,
-    [constituencyNum]
-  );
-  const ballotFirstVotes = ballotFirstVotesRes.rows;
+/**
+ * Expand direct_candidacy.first_votes into individual rows in first_votes
+ */
+async function insertFirstVotes() {
+  const query = `
+    INSERT INTO first_votes (
+      year,
+      direct_person_id,
+      is_valid,
+      created_at
+    )
+    SELECT
+      dc.year,
+      dc.person_id,
+      true,
+      CURRENT_DATE
+    FROM direct_candidacy dc
+    CROSS JOIN LATERAL generate_series(
+      1,
+      FLOOR(COALESCE(dc.first_votes, 0))::integer
+    ) AS gs(n)
+    WHERE dc.first_votes IS NOT NULL
+      AND dc.first_votes > 0;
+  `;
+  const t0 = Date.now();
+  await db.execute(sql.raw(query));
+  const dur = ((Date.now() - t0) / 1000).toFixed(1);
+  console.log(` -> first_votes inserted in ${dur}s`);
+}
 
-  const candidatesRes = await pool.query(
-    `SELECT id, first_name, last_name, first_votes
-     FROM candidates
-     WHERE constituency_num = $1 AND first_votes IS NOT NULL`,
-    [constituencyNum]
-  );
-  const candidates = candidatesRes.rows;
+/**
+ * Expand party_lists.vote_count into individual rows in second_votes
+ */
+async function insertSecondVotes() {
+  const query = `
+    INSERT INTO second_votes (
+      party_list_id,
+      is_valid,
+      created_at
+    )
+    SELECT
+      pl.id,
+      true,
+      CURRENT_DATE
+    FROM party_lists pl
+    CROSS JOIN LATERAL generate_series(
+      1,
+      FLOOR(COALESCE(pl.vote_count, 0))::integer
+    ) AS gs(n)
+    WHERE pl.vote_count IS NOT NULL
+      AND pl.vote_count > 0;
+  `;
+  const t0 = Date.now();
+  await db.execute(sql.raw(query));
+  const dur = ((Date.now() - t0) / 1000).toFixed(1);
+  console.log(` -> second_votes inserted in ${dur}s`);
+}
 
-  let valid = true;
-  for (const c of candidates) {
-    const ballotsCount =
-      ballotFirstVotes.find((b) => b.first_vote_candidate_id === c.id)?.cnt ||
-      0;
-    const expected = Math.floor(c.first_votes || 0);
-    if (ballotsCount !== expected) {
-      valid = false;
-      console.log(
-        `    ⚠ ${c.first_name} ${c.last_name}: Generated ${ballotsCount}, Expected ${expected}`
-      );
-    }
+/**
+ * Add indexes and FKs after bulk inserts
+ */
+async function recreateIndexesAndFKs() {
+  await db.execute(sql.raw(`
+    CREATE INDEX IF NOT EXISTS idx_first_votes_person_year
+      ON first_votes(direct_person_id, year);
+  `));
+
+  await db.execute(sql.raw(`
+    CREATE INDEX IF NOT EXISTS idx_second_votes_party
+      ON second_votes(party_list_id);
+  `));
+
+  await db.execute(sql.raw(`
+    ALTER TABLE first_votes
+      ADD CONSTRAINT fk_first_vote_direct_cand
+      FOREIGN KEY (direct_person_id, year)
+      REFERENCES direct_candidacy(person_id, year)
+      ON DELETE CASCADE;
+  `));
+
+  await db.execute(sql.raw(`
+    ALTER TABLE second_votes
+      ADD CONSTRAINT fk_second_vote_party_list
+      FOREIGN KEY (party_list_id)
+      REFERENCES party_lists(id)
+      ON DELETE CASCADE;
+  `));
+}
+
+/**
+ * Optional sanity verification: check that counts match aggregates
+ */
+async function verifyCounts() {
+  console.log('Verifying first votes...');
+  const firstMismatch = await db.execute(sql.raw(`
+    SELECT dc.person_id, dc.first_votes, COUNT(fv.id)::bigint AS generated
+    FROM direct_candidacy dc
+    LEFT JOIN first_votes fv
+      ON fv.direct_person_id = dc.person_id
+     AND fv.year = dc.year
+    WHERE dc.first_votes IS NOT NULL
+    GROUP BY dc.person_id, dc.first_votes
+    HAVING ABS(COUNT(fv.id) - FLOOR(dc.first_votes)) > 1;
+  `));
+
+  if (firstMismatch.rows.length) {
+    console.log(` ⚠ Found ${firstMismatch.rows.length} mismatched direct candidates`);
+  } else {
+    console.log(' ✅ First votes consistent');
   }
-  if (valid) {
-    console.log("    ✓ First vote counts verified");
+
+  console.log('Verifying second votes...');
+  const secondMismatch = await db.execute(sql.raw(`
+    SELECT pl.id, pl.vote_count, COUNT(sv.id)::bigint AS generated
+    FROM party_lists pl
+    LEFT JOIN second_votes sv
+      ON sv.party_list_id = pl.id
+    GROUP BY pl.id, pl.vote_count
+    HAVING ABS(COUNT(sv.id) - FLOOR(pl.vote_count)) > 1;
+  `));
+
+  if (secondMismatch.rows.length) {
+    console.log(` ⚠ Found ${secondMismatch.rows.length} mismatched party lists`);
+  } else {
+    console.log(' ✅ Second votes consistent');
   }
 }
 
-// Fisher–Yates shuffle
-function shuffleArray<T>(arr: T[]): void {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-}
-
-// --- Entry Point -------------------------
-
-async function main() {
-  const args = process.argv.slice(2);
-  const constituencyArg = args.find((a) => a.startsWith("--constituency="));
-  const options: BallotGenerationOptions = {};
-
-  if (constituencyArg) {
-    const num = parseInt(constituencyArg.split("=")[1]);
-    if (!isNaN(num)) {
-      options.constituencyNumber = num;
-      console.log(`Generating ballots only for constituency ${num}`);
-    }
-  }
-
-  try {
-    await generateBallots(options);
-  } catch (err) {
-    console.error("Error generating ballots:", err);
-  } finally {
-    await disconnect();
-  }
-}
-
-main();
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
