@@ -1,4 +1,4 @@
-BridgeID;Year;ConstituencyID;EligibleVoters;TotalVoters;Percent;PrevVotes;PrevPercent;DiffPercentPts;InvalidFirst;InvalidSecond;ValidFirst;ValidSecond
+﻿BridgeID;Year;ConstituencyID;EligibleVoters;TotalVoters;Percent;PrevVotes;PrevPercent;DiffPercentPts;InvalidFirst;InvalidSecond;ValidFirst;ValidSecond
 1;2021;414;231536.0;180112.0;77.79006288438947;228471.0;75.245436;2.544627;1537.0;1487.0;178575.0;178625.0
 2;2021;415;188267.0;145387.0;77.2238363600631;186568.0;74.60765;2.616187;1337.0;1242.0;144050.0;144145.0
 3;2021;416;176899.0;136299.0;77.04905058818873;176636.0;74.739577;2.309473;1319.0;1190.0;134980.0;135109.0

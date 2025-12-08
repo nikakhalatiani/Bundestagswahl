@@ -8,7 +8,7 @@ RAW_DIR = DATA_DIR / "rawData"
 
 # Latest KERG files (_2: party/system groups, both votes)
 KERG_2021 = RAW_DIR / "kerg2021_2.csv"
-KERG_2025 = RAW_DIR / "kerg2025_2.csv"
+KERG_2025 = RAW_DIR / "kerg2025_2_new.csv"
 
 # Constituency mapping (internal mapping: Number <-> ConstituencyID)
 CONSTITUENCIES_2021 = DATA_DIR / "old2.0/constituencies_2021.csv"
@@ -167,8 +167,24 @@ def main():
 
     # ------------------------------------------------------------------
     # 4) Merge System‑Gruppe stats into base using (Year, Number)
+    #    Drop old election columns so we take fresh values from KERG
     # ------------------------------------------------------------------
-    enriched = base_with_num.merge(sys_df, on=["Year", "Number"], how="left")
+    override_cols = [
+        "EligibleVoters",
+        "TotalVoters",
+        "Percent",
+        "PrevVotes",
+        "PrevPercent",
+        "DiffPercentPts",
+        "InvalidFirst",
+        "InvalidSecond",
+        "ValidFirst",
+        "ValidSecond",
+    ]
+
+    base_for_merge = base_with_num.drop(columns=override_cols, errors="ignore")
+
+    enriched = base_for_merge.merge(sys_df, on=["Year", "Number"], how="left")
 
     # Keep a temp copy if you want to inspect the full enrichment
     enriched.to_csv(ENRICHED_TMP, sep=";", index=False, encoding="utf-8-sig")
