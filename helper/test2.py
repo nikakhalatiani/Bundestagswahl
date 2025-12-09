@@ -1,40 +1,61 @@
 import pandas as pd
 from pathlib import Path
+import unicodedata
 import re
 
-# --- Configuration ----------------------------------------------------
+# ----------------------------------------------------------------------
+# Configuration
+# ----------------------------------------------------------------------
 DATA_DIR = Path("data")
 RAW_DIR = DATA_DIR / "rawData"
 
-# Latest KERG files (_2: party/system groups, both votes)
 KERG_2021 = RAW_DIR / "kerg2021_2.csv"
 KERG_2025 = RAW_DIR / "kerg2025_2_new.csv"
 
-# Constituency mapping (internal mapping: Number <-> ConstituencyID)
+CONST_ELECTIONS = DATA_DIR / "constituency_elections.csv"
 CONSTITUENCIES_2021 = DATA_DIR / "old2.0/constituencies_2021.csv"
 CONSTITUENCIES_2025 = DATA_DIR / "old2.0/constituencies_2025.csv"
+PARTY_MAP = DATA_DIR / "old2.0/party_id_mapping.csv"
 
-# Base + outputs
-BASE_CONST_ELEC = DATA_DIR / "constituency_elections.csv"
-ENRICHED_TMP = DATA_DIR / "constituency_elections_enriched_tmp.csv"
-OUT_UPDATED = DATA_DIR / "constituency_elections_updated.csv"
-# ---------------------------------------------------------------------
+CURRENT_CPV = DATA_DIR / "constituency_party_votes.csv"
+OUT_UPDATED = DATA_DIR / "constituency_party_votes_rebuilt.csv"
+# ----------------------------------------------------------------------
+
+
+def normalize_party(s: str) -> str:
+    if not isinstance(s, str):
+        return ""
+    s = unicodedata.normalize("NFKC", s.strip())
+    s = re.sub(r"[–—]", "-", s)
+    s = re.sub(r"\s*-\s*", " - ", s)
+    s = re.sub(r"[\s\u00A0]+", " ", s)
+    return s.lower()
+
+
+ALIASES = {
+    "gesundheitsforschung": "verjüngungsforschung",
+    "team todenhöfer": "die gerechtigkeitspartei - team todenhöfer",
+    "die humanisten": "pdh",
+    "die linke": "die linke",
+}
+
+
+def add_norm_party(df: pd.DataFrame, src: str, dst: str) -> pd.DataFrame:
+    df[dst] = df[src].map(normalize_party).apply(lambda s: ALIASES.get(s, s))
+    return df
 
 
 def parse_num(series: pd.Series) -> pd.Series:
-    """Convert German-style numeric strings to float safely."""
-    def _fix(s):
-        if not isinstance(s, str):
-            return s
-        s = s.strip()
-        if not s:
+    """Convert German style numerals safely."""
+    def _fix(x):
+        if not isinstance(x, str):
+            return x
+        x = x.strip()
+        if not x:
             return None
-        # remove thousands separators like 12.345
-        s = re.sub(r"(?<=\d)\.(?=\d{3}\b)", "", s)
-        # convert decimal comma to dot
-        s = s.replace(",", ".")
-        return s
-
+        x = re.sub(r"(?<=\d)\.(?=\d{3}\b)", "", x)
+        x = x.replace(",", ".")
+        return x
     return pd.to_numeric(series.map(_fix), errors="coerce")
 
 
@@ -45,191 +66,162 @@ def load_kerg(path: Path, year: int) -> pd.DataFrame:
     return df
 
 
-def load_constituencies(path: Path, year: int) -> pd.DataFrame:
-    df = pd.read_csv(path, sep=";", encoding="utf-8-sig")
-    df.columns = [c.strip() for c in df.columns]
-    df["Year"] = year
-    # internal mapping: (Year, Number) <-> ConstituencyID
-    return df[["Year", "Number", "ConstituencyID"]]
+# ----------------------------------------------------------------------
+# 1) Load reference data
+# ----------------------------------------------------------------------
+print("🧭 Loading reference CSVs ...")
 
+cpv_old = pd.read_csv(CURRENT_CPV, sep=";", encoding="utf-8-sig")
+cpv_columns = list(cpv_old.columns)
 
-def main():
-    # ------------------------------------------------------------------
-    # 1) Load base elections and attach Number via constituency mapping
-    # ------------------------------------------------------------------
-    print("🧭 Loading constituency mappings and base elections ...")
+elections = pd.read_csv(CONST_ELECTIONS, sep=";", encoding="utf-8-sig")
 
-    const21 = load_constituencies(CONSTITUENCIES_2021, 2021)
-    const25 = load_constituencies(CONSTITUENCIES_2025, 2025)
-    all_const = pd.concat([const21, const25], ignore_index=True)
+cons21 = pd.read_csv(CONSTITUENCIES_2021, sep=";", encoding="utf-8-sig")
+cons25 = pd.read_csv(CONSTITUENCIES_2025, sep=";", encoding="utf-8-sig")
+cons21["Year"] = 2021
+cons25["Year"] = 2025
+cons_all = pd.concat([cons21, cons25], ignore_index=True)
+cons_all.columns = [c.strip() for c in cons_all.columns]
+cons_all["Number"] = cons_all["Number"].astype("Int64")
 
-    base = pd.read_csv(BASE_CONST_ELEC, sep=";", encoding="utf-8-sig")
-    base.columns = [c.strip() for c in base.columns]
+party_map = pd.read_csv(PARTY_MAP, sep=";", encoding="utf-8-sig")
+party_map = add_norm_party(party_map, "ShortName", "NormPartyShort")
+party_map_unique = (
+    party_map.sort_values(["Year", "NormPartyShort"])
+    .drop_duplicates(subset=["Year", "NormPartyShort"], keep="last")
+)
 
-    base_with_num = base.merge(
-        all_const,
-        on=["Year", "ConstituencyID"],
-        how="left",
+# ----------------------------------------------------------------------
+# 2) Load and clean KERG for both years
+# ----------------------------------------------------------------------
+print("🧾 Loading KERG 2021 + updated 2025 ...")
+
+k21 = load_kerg(KERG_2021, 2021)
+k25 = load_kerg(KERG_2025, 2025)
+kerg = pd.concat([k21, k25], ignore_index=True)
+
+kerg = kerg[kerg["Gebietsart"] == "Wahlkreis"].copy()
+
+for c in ["Anzahl", "VorpAnzahl", "Prozent", "VorpProzent", "DiffProzent", "DiffProzentPkt"]:
+    if c in kerg.columns:
+        kerg[c] = parse_num(kerg[c])
+
+kerg["Number"] = (
+    kerg["Gebietsnummer"].astype(str).str.strip().str.lstrip("0").replace({"": None})
+)
+kerg["Number"] = pd.to_numeric(kerg["Number"], errors="coerce").astype("Int64")
+kerg["VoteType"] = pd.to_numeric(kerg["Stimme"], errors="coerce").astype("Int64")
+
+# ----------------------------------------------------------------------
+# 3) Select usable rows: Partei, EB/Wählergruppe
+# ----------------------------------------------------------------------
+print("🔍 Selecting Partei + Einzelbewerber/Wählergruppe")
+
+kp = kerg[
+    (
+        kerg["Gruppenart"].isin(
+            ["Partei", "Einzelbewerber", "Einzelbewerber/Wählergruppe"]
+        )
     )
-    if base_with_num["Number"].isna().any():
-        n_miss = base_with_num["Number"].isna().sum()
-        print(f"⚠ {n_miss} rows in constituency_elections lack a Number mapping.")
+].copy()
 
-    # ------------------------------------------------------------------
-    # 2) Load KERG and normalise numeric columns
-    # ------------------------------------------------------------------
-    print("🧾 Loading KERG files (including updated 2025) ...")
-    kerg21 = load_kerg(KERG_2021, 2021)
-    kerg25 = load_kerg(KERG_2025, 2025)
-    kerg = pd.concat([kerg21, kerg25], ignore_index=True)
+# Keep EB names as-is (e.g. "für mehr Bürgerbeteiligung", "ZUKUNFT")
+add_norm_party(kp, "Gruppenname", "NormPartyShort")
 
-    # Only Wahlkreis rows
-    wk = kerg[kerg["Gebietsart"] == "Wahlkreis"].copy()
+# ----------------------------------------------------------------------
+# 4) Attach PartyID where known; create synthetic IDs where missing
+# ----------------------------------------------------------------------
+kp = kp.merge(
+    party_map_unique[["Year", "NormPartyShort", "PartyID"]],
+    on=["Year", "NormPartyShort"],
+    how="left",
+)
 
-    numeric_cols = [
+# ------------------------------------------------------------------
+# When PartyID missing, use Gruppenname directly instead of 900*
+# ------------------------------------------------------------------
+missing_mask = kp["PartyID"].isna()
+if missing_mask.any():
+    unmapped = kp.loc[missing_mask, ["Year", "Gruppenname"]].drop_duplicates()
+    print(
+        f"⚠ {len(unmapped)} KERG parties/candidates not in mapping; "
+        "using original Gruppenname as PartyID string."
+    )
+    kp.loc[missing_mask, "PartyID"] = kp.loc[missing_mask, "Gruppenname"]
+
+# ----------------------------------------------------------------------
+# 5) Map constituencies & BridgeID
+# ----------------------------------------------------------------------
+kp = kp.merge(
+    cons_all[["Year", "Number", "ConstituencyID"]],
+    on=["Year", "Number"],
+    how="left",
+)
+bridge_map = elections[["Year", "ConstituencyID", "BridgeID"]].drop_duplicates()
+kp = kp.merge(bridge_map, on=["Year", "ConstituencyID"], how="left")
+
+# ----------------------------------------------------------------------
+# 6) Aggregate all numeric metrics
+# ----------------------------------------------------------------------
+print("🧮 Aggregating votes + percentages + previous values ...")
+
+numeric_src_cols = [
+    c for c in [
         "Anzahl",
         "Prozent",
         "VorpAnzahl",
         "VorpProzent",
         "DiffProzent",
         "DiffProzentPkt",
-    ]
-    for col in numeric_cols:
-        if col in wk.columns:
-            wk[col] = parse_num(wk[col])
+    ] if c in kp.columns
+]
 
-    # Clean Gebietsnummer into Number (int)
-    wk["Number"] = (
-        wk["Gebietsnummer"]
-        .astype(str)
-        .str.strip()
-        .str.lstrip("0")
-        .replace({"": None})
-    )
-    wk["Number"] = pd.to_numeric(wk["Number"], errors="coerce").astype("Int64")
+group_cols = ["Year", "BridgeID", "PartyID", "Gruppenname", "VoteType"]
 
-    # Clean Stimme once (important: '1.0' -> 1, '2.0' -> 2)
-    wk["StimmeClean"] = pd.to_numeric(wk["Stimme"], errors="coerce").astype("Int64")
+agg = (
+    kp.groupby(group_cols, dropna=False)[numeric_src_cols]
+    .sum()
+    .reset_index()
+)
 
-    # ------------------------------------------------------------------
-    # 3) Extract System‑Gruppe stats per (Year, Number)
-    # ------------------------------------------------------------------
-    sys = wk[wk["Gruppenart"] == "System-Gruppe"].copy()
+rename_map = {
+    "Anzahl": "Votes",
+    "Prozent": "Percent",
+    "VorpAnzahl": "PrevVotes",
+    "VorpProzent": "PrevPercent",
+    "DiffProzent": "DiffPercent",
+    "DiffProzentPkt": "DiffPercentPts",
+}
+agg = agg.rename(columns=rename_map)
+agg = agg.rename(columns={"Gruppenname": "PartyName"})
 
-    debug_mask = sys["Gruppenname"].isin(["Ungültige", "Gültige"])
-    print(
-        f"Found {debug_mask.sum()} Wahlkreis System‑Gruppe rows "
-        f"with Ungültige/Gültige."
-    )
+# # Drop truly empty vote rows (no Erst-/Zweitstimme)
+# agg = agg[agg["Votes"] > 0]
 
-    records = []
-    for (year, number), g in sys.groupby(["Year", "Number"]):
-        if pd.isna(number):
-            continue
-        row = {"Year": int(year), "Number": int(number)}
+# ----------------------------------------------------------------------
+# 7) Build new CPV with same columns as old
+# ----------------------------------------------------------------------
+print("🔁 Building new constituency_party_votes from KERG for 2021 + 2025 ...")
 
-        # Eligible and total voters
-        elig = g.loc[g["Gruppenname"] == "Wahlberechtigte", "Anzahl"]
-        total = g.loc[g["Gruppenname"] == "Wählende", "Anzahl"]
-        if not elig.empty:
-            row["EligibleVoters"] = float(elig.iloc[0])
-        if not total.empty:
-            row["TotalVoters"] = float(total.iloc[0])
-        if row.get("EligibleVoters") and row.get("TotalVoters"):
-            row["Percent"] = row["TotalVoters"] / row["EligibleVoters"] * 100
+cpv_new = agg.copy()
 
-        # previous‑election stats
-        prev_votes = g.loc[g["Gruppenname"] == "Wahlberechtigte", "VorpAnzahl"]
-        prev_pct = g.loc[g["Gruppenname"] == "Wählende", "VorpProzent"]
-        diff_pct_pts = g.loc[g["Gruppenname"] == "Wählende", "DiffProzentPkt"]
-        row["PrevVotes"] = float(prev_votes.iloc[0]) if not prev_votes.empty else None
-        row["PrevPercent"] = float(prev_pct.iloc[0]) if not prev_pct.empty else None
-        row["DiffPercentPts"] = (
-            float(diff_pct_pts.iloc[0]) if not diff_pct_pts.empty else None
-        )
+# If old file has no Year column, drop it
+if "Year" not in cpv_columns and "Year" in cpv_new.columns:
+    cpv_new = cpv_new.drop(columns=["Year"])
 
-        # Valid/Invalid counts using StimmeClean (1=Erst, 2=Zweit)
-        for name, prefix in [("Ungültige", "Invalid"), ("Gültige", "Valid")]:
-            for stimme_val, suffix in [(1, "First"), (2, "Second")]:
-                val = g.loc[
-                    (g["Gruppenname"] == name)
-                    & (g["StimmeClean"] == stimme_val),
-                    "Anzahl",
-                ]
-                row[f"{prefix}{suffix}"] = float(val.iloc[0]) if not val.empty else None
+# Make sure all expected columns exist
+for c in cpv_columns:
+    if c not in cpv_new.columns:
+        cpv_new[c] = None
 
-        records.append(row)
+# If an ID column exists, regenerate sequential IDs
+if "ID" in cpv_columns:
+    cpv_new["ID"] = range(1, len(cpv_new) + 1)
 
-    sys_df = pd.DataFrame(records)
-    print(
-        f"📊 Extracted System‑Gruppe data for {len(sys_df)} (Year, Number) pairs."
-    )
+# Reorder columns to match original schema
+cpv_new = cpv_new[cpv_columns]
 
-    # ------------------------------------------------------------------
-    # 4) Merge System‑Gruppe stats into base using (Year, Number)
-    #    Drop old election columns so we take fresh values from KERG
-    # ------------------------------------------------------------------
-    override_cols = [
-        "EligibleVoters",
-        "TotalVoters",
-        "Percent",
-        "PrevVotes",
-        "PrevPercent",
-        "DiffPercentPts",
-        "InvalidFirst",
-        "InvalidSecond",
-        "ValidFirst",
-        "ValidSecond",
-    ]
-
-    base_for_merge = base_with_num.drop(columns=override_cols, errors="ignore")
-
-    enriched = base_for_merge.merge(sys_df, on=["Year", "Number"], how="left")
-
-    # Keep a temp copy if you want to inspect the full enrichment
-    enriched.to_csv(ENRICHED_TMP, sep=";", index=False, encoding="utf-8-sig")
-    print(f"💾 Saved temporary enriched file → {ENRICHED_TMP.name}")
-
-    # ------------------------------------------------------------------
-    # 5) Replace only 2025 rows in constituency_elections.csv
-    # ------------------------------------------------------------------
-    print("🔁 Replacing 2025 rows in constituency_elections.csv ...")
-
-    # Reload original base (to avoid any accidental mutations)
-    base_orig = pd.read_csv(BASE_CONST_ELEC, sep=";", encoding="utf-8-sig")
-    base_orig.columns = [c.strip() for c in base_orig.columns]
-
-    # Take enriched 2025 rows, drop helper 'Number' column
-    new_2025 = enriched[enriched["Year"] == 2025].copy()
-    if "Number" in new_2025.columns:
-        new_2025 = new_2025.drop(columns=["Number"])
-
-    # Align columns: keep exactly the columns of base_orig
-    missing_cols = [c for c in base_orig.columns if c not in new_2025.columns]
-    if missing_cols:
-        print(f"⚠ Enriched 2025 rows missing columns {missing_cols}; "
-              f"they will be filled with NA.")
-        for c in missing_cols:
-            new_2025[c] = None
-
-    extra_cols = [c for c in new_2025.columns if c not in base_orig.columns]
-    if extra_cols:
-        new_2025 = new_2025[base_orig.columns]
-
-    base_no_25 = base_orig[base_orig["Year"] != 2025].copy()
-    updated = pd.concat([base_no_25, new_2025], ignore_index=True)
-
-    updated.to_csv(OUT_UPDATED, sep=";", index=False, encoding="utf-8-sig")
-    print(f"💾 Wrote updated elections to {OUT_UPDATED.name}")
-    print("👉 Inspect and, if OK, replace constituency_elections.csv with this file.")
-
-
-if __name__ == "__main__":
-    try:
-        main()
-    except FileNotFoundError as e:
-        print(f"❌ Missing file: {e.filename}")
-    except KeyError as e:
-        print(f"❌ Missing expected column: {e}")
-    except Exception as e:
-        print(f"❌ Unexpected error: {type(e).__name__}: {e}")
+cpv_new.to_csv(OUT_UPDATED, sep=";", index=False, encoding="utf-8-sig")
+print(f"💾 Saved rebuilt file → {OUT_UPDATED.name} ({len(cpv_new)} rows).")
+print("✅ All useful metrics (Percent, PrevVotes, PrevPercent, DiffPercentPts) restored from KERG.")
+print("✅ Each Einzelbewerber/Wählergruppe is a separate row in 2021 and 2025.")

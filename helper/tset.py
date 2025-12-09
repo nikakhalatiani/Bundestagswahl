@@ -1,83 +1,103 @@
 import pandas as pd
 from pathlib import Path
 
-DATA = Path("data")
-OUTPUT = Path("Bundestagswahl/outputs")
-OUTPUT.mkdir(parents=True, exist_ok=True)
+DATA_DIR = Path("data")
+RAW_DIR = DATA_DIR / "rawData"
 
-# Input files
-CPV = DATA / "constituency_party_votes.csv"
-MISMATCH_21 = DATA / "firstvote_mismatches_2021.csv"
-MISMATCH_25 = DATA / "firstvote_mismatches_2025.csv"
+KERG_2021 = RAW_DIR / "kerg2021_2.csv"
+KERG_2025 = RAW_DIR / "kerg2025_2_new.csv"
+CPV_REBUILT = DATA_DIR / "constituency_party_votes_rebuilt.csv"
 
-# Output
-OUT_FILE = OUTPUT / "constituency_party_votes_with_residuals.csv"
 
-# ---------------------------------------------------------------
-# Load data
-# ---------------------------------------------------------------
-cpv = pd.read_csv(CPV, sep=";", encoding="utf-8-sig")
+def load_kerg(path: Path, year: int) -> pd.DataFrame:
+    df = pd.read_csv(path, sep=";", encoding="utf-8-sig")
+    df.columns = [c.strip() for c in df.columns]
+    df["Year"] = year
+    return df
 
-mismatches = []
-for f, yr in [(MISMATCH_21, 2021), (MISMATCH_25, 2025)]:
-    if f.exists():
-        df = pd.read_csv(f, sep=";", encoding="utf-8-sig")
-        df["Year"] = yr
-        mismatches.append(df)
-if not mismatches:
-    print("❌ No mismatch files found.")
-    raise SystemExit
 
-mismatch = pd.concat(mismatches, ignore_index=True)
+def group_key_stats(df: pd.DataFrame, year: int):
+    df = df.copy()
+    df = df[df["Gebietsart"] == "Wahlkreis"]
 
-# Sometimes BridgeID is missing or misnamed — attempt fallback
-bridge_col = None
-for cand in ["BridgeID", "bridge_id", "ConstituencyID"]:
-    if cand in mismatch.columns:
-        bridge_col = cand
-        break
-if not bridge_col:
-    raise ValueError("Could not find a BridgeID/ConstituencyID column in mismatch files.")
+    def parse_num_local(s):
+        if not isinstance(s, str):
+            return s
+        s = s.strip()
+        if not s:
+            return None
+        s = re.sub(r"(?<=\d)\.(?=\d{3}\b)", "", s)
+        s = s.replace(",", ".")
+        return s
 
-# ---------------------------------------------------------------
-# Build rows for missing votes
-# ---------------------------------------------------------------
-new_rows = []
-for _, row in mismatch.iterrows():
-    diff = row.get("FirstDiff", 0)
-    if pd.isna(diff) or diff >= 0:
-        continue  # we only handle negative differences (missing votes)
-
-    new_rows.append(
-        {
-            "BridgeID": row[bridge_col],
-            "VoteType": 1,
-            "Votes": abs(diff),
-            "PartyID": None,
-            "PartyName": "Residual",  # synthetic filler entry
-        }
+    df["Anzahl_num"] = pd.to_numeric(
+        df["Anzahl"].map(parse_num_local), errors="coerce"
     )
 
-if not new_rows:
-    print("✅ No negative FirstVote residuals found — nothing to add.")
-    raise SystemExit
+    # only keep entries that actually have votes
+    # df = df[df["Anzahl_num"] > 0]
 
-# ---------------------------------------------------------------
-# Merge with existing CPV schema
-# ---------------------------------------------------------------
-new_df = pd.DataFrame(new_rows)
+    df["VoteType"] = pd.to_numeric(df["Stimme"], errors="coerce").astype("Int64")
+    df["Number"] = (
+        df["Gebietsnummer"]
+        .astype(str)
+        .str.strip()
+        .str.lstrip("0")
+        .replace({"": None})
+    )
+    df["Number"] = pd.to_numeric(df["Number"], errors="coerce").astype("Int64")
 
-# Ensure all required columns exist
-for col in cpv.columns:
-    if col not in new_df.columns:
-        new_df[col] = None
+    mask = df["Gruppenart"].isin(
+        ["Partei", "Einzelbewerber", "Einzelbewerber/Wählergruppe"]
+    ) 
+    df = df[mask].copy()
 
-# Align order
-new_df = new_df[cpv.columns]
+    uniq = (
+        df[["Number", "Gruppenart", "Gruppenname", "VoteType"]]
+        .dropna(subset=["Number", "Gruppenname", "VoteType"])
+        .drop_duplicates()
+    )
 
-# Append & export
-cpv_with_residuals = pd.concat([cpv, new_df], ignore_index=True)
-cpv_with_residuals.to_csv(OUT_FILE, sep=";", encoding="utf-8-sig", index=False)
+    print(
+        f"📊 Year {year}: raw KERG rows with votes={len(df)}, "
+        f"unique Wahlkreis–Partei/EB/Stimme (votes>0)={len(uniq)}"
+    )
+    return len(uniq)
 
-print(f"💾 Added {len(new_rows)} residual entries.")
-print(f"📁 Output: {OUT_FILE}")
+
+def main():
+    print("🧾 Loading KERG + rebuilt CPV ...")
+
+    k21 = load_kerg(KERG_2021, 2021)
+    k25 = load_kerg(KERG_2025, 2025)
+
+    n_kerg_21 = group_key_stats(k21, 2021)
+    n_kerg_25 = group_key_stats(k25, 2025)
+
+    # Load rebuilt constituency_party_votes
+    cpv = pd.read_csv(CPV_REBUILT, sep=";", encoding="utf-8-sig")
+    cpv["Year"] = None
+    if "Year" not in cpv.columns:
+        print("🧩 No Year column in CPV; inferring from BridgeID mapping would be needed.")
+    else:
+        cpv["Year"] = pd.to_numeric(cpv["Year"], errors="coerce").astype("Int64")
+        
+    cpv = pd.read_csv(CPV_REBUILT, sep=";", encoding="utf-8-sig")
+
+    # --- Infer Year if missing ----------------------------------------
+    if "Year" not in cpv.columns:
+        print("🧩 No 'Year' column in CPV, inferring from constituency_elections mapping ...")
+        elections = pd.read_csv("data/constituency_elections.csv", sep=";", encoding="utf-8-sig")
+        year_map = elections[["BridgeID", "Year"]].drop_duplicates()
+        cpv = cpv.merge(year_map, on="BridgeID", how="left")
+    # ------------------------------------------------------------------
+
+    cpv["Year"] = pd.to_numeric(cpv["Year"], errors="coerce").astype("Int64")
+
+    for year, n_kerg in [(2021, n_kerg_21), (2025, n_kerg_25)]:
+        n_cpv = len(cpv[cpv["Year"] == year])
+        print(f"🔶 Year {year}: CPV rows={n_cpv}, KERG unique={n_kerg}, difference={n_cpv - n_kerg}")
+
+
+if __name__ == "__main__":
+    main()
