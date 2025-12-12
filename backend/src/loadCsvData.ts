@@ -119,6 +119,14 @@ interface ConstElectionRow {
   ConstituencyID: string;
   EligibleVoters: string;
   TotalVoters: string;
+  Percent: string;
+  PrevVotes: string;
+  PrevPercent: string;
+  DiffPercentPts: string;
+  InvalidFirst: string;
+  InvalidSecond: string;
+  ValidFirst: string;
+  ValidSecond: string;
 }
 interface ConstPartyVoteRow {
   ID: string;
@@ -296,17 +304,33 @@ async function loadConstituencyElections() {
   await transactionalInsert("Constituency Elections", async (c) => {
     for (const r of rows)
       await c.query(
-        `INSERT INTO constituency_elections (bridge_id, year, constituency_id, eligible_voters, total_voters)
-         VALUES ($1,$2,$3,$4,$5)
+        `INSERT INTO constituency_elections (bridge_id, year, constituency_id, eligible_voters, total_voters, percent, prev_votes, prev_percent, diff_percent_pts, invalid_first, invalid_second, valid_first, valid_second)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
          ON CONFLICT (bridge_id)
          DO UPDATE SET eligible_voters=EXCLUDED.eligible_voters,
-                       total_voters=EXCLUDED.total_voters`,
+                       total_voters=EXCLUDED.total_voters,
+                       percent=EXCLUDED.percent,
+                       prev_votes=EXCLUDED.prev_votes,
+                       prev_percent=EXCLUDED.prev_percent,
+                       diff_percent_pts=EXCLUDED.diff_percent_pts,
+                       invalid_first=EXCLUDED.invalid_first,
+                       invalid_second=EXCLUDED.invalid_second,
+                       valid_first=EXCLUDED.valid_first,
+                       valid_second=EXCLUDED.valid_second`,
         [
           Number(r.BridgeID),
           Number(r.Year),
           Number(r.ConstituencyID),
-          r.EligibleVoters ? Number(r.EligibleVoters) : null,
-          r.TotalVoters ? Number(r.TotalVoters) : null,
+          num(r.EligibleVoters),
+          num(r.TotalVoters),
+          num(r.Percent),
+          num(r.PrevVotes),
+          num(r.PrevPercent),
+          num(r.DiffPercentPts),
+          num(r.InvalidFirst),
+          num(r.InvalidSecond),
+          num(r.ValidFirst),
+          num(r.ValidSecond),
         ]
       );
   });
