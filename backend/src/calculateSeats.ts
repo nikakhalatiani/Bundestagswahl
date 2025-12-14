@@ -156,7 +156,7 @@ Divisoren AS (
     UNION ALL
     SELECT divisor + 2
     FROM Divisoren
-    WHERE divisor < 1260  -- Genug Divisoren für alle möglichen Sitze
+    WHERE divisor < 630  -- Genug Divisoren für alle möglichen Sitze
 ),
 
 -- Höchstzahlen für Oberverteilung
@@ -254,6 +254,7 @@ Unterverteilung AS (
 
 -- ============================================================
 -- SCHRITT 6: Wahlkreisgewinner qualifizierter Parteien
+-- Mit Ranking nach Erststimmen-Prozent (für Zweitstimmendeckung)
 -- ============================================================
 WahlkreisGewinnerQualifiziert AS (
     SELECT 
@@ -272,20 +273,55 @@ WahlkreisGewinnerQualifiziert AS (
     JOIN constituency_elections ce ON ce.constituency_id = wg.constituency_id AND ce.year = $1
 ),
 
--- Anzahl Direktmandate pro Partei pro Bundesland
+-- ============================================================
+-- SCHRITT 6b: Zweitstimmendeckung (2023 Reform)
+-- Pro Bundesland: Nur die stärksten Direktkandidaten bekommen Sitze,
+-- bis zur Anzahl der Sitze laut Unterverteilung für dieses Land
+-- ============================================================
+
+-- Ranking der Direktkandidaten pro Partei UND BUNDESLAND nach Erststimmen-Prozent
+DirektmandateRankedProLand AS (
+    SELECT 
+        wgq.*,
+        ROW_NUMBER() OVER (
+            PARTITION BY wgq.party_id, wgq.state_id
+            ORDER BY wgq.prozent_erststimmen DESC
+        ) AS rang_im_land
+    FROM WahlkreisGewinnerQualifiziert wgq
+),
+
+-- Nur Direktkandidaten die einen Sitz bekommen 
+-- (bis zur Unterverteilung-Grenze pro Bundesland)
+DirektmandateMitSitz AS (
+    SELECT 
+        dr.person_id,
+        dr.constituency_id,
+        dr.constituency_name,
+        dr.party_id,
+        dr.first_votes,
+        dr.state_id,
+        dr.party_name,
+        dr.prozent_erststimmen,
+        dr.rang_im_land
+    FROM DirektmandateRankedProLand dr
+    JOIN Unterverteilung u ON u.party_id = dr.party_id AND u.state_id = dr.state_id
+    WHERE dr.rang_im_land <= u.sitze_land
+),
+
+-- Anzahl vergebene Direktmandate pro Partei pro Land
 DirektmandateProParteiLand AS (
     SELECT 
         party_id,
         state_id,
         COUNT(*) AS anzahl_direktmandate
-    FROM WahlkreisGewinnerQualifiziert
+    FROM DirektmandateMitSitz
     GROUP BY party_id, state_id
 ),
 
 -- ============================================================
--- SCHRITT 6 & 7: Sitzvergabe - erst Direktmandate, dann Liste
+-- SCHRITT 7: Listensitze vergeben
+-- Verfügbare Listensitze = Unterverteilung - vergebene Direktmandate
 -- ============================================================
--- Verfügbare Listensitze = Unterverteilung - Direktmandate
 ListensitzeProParteiLand AS (
     SELECT 
         u.party_id,
@@ -301,6 +337,7 @@ ListensitzeProParteiLand AS (
 ),
 
 -- Listenkandidaten die Sitze bekommen (sortiert nach Listenplatz)
+-- Ausgeschlossen: Kandidaten die bereits ein Direktmandat MIT Sitz haben
 ListenkandidatenRanked AS (
     SELECT 
         plc.person_id,
@@ -321,9 +358,9 @@ ListenkandidatenRanked AS (
     JOIN parties p ON p.id = pl.party_id
     JOIN states s ON s.id = pl.state_id
     JOIN persons per ON per.id = plc.person_id
-    -- Kandidaten die bereits Direktmandat haben, ausschließen
+    -- Kandidaten die bereits Direktmandat MIT SITZ haben, ausschließen
     WHERE plc.person_id NOT IN (
-        SELECT person_id FROM WahlkreisGewinnerQualifiziert
+        SELECT person_id FROM DirektmandateMitSitz
     )
     AND pl.party_id IN (SELECT party_id FROM Oberverteilung)
 ),
@@ -357,7 +394,7 @@ SELECT
     NULL AS list_position,
     'Direktmandat' AS sitz_typ,
     prozent_erststimmen
-FROM WahlkreisGewinnerQualifiziert
+FROM DirektmandateMitSitz
 
 UNION ALL
 
@@ -504,7 +541,7 @@ QualifizierteParteien AS (
 Divisoren AS (
     SELECT 1 AS divisor
     UNION ALL
-    SELECT divisor + 2 FROM Divisoren WHERE divisor < 1260
+    SELECT divisor + 2 FROM Divisoren WHERE divisor < 630
 ),
 
 Quotienten AS (
@@ -580,7 +617,7 @@ QualifizierteParteien AS (
 Divisoren AS (
     SELECT 1 AS divisor
     UNION ALL
-    SELECT divisor + 2 FROM Divisoren WHERE divisor < 1260
+    SELECT divisor + 2 FROM Divisoren WHERE divisor < 630
 ),
 
 -- Oberverteilung
