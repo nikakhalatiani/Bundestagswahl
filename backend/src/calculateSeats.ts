@@ -10,14 +10,53 @@ export { };
  * Seat Allocation for German Federal Election (Bundestagswahl)
  * Implements the German electoral system with 2023 reform
  *
- * Algorithm Steps:
+ * === 2023 ELECTORAL REFORM (Bundeswahlrechtsreform 2023) ===
+ *
+ * The 2023 reform fundamentally changed the German electoral system to address
+ * the problem of an ever-growing Bundestag. Key changes:
+ *
+ * 1. FIXED BUNDESTAG SIZE: Exactly 630 seats (previously 598 + overhang + leveling seats)
+ *    - The Bundestag had grown to 736 seats in 2021 due to overhang and leveling seats
+ *    - Reform caps it at 630 seats regardless of election results
+ *
+ * 2. ABOLITION OF OVERHANG MANDATES (Überhangmandate):
+ *    - OLD: If a party won more constituencies than proportional seats, they kept all
+ *    - NEW: "Second-Vote Coverage" (Zweitstimmendeckung) - only the strongest direct
+ *      candidates (by first-vote percentage) get seats, up to the party's proportional share
+ *    - Weaker direct candidates lose their mandate if party exceeds proportional allocation
+ *
+ * 3. ABOLITION OF LEVELING SEATS (Ausgleichsmandate):
+ *    - OLD: Other parties received additional seats to maintain proportionality
+ *    - NEW: Not needed since overhang mandates are eliminated
+ *
+ * 4. TWO-TIER PROPORTIONAL ALLOCATION:
+ *    - Federal level (Oberverteilung): 630 seats allocated by Sainte-Laguë
+ *    - State level (Unterverteilung): Each party's seats distributed across states by Sainte-Laguë
+ *
+ * 5. TIE-BREAKING RULES:
+ *    - Primary: Highest quotient (votes / divisor)
+ *    - Secondary: Most votes (federal or state level)
+ *    - Tertiary: Lower party_id or state_id (deterministic)
+ *
+ * === ALGORITHM STEPS ===
+ *
  * 1. Find winner for each constituency (first votes / Erststimmen)
  * 2. Filter parties by 5% threshold, 3 direct mandates, or minority status
  * 3. Independent candidates and candidates from non-qualified parties get seats directly
  * 4. Federal Distribution (Oberverteilung): Sainte-Laguë at federal level
+ *    - Allocate 630 seats minus non-qualified party seats
+ *    - Only qualified parties participate
  * 5. State Distribution (Unterverteilung): Sainte-Laguë per party at state level
- * 6. Assign seats first to constituency winners
- * 7. Remaining seats go to list candidates
+ *    - Each party's federal seats distributed across states by state list votes
+ * 6. Second-Vote Coverage (Zweitstimmendeckung):
+ *    - Rank direct candidates by first-vote percentage within each state
+ *    - Only top candidates get seats, up to state allocation limit
+ *    - Prevents overhang mandates
+ * 7. Assign remaining seats to list candidates (excluding seated direct candidates)
+ *
+ * === REFERENCES ===
+ * - Bundeswahlgesetz (BWG) in der Fassung vom 24.03.2023
+ * - https://www.bundeswahlleiter.de/en/bundestagswahlen/2025.html
  */
 
 async function calculateSeats(electionYear: number = 2025) {
@@ -39,7 +78,7 @@ ConstituencyFirstVotes AS (
         c.state_id,
         ROW_NUMBER() OVER (
             PARTITION BY ce.constituency_id, ce.year
-            ORDER BY dc.first_votes DESC
+            ORDER BY dc.first_votes DESC, dc.person_id ASC
         ) AS rank
     FROM constituency_elections ce
     JOIN constituencies c ON ce.constituency_id = c.id
@@ -173,12 +212,14 @@ FederalDistributionQuotients AS (
 ),
 
 -- Allocate seats by highest quotient method
+-- Tie-breaking: quotient DESC, total_second_votes DESC, party_id ASC
 FederalDistributionRanked AS (
     SELECT
         party_id,
         short_name,
         quotient,
-        ROW_NUMBER() OVER (ORDER BY quotient DESC) AS seat_number
+        total_second_votes,
+        ROW_NUMBER() OVER (ORDER BY quotient DESC, total_second_votes DESC, party_id ASC) AS seat_number
     FROM FederalDistributionQuotients
 ),
 
@@ -236,7 +277,7 @@ StateDistributionRanked AS (
         seats_national,
         ROW_NUMBER() OVER (
             PARTITION BY party_id
-            ORDER BY quotient DESC
+            ORDER BY quotient DESC, state_second_votes DESC, state_id ASC
         ) AS seat_number
     FROM StateDistributionQuotients
 ),
@@ -276,9 +317,27 @@ QualifiedConstituencyWinners AS (
 
 -- ============================================================
 -- STEP 8: Second-Vote Coverage / Zweitstimmendeckung (2023 Reform)
--- Per state: Only the strongest direct candidates get seats,
--- up to the number of seats allocated by state distribution
--- This prevents overhang mandates (Überhangmandate)
+-- ============================================================
+-- This is the CORE of the 2023 reform that eliminates overhang mandates.
+--
+-- PROBLEM BEFORE REFORM:
+-- If a party won 40 constituencies but only deserved 35 seats proportionally,
+-- they kept all 40 (overhang mandates), and other parties got leveling seats.
+-- This caused the Bundestag to grow from 598 to 736 seats by 2021.
+--
+-- SOLUTION AFTER REFORM:
+-- 1. Each party gets a fixed number of seats per state (from state distribution)
+-- 2. Direct candidates are ranked by first-vote percentage WITHIN each state
+-- 3. Only the STRONGEST direct candidates get seats (up to the state limit)
+-- 4. Weaker direct candidates LOSE their mandate despite winning their constituency
+-- 5. Remaining seats filled by list candidates
+--
+-- EXAMPLE:
+-- Party wins 10 constituencies in Bavaria but only gets 8 seats allocated
+-- → Rank all 10 candidates by first-vote percentage in Bavaria
+-- → Top 8 get direct mandates
+-- → Bottom 2 lose despite winning (no seat!)
+-- → No additional list seats since all 8 are filled
 -- ============================================================
 
 -- Rank direct candidates per party AND STATE by first-vote percentage
@@ -287,7 +346,7 @@ DirectMandatesRankedPerState AS (
         qcw.*,
         ROW_NUMBER() OVER (
             PARTITION BY qcw.party_id, qcw.state_id
-            ORDER BY qcw.percent_first_votes DESC
+            ORDER BY qcw.percent_first_votes DESC, qcw.first_votes DESC, qcw.person_id ASC
         ) AS rank_in_state
     FROM QualifiedConstituencyWinners qcw
 ),
@@ -563,7 +622,8 @@ RankedSeats AS (
         party_id,
         short_name,
         quotient,
-        ROW_NUMBER() OVER (ORDER BY quotient DESC) AS rank
+        total_second_votes,
+        ROW_NUMBER() OVER (ORDER BY quotient DESC, total_second_votes DESC, party_id ASC) AS rank
     FROM Quotients
 )
 
@@ -633,8 +693,8 @@ FederalQuotients AS (
 ),
 
 FederalRanked AS (
-    SELECT party_id, short_name, quotient,
-        ROW_NUMBER() OVER (ORDER BY quotient DESC) AS rank
+    SELECT party_id, short_name, quotient, total_second_votes,
+        ROW_NUMBER() OVER (ORDER BY quotient DESC, total_second_votes DESC, party_id ASC) AS rank
     FROM FederalQuotients
 ),
 
@@ -665,8 +725,8 @@ StateQuotients AS (
 
 StateRanked AS (
     SELECT
-        party_id, short_name, state_id, state_name, quotient, seats_national,
-        ROW_NUMBER() OVER (PARTITION BY party_id ORDER BY quotient DESC) AS rank
+        party_id, short_name, state_id, state_name, quotient, vote_count, seats_national,
+        ROW_NUMBER() OVER (PARTITION BY party_id ORDER BY quotient DESC, vote_count DESC, state_id ASC) AS rank
     FROM StateQuotients
 )
 

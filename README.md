@@ -129,6 +129,100 @@ The schema supports multi-year election data with proper foreign key relationshi
 - **First Votes**: Generated individual first vote ballots
 - **Second Votes**: Generated individual second vote ballots
 
-Next steps / optional
-- Add authentication, migrations as part of CI, or a PgAdmin service in docker-compose.
+## Running Seat Allocation Algorithm
+
+After loading the data, you can run the seat allocation algorithm that implements the German electoral system with the 2023 reform.
+
+### Option 1: Full Results (Recommended)
+
+```bash
+cd backend
+npx ts-node src/runCalculateSeats.ts [year]
+```
+
+**Example**:
+```bash
+npx ts-node src/runCalculateSeats.ts 2025
+```
+
+**Output includes**:
+- Party Summary (votes, percentages, qualification status)
+- Federal Distribution (Oberverteilung) - Sainte-Laguë allocation
+- State Distribution (Unterverteilung) - per party, per state
+- Total seats allocated (should be 630)
+
+### Option 2: Seat Counts Per Party
+
+```bash
+npx ts-node src/countSeatsPerParty.ts [year]
+```
+
+**Output**: Table showing each party's:
+- Direct mandates (from constituencies)
+- List seats (from party lists)
+- Total seats
+
+### Option 3: Debug Mode
+
+For detailed diagnostics and troubleshooting:
+
+```bash
+npx ts-node src/debugSeats.ts [year] [mode] [party]
+```
+
+**Available modes**:
+- `all` - Run all diagnostic checks (default)
+- `basic` - Party votes, qualification, and constituency winners
+- `ober` - Federal distribution (Oberverteilung)
+- `unter` - State distribution (Unterverteilung)
+- `seats` - List seat allocation details
+- `party` - Analyze specific party (requires party name)
+
+**Examples**:
+```bash
+# Run all checks for 2025
+npx ts-node src/debugSeats.ts
+
+# Debug specific party
+npx ts-node src/debugSeats.ts 2025 party SPD
+npx ts-node src/debugSeats.ts 2025 party GRÜNE
+
+# Check federal distribution only
+npx ts-node src/debugSeats.ts 2025 ober
+
+# Check state distribution only
+npx ts-node src/debugSeats.ts 2025 unter
+```
+
+### Option 4: Run Validation Tests
+
+Validate the algorithm's correctness with comprehensive tests:
+
+```bash
+npx ts-node src/testSeatAllocation.ts [year]
+```
+
+**Tests include**:
+1. ✓ Total seats equals 630
+2. ✓ No duplicate person assignments
+3. ✓ Only qualified parties have seats (5% threshold, 3 mandates, or minority)
+4. ✓ Oberverteilung matches total seats
+5. ✓ Unterverteilung matches Oberverteilung
+6. ✓ Seat type breakdown is correct (direct + list = total)
+7. ✓ Direct mandate winners excluded from list seats
+8. ✓ Zweitstimmendeckung compliance (2023 reform)
+9. ✓ Summary data consistency
+
+**Exit code**: 0 if all tests pass, 1 if any fail
+
+## Algorithm Overview
+
+The seat allocation implements the German electoral system with the 2023 reform:
+
+1. **Constituency Winners**: 299 constituencies each elect one representative by first votes (Erststimmen)
+2. **Party Qualification**: Parties must meet 5% threshold OR 3 direct mandates OR be a minority party
+3. **Oberverteilung**: 630 total seats distributed among qualified parties using Sainte-Laguë method based on second votes
+4. **Unterverteilung**: Each party's federal seats distributed to states using Sainte-Laguë method
+5. **Zweitstimmendeckung** (2023 Reform): Direct mandates limited by Unterverteilung per state to prevent overhang mandates
+6. **List Seats**: Remaining seats filled from party lists, excluding direct mandate winners
 
