@@ -133,6 +133,14 @@ export const constituencyElections = pgTable("constituency_elections", {
     .references(() => constituencies.id, { onDelete: "cascade" }),
   eligible_voters: doublePrecision("eligible_voters"),
   total_voters: doublePrecision("total_voters"),
+  percent: doublePrecision("percent"),
+  prev_votes: doublePrecision("prev_votes"),
+  prev_percent: doublePrecision("prev_percent"),
+  diff_percent_pts: doublePrecision("diff_percent_pts"),
+  invalid_first: doublePrecision("invalid_first"),
+  invalid_second: doublePrecision("invalid_second"),
+  valid_first: doublePrecision("valid_first"),
+  valid_second: doublePrecision("valid_second"),
 },
   (table) => [
     unique().on(table.constituency_id, table.year),
@@ -209,5 +217,3 @@ export const secondVotes = pgTable("second_votes",{
 // export const idx_party_votes_party = index("const_party_votes_party_idx").on(
 //   constituencyPartyVotes.party_id
 // );
-
-// going to sleep

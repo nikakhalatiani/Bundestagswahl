@@ -52,45 +52,177 @@ Notes
 
 ## Database Setup & CSV Data Loading
 
-The database schema has been configured to match the CSV files in `Bundestagswahl/outputs/`. The schema includes:
-- **States** (German federal states)
-- **Parties** (Political parties with IDs and names)
-- **Constituencies** (electoral districts/Wahlkreise)
-- **Candidates** (candidates with personal info, party affiliation, and vote counts)
-- **StateParties** (Second vote results by state and party)
+The database schema has been configured to match the CSV files in `data/`. The schema includes tables for states, parties, elections, constituencies, persons, party lists, direct candidacy, party list candidacy, constituency elections, constituency party votes, first votes, and second votes.
 
-### Loading CSV Data into Database
+### Setting Up the Database and Loading Data
 
-After setting up the database with migrations, load the CSV data:
+To set up the database from scratch and load all election data, run the following commands in sequence:
 
-```powershell
+```bash
 cd backend
 
-# Load all CSV data from Bundestagswahl/outputs/ into the database
-npm run load-csv
+# 1. Reset the database (drops all tables and data)
+npx ts-node src/resetDB.ts
 
-# Verify the loaded data (shows statistics and samples)
-npm run verify
+# 2. Generate Drizzle migration files based on the schema
+npx drizzle-kit generate
+
+# 3. Push the schema to the database (creates tables)
+npx drizzle-kit push
+
+# 4. Load all CSV data from data/ into the database
+npx ts-node src/loadCsvData.ts
+
+# 5. Show database statistics and sample data
+npx ts-node src/showDB.ts
+
+# 6. Generate ballot data (first and second votes)
+npx ts-node src/generateBallots.ts
+
+# 7. Verify that generated ballots match the original aggregated data
+npx ts-node src/verifyBallots.ts
 ```
 
-The `load-csv` script will:
-1. Load all 16 states from `states.csv`
-2. Load 86 unique parties from `parties.csv` (handles duplicates)
-3. Load 299 constituencies from `wahlkreis.csv`
-4. Load 4,506 candidates from `candidates.csv`
-5. Load 227 state party results from `state_parties.csv`
+### What Each Command Does
 
-The `verify` script displays database statistics and sample data, including top parties by second votes.
+- `npx ts-node src/resetDB.ts`: Drops all existing tables in the database to start fresh.
+- `npx drizzle-kit generate`: Generates migration files from the TypeScript schema in `src/db/schema.ts`.
+- `npx drizzle-kit push`: Applies the schema to the PostgreSQL database, creating all necessary tables and constraints.
+- `npx ts-node src/loadCsvData.ts`: Imports data from CSV files in the `data/` directory into the database tables.
+- `npx ts-node src/showDB.ts`: Displays statistics about the loaded data, including row counts and sample entries.
+- `npx ts-node src/generateBallots.ts`: Generates individual ballot records (first and second votes) based on the loaded election data.
+- `npx ts-node src/verifyBallots.ts`: Verifies that the generated ballots accurately reflect the original vote counts and distributions.
 
+### Verification Options
+
+The `verifyBallots.ts` script supports command-line options for flexible verification:
+
+- Verify all constituencies for 2025 (default):
+  ```bash
+  npx ts-node src/verifyBallots.ts --year=2025
+  ```
+
+- Verify just constituency 9 for 2025:
+  ```bash
+  npx ts-node src/verifyBallots.ts --year=2025 --constituency=9
+  ```
+
+- Print top 10 candidates/parties instead of the default 5:
+  ```bash
+  npx ts-node src/verifyBallots.ts --year=2025 --top=10
+  ```
+
+These options can be combined as needed.
 ### Database Schema Overview
 
-The simplified schema (Drizzle migration/schema files) should map to the CSV structure:
-- `State`: Uses state abbreviation (e.g., "BB", "NW") as primary key
-- `Party`: Indexed by PartyID with unique shortName (e.g., "SPD", "CDU")
-- `Constituency`: Uses constituency number as primary key
-- `Candidate`: Contains all candidate information including votes, list positions, and party affiliations
-- `StateParty`: Links states and parties with Zweitstimmen (second votes)
+The schema supports multi-year election data with proper foreign key relationships:
+- **States**: German federal states
+- **Parties**: Political parties
+- **Elections**: Election years and dates
+- **Constituencies**: Electoral districts
+- **Persons**: Candidate personal information
+- **Party Lists**: State-level party lists for second votes
+- **Direct Candidacy**: Direct candidates per constituency
+- **Party List Candidacy**: Candidates on party lists
+- **Constituency Elections**: Election statistics per constituency
+- **Constituency Party Votes**: Vote counts by party and type per constituency
+- **First Votes**: Generated individual first vote ballots
+- **Second Votes**: Generated individual second vote ballots
 
-Next steps / optional
-- Add authentication, migrations as part of CI, or a PgAdmin service in docker-compose.
+## Running Seat Allocation Algorithm
+
+After loading the data, you can run the seat allocation algorithm that implements the German electoral system with the 2023 reform.
+
+### Option 1: Full Results (Recommended)
+
+```bash
+cd backend
+npx ts-node src/runCalculateSeats.ts [year]
+```
+
+**Example**:
+```bash
+npx ts-node src/runCalculateSeats.ts 2025
+```
+
+**Output includes**:
+- Party Summary (votes, percentages, qualification status)
+- Federal Distribution (Oberverteilung) - Sainte-Laguë allocation
+- State Distribution (Unterverteilung) - per party, per state
+- Total seats allocated (should be 630)
+
+### Option 2: Seat Counts Per Party
+
+```bash
+npx ts-node src/countSeatsPerParty.ts [year]
+```
+
+**Output**: Table showing each party's:
+- Direct mandates (from constituencies)
+- List seats (from party lists)
+- Total seats
+
+### Option 3: Debug Mode
+
+For detailed diagnostics and troubleshooting:
+
+```bash
+npx ts-node src/debugSeats.ts [year] [mode] [party]
+```
+
+**Available modes**:
+- `all` - Run all diagnostic checks (default)
+- `basic` - Party votes, qualification, and constituency winners
+- `ober` - Federal distribution (Oberverteilung)
+- `unter` - State distribution (Unterverteilung)
+- `seats` - List seat allocation details
+- `party` - Analyze specific party (requires party name)
+
+**Examples**:
+```bash
+# Run all checks for 2025
+npx ts-node src/debugSeats.ts
+
+# Debug specific party
+npx ts-node src/debugSeats.ts 2025 party SPD
+npx ts-node src/debugSeats.ts 2025 party GRÜNE
+
+# Check federal distribution only
+npx ts-node src/debugSeats.ts 2025 ober
+
+# Check state distribution only
+npx ts-node src/debugSeats.ts 2025 unter
+```
+
+### Option 4: Run Validation Tests
+
+Validate the algorithm's correctness with comprehensive tests:
+
+```bash
+npx ts-node src/testSeatAllocation.ts [year]
+```
+
+**Tests include**:
+1. ✓ Total seats equals 630
+2. ✓ No duplicate person assignments
+3. ✓ Only qualified parties have seats (5% threshold, 3 mandates, or minority)
+4. ✓ Oberverteilung matches total seats
+5. ✓ Unterverteilung matches Oberverteilung
+6. ✓ Seat type breakdown is correct (direct + list = total)
+7. ✓ Direct mandate winners excluded from list seats
+8. ✓ Zweitstimmendeckung compliance (2023 reform)
+9. ✓ Summary data consistency
+
+**Exit code**: 0 if all tests pass, 1 if any fail
+
+## Algorithm Overview
+
+The seat allocation implements the German electoral system with the 2023 reform:
+
+1. **Constituency Winners**: 299 constituencies each elect one representative by first votes (Erststimmen)
+2. **Party Qualification**: Parties must meet 5% threshold OR 3 direct mandates OR be a minority party
+3. **Oberverteilung**: 630 total seats distributed among qualified parties using Sainte-Laguë method based on second votes
+4. **Unterverteilung**: Each party's federal seats distributed to states using Sainte-Laguë method
+5. **Zweitstimmendeckung** (2023 Reform): Direct mandates limited by Unterverteilung per state to prevent overhang mandates
+6. **List Seats**: Remaining seats filled from party lists, excluding direct mandate winners
 
