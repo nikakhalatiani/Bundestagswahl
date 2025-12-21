@@ -148,7 +148,13 @@ export default function App() {
         }
         const res = await fetch('/api/ballot', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
         const json = await res.json()
-        if (!res.ok) throw new Error(json.error || 'submit_failed')
+        if (res.ok) {
+          alert('Ballot submitted! Thank you for voting.');
+        } else {
+          alert('Submission failed, try again.');
+          console.error('Submission error', json);
+        }
+        
         setSubmitResult('Ballot submitted')
       } catch (err: any) {
         setSubmitResult(String(err))
@@ -205,7 +211,7 @@ export default function App() {
         </div>
 
         <div style={{ marginTop: 18 }}>
-          <button onClick={submitBallot} disabled={submitting}>{submitting ? 'Submitting…' : 'Submit Ballot'}</button>
+          <button onClick={submitBallot} disabled={submitting}>{submitting ? 'Submitting...' : 'Submit Ballot'}</button>
           {submitResult && <div style={{ marginTop: 8 }}>{submitResult}</div>}
         </div>
       </div>
