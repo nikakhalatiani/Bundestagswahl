@@ -103,6 +103,11 @@ export default function App() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
+    const [selectedFirst, setSelectedFirst] = useState<number | 'invalid' | null>(null)
+    const [selectedSecond, setSelectedSecond] = useState<number | 'invalid' | null>(null)
+    const [submitting, setSubmitting] = useState(false)
+    const [submitResult, setSubmitResult] = useState<string | null>(null)
+
     useEffect(() => {
       let mounted = true
       async function load() {
@@ -131,6 +136,27 @@ export default function App() {
       return () => { mounted = false }
     }, [])
 
+    async function submitBallot() {
+      setSubmitResult(null)
+      setSubmitting(true)
+      try {
+        const body = {
+          constituencyId: 1,
+          year: 2025,
+          first: selectedFirst === 'invalid' || selectedFirst === null ? { type: 'invalid' } : { type: 'candidate', person_id: selectedFirst },
+          second: selectedSecond === 'invalid' || selectedSecond === null ? { type: 'invalid' } : { type: 'party', party_id: selectedSecond }
+        }
+        const res = await fetch('/api/ballot', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+        const json = await res.json()
+        if (!res.ok) throw new Error(json.error || 'submit_failed')
+        setSubmitResult('Ballot submitted')
+      } catch (err: any) {
+        setSubmitResult(String(err))
+      } finally {
+        setSubmitting(false)
+      }
+    }
+
     return (
       <div style={{ padding: 20 }}>
         <h1>Stimmzettel: {constituencyName}</h1>
@@ -142,26 +168,45 @@ export default function App() {
 
         <div style={{ display: 'flex', gap: 24 }}>
           <div style={{ flex: 1 }}>
-            <h3>Parteien (Zweitstimmen)</h3>
-            <ul>
-              {parties.map((p: any) => (
-                <li key={p.id || `${p.short_name}-${p.vote_type}`}>
-                  <strong>{p.short_name || p.shortName}</strong> ({p.long_name})
-                </li>
-              ))}
-            </ul>
+            <h3>Direktkandidaten (Erststimmen)</h3>
+            <div>
+              <ol>
+                {candidates.map((c: any) => (
+                  <li key={c.person_id || c.id} style={{ marginBottom: 6 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <input type="radio" name="first" value={String(c.person_id)} checked={selectedFirst === c.person_id} onChange={() => setSelectedFirst(c.person_id)} />
+                      {c.title ? c.title + ' ' : ''}{c.first_name} {c.last_name} ({c.short_name || ''})
+                    </label>
+                  </li>
+                ))}
+              </ol>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input type="radio" name="first" value="invalid" checked={selectedFirst === 'invalid'} onChange={() => setSelectedFirst('invalid')} />
+                Ungültig / Keine Erststimme
+              </label>
+            </div>
           </div>
 
           <div style={{ flex: 1 }}>
-            <h3>Direktkandidaten (Erststimmen)</h3>
-            <ol>
-              {candidates.map((c: any) => (
-                <li key={c.person_id || c.id}>
-                  {c.title ? c.title + ' ' : ''}{c.first_name} {c.last_name} ({c.short_name || ''})
-                </li>
+            <h3>Parteien (Zweitstimmen)</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {parties.map((p: any) => (
+                <label key={p.id || `${p.short_name}-${p.vote_type}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input type="radio" name="second" value={String(p.id)} checked={selectedSecond === p.id} onChange={() => setSelectedSecond(p.id)} />
+                  <strong>{p.short_name || p.shortName}</strong> ({p.long_name})
+                </label>
               ))}
-            </ol>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input type="radio" name="second" value="invalid" checked={selectedSecond === 'invalid'} onChange={() => setSelectedSecond('invalid')} />
+                Ungültig / Keine Zweitstimme
+              </label>
+            </div>
           </div>
+        </div>
+
+        <div style={{ marginTop: 18 }}>
+          <button onClick={submitBallot} disabled={submitting}>{submitting ? 'Submitting…' : 'Submit Ballot'}</button>
+          {submitResult && <div style={{ marginTop: 8 }}>{submitResult}</div>}
         </div>
       </div>
     )
