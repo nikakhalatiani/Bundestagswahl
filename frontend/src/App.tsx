@@ -107,6 +107,60 @@ export default function App() {
     const [selectedSecond, setSelectedSecond] = useState<number | 'invalid' | null>(null)
     const [submitting, setSubmitting] = useState(false)
     const [submitResult, setSubmitResult] = useState<string | null>(null)
+    const [authorized, setAuthorized] = useState(false)
+    const [submitted, setSubmitted] = useState(false)
+
+    // 16 single-char code inputs (displayed as 4x4 with dashes)
+    const [codeParts, setCodeParts] = useState<string[]>(Array.from({ length: 16 }, () => ''))
+    const inputRefs = React.useRef<HTMLInputElement[]>([])
+
+    function normalizeChar(s: string) {
+      return s.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 1)
+    }
+
+    function handleCodeChange(idx: number, val: string) {
+      const ch = normalizeChar(val)
+      const next = [...codeParts]
+      next[idx] = ch
+      setCodeParts(next)
+      if (ch && idx < 15) {
+        const nextEl = inputRefs.current[idx + 1]
+        nextEl?.focus()
+      }
+    }
+
+    function handleKeyDown(idx: number, e: React.KeyboardEvent<HTMLInputElement>) {
+      if (e.key === 'Backspace') {
+        if (codeParts[idx] === '' && idx > 0) {
+          const prev = inputRefs.current[idx - 1]
+          prev?.focus()
+        }
+      }
+    }
+
+    function handlePaste(idx: number, e: React.ClipboardEvent<HTMLInputElement>) {
+      const pasted = (e.clipboardData.getData('text') || '')
+      const cleaned = pasted.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 16 - idx)
+      if (!cleaned) return
+      const next = [...codeParts]
+      for (let i = 0; i < cleaned.length; i++) {
+        next[idx + i] = cleaned[i]
+      }
+      setCodeParts(next)
+      // focus after pasted chars
+      const focusIdx = Math.min(15, idx + cleaned.length)
+      inputRefs.current[focusIdx]?.focus()
+      e.preventDefault()
+    }
+
+    function fullCode() {
+      return codeParts.join('')
+    }
+
+    function validateFullCode() {
+      const code = fullCode()
+      return /^[A-Z0-9]{16}$/.test(code)
+    }
 
     useEffect(() => {
       let mounted = true
@@ -150,19 +204,82 @@ export default function App() {
         const json = await res.json()
         if (res.ok) {
           alert('Ballot submitted! Thank you for voting.');
+          setSubmitted(true)
+          setAuthorized(false)
         } else {
           alert('Submission failed, try again.');
           console.error('Submission error', json);
+          setSubmitResult('Submission failed')
         }
-        
-        setSubmitResult('Ballot submitted')
       } catch (err: any) {
         setSubmitResult(String(err))
       } finally {
         setSubmitting(false)
+        // Clear code inputs
+        setCodeParts(Array.from({ length: 16 }, () => ''))
+        // Clear votes
+        setSelectedFirst(null)
+        setSelectedSecond(null)
       }
     }
 
+    // If not authorized (pre-vote), show code entry screen
+    if (!authorized && !submitted) {
+      return (
+        <div style={{ padding: 20 }}>
+          <h1>Wahlcode eingeben</h1>
+          <p>Bitte geben Sie Ihren 16-stelligen Wahlcode ein.</p>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {codeParts.map((part, idx) => (
+              <React.Fragment key={idx}>
+                <input
+                  ref={(el) => (inputRefs.current[idx] = el)}
+                  value={part}
+                  onChange={(e) => handleCodeChange(idx, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(idx, e)}
+                  onPaste={(e) => handlePaste(idx, e)}
+                  style={{ width: 15, padding: 8, fontSize: 18, textTransform: 'uppercase', letterSpacing: 2, textAlign: 'center' }}
+                />
+                {(idx % 4 === 3) && idx !== 15 ? <span style={{ padding: '0 6px' }}>-</span> : null}
+              </React.Fragment>
+            ))}
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <button disabled={!validateFullCode()} onClick={() => setAuthorized(true)}>Weiter zur Wahl</button>
+          </div>
+        </div>
+      )
+    }
+
+    // After submission: require code again (post-vote screen)
+    if (submitted && !authorized) {
+      return (
+        <div style={{ padding: 20 }}>
+          <h1>Wahlcode eingeben</h1>
+          <p>Ihre Stimme wurde abgegeben. Geben Sie den Wahlcode erneut ein, um die Bestätigung zu sehen.</p>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {codeParts.map((part, idx) => (
+              <React.Fragment key={idx}>
+                <input
+                  ref={(el) => (inputRefs.current[idx] = el)}
+                  value={part}
+                  onChange={(e) => handleCodeChange(idx, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(idx, e)}
+                  onPaste={(e) => handlePaste(idx, e)}
+                  style={{ width: 15, padding: 8, fontSize: 18, textTransform: 'uppercase', letterSpacing: 2, textAlign: 'center' }}
+                />
+                {(idx % 4 === 3) && idx !== 15 ? <span style={{ padding: '0 6px' }}>-</span> : null}
+              </React.Fragment>
+            ))}
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <button disabled={!validateFullCode()} onClick={() => setAuthorized(true)}>Bestätigung anzeigen</button>
+          </div>
+        </div>
+      )
+    }
+
+    // Authorized voting view
     return (
       <div style={{ padding: 20 }}>
         <h1>Stimmzettel: {constituencyName}</h1>
