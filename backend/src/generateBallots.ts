@@ -192,7 +192,14 @@ async function generateBallots(options: GenerationOptions) {
   console.log(`Starting ballot generation${filterDesc || ' (all data)'}...`);
   const start = Date.now();
 
-  await db.execute(sql`SET LOCAL synchronous_commit = 'off';`);
+  // Optimize PostgreSQL for bulk loading
+  console.log('Optimizing database for bulk inserts...');
+  await Promise.all([
+    db.execute(sql.raw(`SET LOCAL synchronous_commit = 'off';`)),
+    db.execute(sql.raw(`SET LOCAL maintenance_work_mem = '1GB';`)),
+    db.execute(sql.raw(`SET LOCAL max_parallel_workers = 8;`)),
+    db.execute(sql.raw(`SET LOCAL max_parallel_workers_per_gather = 4;`))
+  ]);
 
   if (dropAndRecreateTables) {
     console.log("Dropping and recreating tables...");
@@ -207,11 +214,17 @@ async function generateBallots(options: GenerationOptions) {
     );
   }
 
-  console.log("\nGenerating first_votes...");
-  await insertFirstVotes(year, constituencyIds, stateIds);
+  // Generate first and second votes IN PARALLEL for better performance
+  console.log("\nGenerating first_votes and second_votes (parallel)...");
+  const startVotes = Date.now();
 
-  console.log("\nGenerating second_votes...");
-  await insertSecondVotes(year, constituencyIds, stateIds);
+  await Promise.all([
+    insertFirstVotes(year, constituencyIds, stateIds),
+    insertSecondVotes(year, constituencyIds, stateIds)
+  ]);
+
+  const votesDur = ((Date.now() - startVotes) / 1000).toFixed(1);
+  console.log(`✓ Both vote types generated in ${votesDur}s (parallel execution)`);
 
   console.log("\nRecreating indexes and foreign keys...");
   await recreateIndexesAndFKs();
@@ -394,56 +407,68 @@ async function insertSecondVotes(
  *   second_votes(party_list_id)         -> party_lists(id)
  */
 async function recreateIndexesAndFKs() {
-  await db.execute(
-    sql.raw(`
+  // Step 1: Create indexes in parallel (independent operations)
+  console.log('  Creating indexes...');
+  const idxStart = Date.now();
+  await Promise.all([
+    db.execute(sql.raw(`
       CREATE INDEX IF NOT EXISTS idx_first_votes_person_year
         ON first_votes(direct_person_id, year);
-    `)
-  );
-
-  await db.execute(
-    sql.raw(`
+    `)),
+    db.execute(sql.raw(`
       CREATE INDEX IF NOT EXISTS idx_second_votes_party_list
         ON second_votes(party_list_id);
-    `)
-  );
+    `))
+  ]);
+  const idxDur = ((Date.now() - idxStart) / 1000).toFixed(1);
+  console.log(`  ✓ Indexes created in ${idxDur}s`);
 
-  // Add constraints as NOT VALID (faster), then validate
-  await db.execute(
-    sql.raw(`
+  // Step 2: Add constraints as NOT VALID (parallel)
+  console.log('  Adding foreign key constraints...');
+  const fkStart = Date.now();
+  await Promise.all([
+    db.execute(sql.raw(`
+      ALTER TABLE first_votes
+        DROP CONSTRAINT IF EXISTS fk_first_vote_direct_cand;
+    `)),
+    db.execute(sql.raw(`
+      ALTER TABLE second_votes
+        DROP CONSTRAINT IF EXISTS fk_second_vote_party_list;
+    `))
+  ]);
+
+  await Promise.all([
+    db.execute(sql.raw(`
       ALTER TABLE first_votes
         ADD CONSTRAINT fk_first_vote_direct_cand
         FOREIGN KEY (direct_person_id, year)
         REFERENCES direct_candidacy(person_id, year)
         ON DELETE CASCADE
         NOT VALID;
-    `)
-  );
-
-  await db.execute(
-    sql.raw(`
+    `)),
+    db.execute(sql.raw(`
       ALTER TABLE second_votes
         ADD CONSTRAINT fk_second_vote_party_list
         FOREIGN KEY (party_list_id)
         REFERENCES party_lists(id)
         ON DELETE CASCADE
         NOT VALID;
-    `)
-  );
+    `))
+  ]);
 
-  await db.execute(
-    sql.raw(`
+  // Step 3: Validate constraints in parallel
+  await Promise.all([
+    db.execute(sql.raw(`
       ALTER TABLE first_votes
         VALIDATE CONSTRAINT fk_first_vote_direct_cand;
-    `)
-  );
-
-  await db.execute(
-    sql.raw(`
+    `)),
+    db.execute(sql.raw(`
       ALTER TABLE second_votes
         VALIDATE CONSTRAINT fk_second_vote_party_list;
-    `)
-  );
+    `))
+  ]);
+  const fkDur = ((Date.now() - fkStart) / 1000).toFixed(1);
+  console.log(`  ✓ Foreign keys added and validated in ${fkDur}s`);
 }
 
 /**
