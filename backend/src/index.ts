@@ -624,7 +624,7 @@ app.post('/api/ballot', async (req, res) => {
 
     // SECOND VOTE handling
     let partyListId: number | null = null;
-    let secondIsValid = true;
+    let secondIsValid: boolean;
     if (body.second && body.second.type === 'party' && body.second.party_id) {
       // find party_list for that party in this state+year
       let plRes = await pool.query(
