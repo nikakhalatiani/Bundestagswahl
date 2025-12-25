@@ -1,4 +1,6 @@
-const calculateSeatsFunc: any = require('./calculateSeats');
+import type { CalculateSeatsResult, SeatAllocationRow } from './types/seats';
+
+const calculateSeatsFunc: (year?: number) => Promise<CalculateSeatsResult> = require('./calculateSeats');
 
 interface SeatCounts {
   party_id: number | string;
@@ -9,7 +11,7 @@ interface SeatCounts {
 export default async function countSeatsPerParty(year: number = 2025): Promise<SeatCounts[]> {
   try {
     const res = await calculateSeatsFunc(year);
-    const rows = res.seatAllocation || [];
+    const rows: SeatAllocationRow[] = res.seatAllocation || [];
 
     const counts: Record<string, { party_id: number | string; party_name: string; seats: number }> = {};
 

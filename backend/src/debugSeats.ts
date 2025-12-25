@@ -15,9 +15,11 @@
 //   party  - Check specific party (requires party name)
 
 import dbModule from './db';
-const pool = (dbModule as any).pool || (dbModule as any).default?.pool;
+const { pool } = dbModule;
 
-const calculateSeatsFunc = require('./calculateSeats');
+import type { CalculateSeatsResult, SeatAllocationRow } from './types/seats';
+
+const calculateSeatsFunc: (year?: number) => Promise<CalculateSeatsResult> = require('./calculateSeats');
 
 interface DebugOptions {
   year: number;
@@ -167,7 +169,7 @@ async function debugBasic(year: number) {
 
 async function debugFederalDistribution(year: number) {
   console.log(`\n${'='.repeat(60)}`);
-  console.log(`OBERVERTEILUNG (FEDERAL DISTRIBUTION) FOR ${year}`);
+  console.log(`FEDERAL DISTRIBUTION FOR ${year}`);
   console.log('='.repeat(60));
 
   const oberRes = await pool.query(`
@@ -228,13 +230,16 @@ async function debugFederalDistribution(year: number) {
   console.log('\n--- Seats per Party (Sainte-Laguë Method) ---');
   console.table(oberRes.rows);
 
-  const totalSeats = oberRes.rows.reduce((sum: number, row: any) => sum + parseInt(row.seats_national), 0);
+  const totalSeats = oberRes.rows.reduce(
+    (sum: number, row: { seats_national: string | number }) => sum + Number(row.seats_national),
+    0
+  );
   console.log(`\nTotal Federal Seats Allocated: ${totalSeats}`);
 }
 
 async function debugStateDistribution(year: number) {
   console.log(`\n${'='.repeat(60)}`);
-  console.log(`UNTERVERTEILUNG (STATE DISTRIBUTION) FOR ${year}`);
+  console.log(`STATE DISTRIBUTION FOR ${year}`);
   console.log('='.repeat(60));
 
   const unterRes = await pool.query(`
@@ -405,7 +410,10 @@ async function debugParty(year: number, partyName: string) {
   `, [partyId, year]);
   console.table(votesRes.rows);
 
-  const totalVotes = votesRes.rows.reduce((sum: number, row: any) => sum + parseFloat(row.vote_count), 0);
+  const totalVotes = votesRes.rows.reduce(
+    (sum: number, row: { vote_count: string | number }) => sum + Number(row.vote_count),
+    0
+  );
   console.log(`Total Second Votes: ${totalVotes}`);
 
   // Direct mandates
@@ -450,7 +458,7 @@ async function debugParty(year: number, partyName: string) {
   console.log(`\n--- Final Seat Allocation for ${partyShortName} ---`);
   const results = await calculateSeatsFunc(year);
   const partySeats = (results.seatAllocation || []).filter(
-    (r: any) => r.party_id === partyId
+    (r: SeatAllocationRow) => Number(r.party_id) === partyId
   );
 
   const seatsByType = {
@@ -459,7 +467,7 @@ async function debugParty(year: number, partyName: string) {
     Other: 0
   };
 
-  partySeats.forEach((seat: any) => {
+  partySeats.forEach((seat: SeatAllocationRow) => {
     const type = seat.seat_type || 'Other';
     if (type === 'Direct Mandate') seatsByType.DirectMandate++;
     else if (type === 'List Seat') seatsByType.ListSeat++;
@@ -479,7 +487,7 @@ async function main() {
   const partyName = args[2];
 
   console.log(`\n${'='.repeat(60)}`);
-  console.log(`BUNDESTAGSWAHL SEAT ALLOCATION DEBUG TOOL`);
+  console.log(`GERMAN FEDERAL ELECTION SEAT ALLOCATION DEBUG TOOL`);
   console.log('='.repeat(60));
   console.log(`Year: ${year}`);
   console.log(`Mode: ${mode}`);

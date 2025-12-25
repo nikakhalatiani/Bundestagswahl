@@ -1,13 +1,16 @@
-const dbModule = require('./db');
-// support both `export default { pool, db }` and named exports
-const pool = dbModule.pool || (dbModule.default && dbModule.default.pool);
-const drizzleDb = dbModule.db || (dbModule.default && dbModule.default.db);
+import dbModule from './db';
+import type {
+    CalculateSeatsResult,
+    FederalDistributionRow,
+    PartySummaryRow,
+    SeatAllocationRow,
+    StateDistributionRow,
+} from './types/seats';
 
-// ensure this file is treated as a module by TypeScript
-export { };
+const { pool } = dbModule;
 
 /**
- * Seat Allocation for German Federal Election (Bundestagswahl)
+ * Seat allocation for the German federal election
  * Implements the German electoral system with 2023 reform
  *
  * === 2023 ELECTORAL REFORM (Bundeswahlrechtsreform 2023) ===
@@ -19,19 +22,19 @@ export { };
  *    - The Bundestag had grown to 736 seats in 2021 due to overhang and leveling seats
  *    - Reform caps it at 630 seats regardless of election results
  *
- * 2. ABOLITION OF OVERHANG MANDATES (Überhangmandate):
+ * 2. ABOLITION OF OVERHANG MANDATES:
  *    - OLD: If a party won more constituencies than proportional seats, they kept all
- *    - NEW: "Second-Vote Coverage" (Zweitstimmendeckung) - only the strongest direct
+ *    - NEW: Second-vote coverage - only the strongest direct
  *      candidates (by first-vote percentage) get seats, up to the party's proportional share
  *    - Weaker direct candidates lose their mandate if party exceeds proportional allocation
  *
- * 3. ABOLITION OF LEVELING SEATS (Ausgleichsmandate):
+ * 3. ABOLITION OF LEVELING SEATS:
  *    - OLD: Other parties received additional seats to maintain proportionality
  *    - NEW: Not needed since overhang mandates are eliminated
  *
  * 4. TWO-TIER PROPORTIONAL ALLOCATION:
- *    - Federal level (Oberverteilung): 630 seats allocated by Sainte-Laguë
- *    - State level (Unterverteilung): Each party's seats distributed across states by Sainte-Laguë
+ *    - Federal level: 630 seats allocated by Sainte-Laguë
+ *    - State level: Each party's seats distributed across states by Sainte-Laguë
  *
  * 5. TIE-BREAKING RULES:
  *    - Primary: Highest quotient (votes / divisor)
@@ -40,26 +43,26 @@ export { };
  *
  * === ALGORITHM STEPS ===
  *
- * 1. Find winner for each constituency (first votes / Erststimmen)
+ * 1. Find winner for each constituency (first votes)
  * 2. Filter parties by 5% threshold, 3 direct mandates, or minority status
  * 3. Independent candidates and candidates from non-qualified parties get seats directly
- * 4. Federal Distribution (Oberverteilung): Sainte-Laguë at federal level
+ * 4. Federal distribution: Sainte-Laguë at federal level
  *    - Allocate 630 seats minus non-qualified party seats
  *    - Only qualified parties participate
- * 5. State Distribution (Unterverteilung): Sainte-Laguë per party at state level
+ * 5. State distribution: Sainte-Laguë per party at state level
  *    - Each party's federal seats distributed across states by state list votes
- * 6. Second-Vote Coverage (Zweitstimmendeckung):
+ * 6. Second-vote coverage:
  *    - Rank direct candidates by first-vote percentage within each state
  *    - Only top candidates get seats, up to state allocation limit
  *    - Prevents overhang mandates
  * 7. Assign remaining seats to list candidates (excluding seated direct candidates)
  *
  * === REFERENCES ===
- * - Bundeswahlgesetz (BWG) in der Fassung vom 24.03.2023
+ * - Federal Electoral Act (Bundeswahlgesetz, BWG) as amended 2023-03-24
  * - https://www.bundeswahlleiter.de/en/bundestagswahlen/2025.html
  */
 
-async function calculateSeats(electionYear: number = 2025) {
+async function calculateSeats(electionYear: number = 2025): Promise<CalculateSeatsResult> {
     try {
         const seatAllocationQuery = `
 WITH RECURSIVE
@@ -173,7 +176,7 @@ NumDirectSeatsNonQualified AS (
 ),
 
 -- ============================================================
--- STEP 5: Federal Distribution (Oberverteilung) with Sainte-Laguë
+-- STEP 5: Federal distribution with Sainte-Laguë
 -- 630 seats minus independent candidates/non-qualified parties
 -- ============================================================
 AvailableSeats AS (
@@ -234,7 +237,7 @@ FederalDistribution AS (
 ),
 
 -- ============================================================
--- STEP 6: State Distribution (Unterverteilung) - Seats per state per party
+-- STEP 6: State distribution - seats per state per party
 -- ============================================================
 StateListSecondVotes AS (
     SELECT
@@ -296,7 +299,7 @@ StateDistribution AS (
 
 -- ============================================================
 -- STEP 7: Constituency winners from qualified parties
--- Ranked by first-vote percentage (for second-vote coverage / Zweitstimmendeckung)
+-- Ranked by first-vote percentage (for second-vote coverage)
 -- ============================================================
 QualifiedConstituencyWinners AS (
     SELECT
@@ -316,7 +319,7 @@ QualifiedConstituencyWinners AS (
 ),
 
 -- ============================================================
--- STEP 8: Second-Vote Coverage / Zweitstimmendeckung (2023 Reform)
+-- STEP 8: Second-vote coverage (2023 reform)
 -- ============================================================
 -- This is the CORE of the 2023 reform that eliminates overhang mandates.
 --
@@ -740,12 +743,12 @@ GROUP BY party_id, short_name, state_id, state_name
 ORDER BY short_name, seats DESC;
 `;
 
-        const seatAllocationRes = await pool.query(seatAllocationQuery, [electionYear]);
-        const summaryRes = await pool.query(summaryQuery, [electionYear]);
-        const federalRes = await pool.query(federalDistributionQuery, [electionYear]);
-        const stateRes = await pool.query(stateDistributionQuery, [electionYear]);
+        const seatAllocationRes = await pool.query<SeatAllocationRow>(seatAllocationQuery, [electionYear]);
+        const summaryRes = await pool.query<PartySummaryRow>(summaryQuery, [electionYear]);
+        const federalRes = await pool.query<FederalDistributionRow>(federalDistributionQuery, [electionYear]);
+        const stateRes = await pool.query<StateDistributionRow>(stateDistributionQuery, [electionYear]);
 
-        const results = {
+        const results: CalculateSeatsResult = {
             seatAllocation: seatAllocationRes.rows,
             summary: summaryRes.rows,
             federalDistribution: federalRes.rows,

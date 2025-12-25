@@ -71,6 +71,8 @@ interface GenerationOptions {
   stateIds?: number[]; // Filter by specific state IDs (default: all)
 }
 
+type ConstituencyMappingRow = { id: number; number: number; name: string };
+
 async function main() {
   // Parse command-line arguments
   const args = process.argv.slice(2);
@@ -121,7 +123,7 @@ async function generateBallots(options: GenerationOptions) {
     // If year is specified, filter constituencies by year (via direct_candidacy or constituency_elections)
     // to handle cases where the same constituency number exists for different election years
     let mappingQuery: string;
-    let queryParams: any[];
+    let queryParams: Array<number | number[]>;
 
     if (year !== undefined) {
       // Filter by year: only return constituencies that have candidates in that election year
@@ -144,7 +146,7 @@ async function generateBallots(options: GenerationOptions) {
       queryParams = [constituencyNumbers];
     }
 
-    const mappingRes = await pool.query(mappingQuery, queryParams);
+    const mappingRes = await pool.query<ConstituencyMappingRow>(mappingQuery, queryParams);
 
     if (mappingRes.rows.length === 0) {
       console.error(`❌ Error: No constituencies found with numbers: ${constituencyNumbers.join(', ')}${year ? ` for year ${year}` : ''}`);
@@ -156,7 +158,7 @@ async function generateBallots(options: GenerationOptions) {
     }
 
     if (mappingRes.rows.length < constituencyNumbers.length) {
-      const foundNumbers = mappingRes.rows.map((r: any) => r.number);
+      const foundNumbers = mappingRes.rows.map((r) => r.number);
       const missingNumbers = constituencyNumbers.filter(n => !foundNumbers.includes(n));
       console.warn(`⚠️  Warning: Some constituency numbers not found: ${missingNumbers.join(', ')}${year ? ` for year ${year}` : ''}`);
       console.warn(`   Will generate ballots for: ${foundNumbers.join(', ')}`);
@@ -174,12 +176,12 @@ async function generateBallots(options: GenerationOptions) {
       const dupNumbers = duplicates.map(([num, _]) => num);
       console.warn(`⚠️  Warning: Constituency numbers ${dupNumbers.join(', ')} exist in multiple election years`);
       console.warn(`   Generating ballots for ALL matching constituencies. Specify --year=YYYY to disambiguate.`);
-      mappingRes.rows.forEach((r: any) => {
+      mappingRes.rows.forEach((r) => {
         console.warn(`     - Constituency ${r.number}: "${r.name}" (id=${r.id})`);
       });
     }
 
-    constituencyIds = mappingRes.rows.map((r: any) => r.id);
+    constituencyIds = mappingRes.rows.map((r) => r.id);
     console.log(`✓ Mapped constituency numbers ${constituencyNumbers.join(',')} → database IDs ${constituencyIds.join(',')}${year ? ` (year ${year})` : ''}`);
   }
 

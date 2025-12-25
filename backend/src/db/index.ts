@@ -4,7 +4,7 @@ import { Pool } from "pg";
 import * as schema from "./schema";
 
 // Shared connection pool
-const pool = new Pool({
+export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 20,               // allow concurrent queries
   idleTimeoutMillis: 0,  // keep connections alive (for long imports)

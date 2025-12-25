@@ -1,5 +1,22 @@
 import dbModule from './db';
-const pool = (dbModule as any).pool || (dbModule as any).default?.pool;
+const { pool } = dbModule;
+
+interface CandidateRow {
+  person_id: number;
+  first_name: string;
+  last_name: string;
+  artist_name: string | null;
+  birth_year: number | null;
+  candidacy_type: 'direct' | 'list';
+  year: number;
+  constituency_id: number | null;
+  constituency_number: number | null;
+  constituency_name: string | null;
+  party_id: number;
+  party_short_name: string;
+  party_list_id: number | null;
+  list_position: number | null;
+}
 
 async function listCandidates() {
   const sql = `
@@ -50,7 +67,7 @@ JOIN parties par ON par.id = pl.party_id
 ORDER BY last_name, first_name, year DESC, candidacy_type;
 `;
 
-  const res = await pool.query(sql);
+  const res = await pool.query<CandidateRow>(sql);
   return res.rows;
 }
 

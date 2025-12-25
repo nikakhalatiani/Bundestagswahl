@@ -4,26 +4,28 @@
 // 1. Total number of seats equals 630 (or expected amount)
 // 2. No duplicate person assignments
 // 3. All parties meet qualification criteria
-// 4. Oberverteilung and Unterverteilung add up correctly
+// 4. Federal and state distribution add up correctly
 // 5. Direct mandates + list seats = total seats per party
 // 6. List candidates who won direct mandates are excluded from list seats
 
 import dbModule from './db';
-const pool = (dbModule as any).pool || (dbModule as any).default?.pool;
+const { pool } = dbModule;
 
-const calculateSeatsFunc = require('./calculateSeats');
+import type { CalculateSeatsResult, FederalDistributionRow, PartySummaryRow, SeatAllocationRow, StateDistributionRow } from './types/seats';
+
+const calculateSeatsFunc: (year?: number) => Promise<CalculateSeatsResult> = require('./calculateSeats');
 
 interface ValidationResult {
   testName: string;
   passed: boolean;
-  expected?: any;
-  actual?: any;
+  expected?: unknown;
+  actual?: unknown;
   details?: string;
 }
 
 class SeatAllocationTester {
   private year: number;
-  private results: any;
+  private results: CalculateSeatsResult | null = null;
   private validationResults: ValidationResult[] = [];
 
   constructor(year: number) {
@@ -36,7 +38,7 @@ class SeatAllocationTester {
     console.log(`✓ Results loaded\n`);
   }
 
-  addResult(testName: string, passed: boolean, expected?: any, actual?: any, details?: string) {
+  addResult(testName: string, passed: boolean, expected?: unknown, actual?: unknown, details?: string) {
     this.validationResults.push({
       testName,
       passed,
@@ -47,7 +49,8 @@ class SeatAllocationTester {
   }
 
   async testTotalSeats() {
-    const seatAllocation = this.results.seatAllocation || [];
+    if (!this.results) throw new Error('Results not loaded');
+    const seatAllocation: SeatAllocationRow[] = this.results.seatAllocation || [];
     const totalSeats = seatAllocation.length;
 
     // Get number of constituencies to know expected total
@@ -56,7 +59,7 @@ class SeatAllocationTester {
     );
     const numConstituencies = parseInt(constituenciesRes.rows[0].count);
 
-    // German system should have exactly 630 seats (or more if Überhangmandate exist)
+    // German system should have exactly 630 seats (or more if overhang mandates exist)
     // But with 2023 reform, it should be exactly 630
     const expected = 630;
     const passed = totalSeats === expected;
@@ -71,8 +74,9 @@ class SeatAllocationTester {
   }
 
   async testNoDuplicatePersons() {
-    const seatAllocation = this.results.seatAllocation || [];
-    const personIds = seatAllocation.map((s: any) => s.person_id);
+    if (!this.results) throw new Error('Results not loaded');
+    const seatAllocation: SeatAllocationRow[] = this.results.seatAllocation || [];
+    const personIds = seatAllocation.map((s) => s.person_id);
     const uniquePersonIds = new Set(personIds);
 
     const passed = personIds.length === uniquePersonIds.size;
@@ -88,8 +92,9 @@ class SeatAllocationTester {
   }
 
   async testQualifiedPartiesOnly() {
-    const seatAllocation = this.results.seatAllocation || [];
-    const partyIds = [...new Set(seatAllocation.map((s: any) => s.party_id))];
+    if (!this.results) throw new Error('Results not loaded');
+    const seatAllocation: SeatAllocationRow[] = this.results.seatAllocation || [];
+    const partyIds = [...new Set(seatAllocation.map((s) => s.party_id))];
 
     // Check each party meets qualification criteria
     const qualCheckRes = await pool.query(`
@@ -132,7 +137,7 @@ class SeatAllocationTester {
       WHERE bz.party_id = ANY($2)
     `, [this.year, partyIds]);
 
-    const unqualifiedParties = qualCheckRes.rows.filter((r: any) => !r.qualified);
+    const unqualifiedParties = qualCheckRes.rows.filter((r: { qualified: boolean }) => !r.qualified);
     const passed = unqualifiedParties.length === 0;
 
     this.addResult(
@@ -142,15 +147,16 @@ class SeatAllocationTester {
       unqualifiedParties.length,
       passed
         ? 'All parties meet qualification criteria'
-        : `Unqualified parties with seats: ${unqualifiedParties.map((p: any) => p.short_name).join(', ')}`
+        : `Unqualified parties with seats: ${unqualifiedParties.map((p: { short_name: string }) => p.short_name).join(', ')}`
     );
   }
 
   async testFederalDistributionMatchesTotal() {
-    const federalDistribution = this.results.federalDistribution || [];
-    const totalFromFederal = federalDistribution.reduce((sum: number, r: any) => sum + parseInt(r.seats), 0);
+    if (!this.results) throw new Error('Results not loaded');
+    const federalDistribution: FederalDistributionRow[] = this.results.federalDistribution || [];
+    const totalFromFederal = federalDistribution.reduce((sum, r) => sum + Number(r.seats), 0);
 
-    const seatAllocation = this.results.seatAllocation || [];
+    const seatAllocation: SeatAllocationRow[] = this.results.seatAllocation || [];
     const totalSeats = seatAllocation.length;
 
     const passed = totalFromFederal === totalSeats;
@@ -167,21 +173,22 @@ class SeatAllocationTester {
   }
 
   async testStateDistributionMatchesFederal() {
-    const federalDistribution = this.results.federalDistribution || [];
-    const stateDistribution = this.results.stateDistribution || [];
+    if (!this.results) throw new Error('Results not loaded');
+    const federalDistribution: FederalDistributionRow[] = this.results.federalDistribution || [];
+    const stateDistribution: StateDistributionRow[] = this.results.stateDistribution || [];
 
     // Sum state distribution per party
     const stateByParty: Record<string, number> = {};
     for (const row of stateDistribution) {
       const party = row.party;
-      stateByParty[party] = (stateByParty[party] || 0) + parseInt(row.seats);
+      stateByParty[party] = (stateByParty[party] || 0) + Number(row.seats);
     }
 
     // Compare with federal distribution
     const mismatches: string[] = [];
     for (const row of federalDistribution) {
       const party = row.party;
-      const federalSeats = parseInt(row.seats);
+      const federalSeats = Number(row.seats);
       const stateSeats = stateByParty[party] || 0;
 
       if (federalSeats !== stateSeats) {
@@ -203,7 +210,8 @@ class SeatAllocationTester {
   }
 
   async testSeatTypeBreakdown() {
-    const seatAllocation = this.results.seatAllocation || [];
+    if (!this.results) throw new Error('Results not loaded');
+    const seatAllocation: SeatAllocationRow[] = this.results.seatAllocation || [];
 
     // Count by party and seat type
     const partyBreakdown: Record<string, { direct: number; list: number; other: number }> = {};
@@ -225,12 +233,12 @@ class SeatAllocationTester {
     }
 
     // Verify against federal distribution
-    const federalDistribution = this.results.federalDistribution || [];
+    const federalDistribution: FederalDistributionRow[] = this.results.federalDistribution || [];
     const mismatches: string[] = [];
 
     for (const row of federalDistribution) {
       const party = row.party;
-      const expectedTotal = parseInt(row.seats);
+      const expectedTotal = Number(row.seats);
       const breakdown = partyBreakdown[party] || { direct: 0, list: 0, other: 0 };
       const actualTotal = breakdown.direct + breakdown.list + breakdown.other;
 
@@ -255,17 +263,18 @@ class SeatAllocationTester {
   }
 
   async testDirectMandateWinnersExcludedFromLists() {
-    const seatAllocation = this.results.seatAllocation || [];
+    if (!this.results) throw new Error('Results not loaded');
+    const seatAllocation: SeatAllocationRow[] = this.results.seatAllocation || [];
 
     const directMandatePersons = new Set(
       seatAllocation
-        .filter((s: any) => s.seat_type === 'Direct Mandate')
-        .map((s: any) => s.person_id)
+        .filter((s) => s.seat_type === 'Direct Mandate')
+        .map((s) => Number(s.person_id))
     );
 
     const listSeatPersons = seatAllocation
-      .filter((s: any) => s.seat_type === 'List Seat')
-      .map((s: any) => s.person_id);
+      .filter((s) => s.seat_type === 'List Seat')
+      .map((s) => Number(s.person_id));
 
     const overlaps = listSeatPersons.filter((pid: number) => directMandatePersons.has(pid));
     const passed = overlaps.length === 0;
@@ -281,16 +290,17 @@ class SeatAllocationTester {
     );
   }
 
-  async testZweitstimmendeckung() {
-    // Test that no party gets more direct mandates in a state than their Unterverteilung allows
-    const seatAllocation = this.results.seatAllocation || [];
-    const stateDistribution = this.results.stateDistribution || [];
+  async testSecondVoteCoverage() {
+    // Test that no party gets more direct mandates in a state than their state allocation allows
+    if (!this.results) throw new Error('Results not loaded');
+    const seatAllocation: SeatAllocationRow[] = this.results.seatAllocation || [];
+    const stateDistribution: StateDistributionRow[] = this.results.stateDistribution || [];
 
     // Build map of seats per party per state from State Distribution
     const stateSeatsMap: Record<string, number> = {};
     for (const row of stateDistribution) {
       const key = `${row.party}::${row.state}`;
-      stateSeatsMap[key] = parseInt(row.seats);
+      stateSeatsMap[key] = Number(row.seats);
     }
 
     // Count direct mandates per party per state
@@ -326,23 +336,24 @@ class SeatAllocationTester {
     const passed = violations.length === 0;
 
     this.addResult(
-      'Zweitstimmendeckung (2023 Reform)',
+      'Second-vote coverage (2023 reform)',
       passed,
       'No violations',
       violations.length === 0 ? 'Compliant' : violations.join('; '),
       passed
-        ? 'All parties respect Unterverteilung limits per state'
+        ? 'All parties respect state allocation limits per state'
         : `Violations found: ${violations.join('; ')}`
     );
   }
 
   async testSummaryDataConsistency() {
-    const summary = this.results.summary || [];
-    const federalDistribution = this.results.federalDistribution || [];
+    if (!this.results) throw new Error('Results not loaded');
+    const summary: PartySummaryRow[] = this.results.summary || [];
+    const federalDistribution: FederalDistributionRow[] = this.results.federalDistribution || [];
 
     // Check that qualified parties in summary match those in federal distribution
-    const qualifiedInSummary = summary.filter((s: any) => s.in_bundestag).map((s: any) => s.party);
-    const partiesInFederal = federalDistribution.map((o: any) => o.party);
+    const qualifiedInSummary = summary.filter((s) => s.in_bundestag).map((s) => s.party);
+    const partiesInFederal = federalDistribution.map((o) => o.party);
 
     const missingInFederal = qualifiedInSummary.filter((p: string) => !partiesInFederal.includes(p));
     const extraInFederal = partiesInFederal.filter((p: string) => !qualifiedInSummary.includes(p));
@@ -404,7 +415,7 @@ class SeatAllocationTester {
     await this.testStateDistributionMatchesFederal();
     await this.testSeatTypeBreakdown();
     await this.testDirectMandateWinnersExcludedFromLists();
-    await this.testZweitstimmendeckung();
+    await this.testSecondVoteCoverage();
     await this.testSummaryDataConsistency();
 
     return this.printResults();
