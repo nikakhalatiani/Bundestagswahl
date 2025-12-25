@@ -3,7 +3,6 @@ import dbModule from "./db";
 const { pool } = dbModule;
 
 // helper modules
-import listCandidates from "./listCandidates";
 import countSeatsPerParty from "./countSeatsPerParty";
 // calculateSeats is CommonJS-exported
 const calculateSeats = require("./calculateSeats");
