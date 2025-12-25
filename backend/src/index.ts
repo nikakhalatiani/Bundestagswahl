@@ -590,7 +590,7 @@ app.post('/api/ballot', async (req, res) => {
 
     // FIRST VOTE handling
     let firstPersonId: number | null = null;
-    let firstIsValid = true;
+    let firstIsValid: boolean;
     if (body.first && body.first.type === 'candidate' && body.first.person_id) {
       // ensure the direct_candidacy exists for that person/year/constituency
       const check = await pool.query(
