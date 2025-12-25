@@ -3,7 +3,6 @@ import dbModule from "./db";
 const { pool } = dbModule;
 
 // helper modules
-import countSeatsPerParty from "./countSeatsPerParty";
 // calculateSeats is CommonJS-exported
 const calculateSeats = require("./calculateSeats");
 import { ensureCacheExists } from "./services/cacheSeats";
