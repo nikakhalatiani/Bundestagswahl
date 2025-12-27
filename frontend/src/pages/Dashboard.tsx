@@ -1,17 +1,7 @@
 import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from 'recharts';
 import { useSeatDistribution } from '../hooks/useQueries';
 import type { SeatDistributionItem } from '../types/api';
-
-const PARTY_COLORS: Record<string, string> = {
-  'SPD': '#E3000F',
-  'CDU': '#000000',
-  'GRÜNE': '#1AA037',
-  'FDP': '#FFED00',
-  'AfD': '#009EE0',
-  'Die Linke': '#BE3075',
-  'CSU': '#008AC5',
-  'SSW': '#003C8F',
-};
+import { getPartyColor, getPartyDisplayName, partyBadgeStyle } from '../utils/party';
 
 interface DashboardProps {
   year: number;
@@ -39,12 +29,26 @@ export function Dashboard({ year }: DashboardProps) {
 
   const items: SeatDistributionItem[] = data.data;
 
-  const chartData = items.map((party) => ({
+  const partyOpts = { combineCduCsu: true };
+
+  const combinedMap = new Map<string, { party_name: string; seats: number }>();
+  for (const party of items) {
+    const displayName = getPartyDisplayName(party.party_name, partyOpts);
+    const existing = combinedMap.get(displayName);
+    if (existing) {
+      existing.seats += party.seats;
+    } else {
+      combinedMap.set(displayName, { party_name: displayName, seats: party.seats });
+    }
+  }
+  const combinedItems = Array.from(combinedMap.values()).sort((a, b) => b.seats - a.seats);
+
+  const chartData = combinedItems.map((party) => ({
     name: party.party_name,
     value: party.seats,
   }));
 
-  const totalSeats = items.reduce((sum, p) => sum + p.seats, 0);
+  const totalSeats = combinedItems.reduce((sum, p) => sum + p.seats, 0);
 
   return (
     <div>
@@ -68,7 +72,7 @@ export function Dashboard({ year }: DashboardProps) {
                   label={(entry) => `${entry.name}: ${entry.value}`}
                 >
                   {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={PARTY_COLORS[entry.name] || '#999'} />
+                    <Cell key={`cell-${index}`} fill={getPartyColor(entry.name, partyOpts)} />
                   ))}
                 </Pie>
                 <Tooltip />
@@ -88,11 +92,12 @@ export function Dashboard({ year }: DashboardProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((party) => (
-                    <tr key={party.party_id}>
+                  {combinedItems.map((party) => (
+                    <tr key={party.party_name}>
                       <td>
                         <span
-                          className={`party-badge party-${party.party_name.toLowerCase().replace(/ü/g, 'u').replace(/\s/g, '')}`}
+                          className="party-badge"
+                          style={partyBadgeStyle(party.party_name, partyOpts)}
                         >
                           {party.party_name}
                         </span>

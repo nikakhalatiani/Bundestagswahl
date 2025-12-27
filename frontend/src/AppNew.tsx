@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Dashboard } from './pages/Dashboard';
 import { Members } from './pages/Members';
 import { ConstituencyAnalysis } from './pages/ConstituencyAnalysis';
+import { ParliamentDemo } from './pages/ParliamentDemo';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -47,6 +48,11 @@ function Navigation({ year, setYear }: { year: number; setYear: (y: number) => v
                 Constituency analysis
               </Link>
             </li>
+            <li>
+              <Link to="/parliament" className={`nav-link ${location.pathname === '/parliament' ? 'active' : ''}`}>
+                Parliament
+              </Link>
+            </li>
           </ul>
         </nav>
       </header>
@@ -65,6 +71,7 @@ function AppContent() {
           <Route path="/" element={<Dashboard year={year} />} />
           <Route path="/members" element={<Members year={year} />} />
           <Route path="/analysis" element={<ConstituencyAnalysis year={year} />} />
+          <Route path="/parliament" element={<ParliamentDemo year={year} />} />
         </Routes>
       </main>
     </>

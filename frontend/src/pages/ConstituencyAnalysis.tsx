@@ -1,6 +1,8 @@
-import { useState } from 'react';
-import { useConstituencyOverview, useClosestWinners, useDirectWithoutCoverage } from '../hooks/useQueries';
-import type { ClosestWinnerItem, VoteDistributionItem } from '../types/api';
+import { useEffect, useState } from 'react';
+import { Autocomplete } from '../components/Autocomplete';
+import { useClosestWinners, useConstituencyList, useConstituencyOverview, useDirectWithoutCoverage } from '../hooks/useQueries';
+import type { ClosestWinnerItem, ConstituencyListItem, VoteDistributionItem } from '../types/api';
+import { getPartyDisplayName, partyBadgeStyle } from '../utils/party';
 
 interface ConstituencyAnalysisProps {
   year: number;
@@ -8,9 +10,27 @@ interface ConstituencyAnalysisProps {
 
 export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
   const [constituencyId, setConstituencyId] = useState(1);
+  const [constituencyQuery, setConstituencyQuery] = useState('');
+
+  const { data: constituencyList, isLoading: loadingConstituencyList, error: constituencyListError } = useConstituencyList(year);
   const { data: overview, isLoading: loadingOverview } = useConstituencyOverview(constituencyId, year);
   const { data: closest } = useClosestWinners(year, 5);
   const { data: lostMandates } = useDirectWithoutCoverage(year);
+
+  const constituencyItems: ConstituencyListItem[] = constituencyList?.data ?? [];
+  const getConstituencyLabel = (c: ConstituencyListItem) => `${c.number} — ${c.name} (${c.state_name})`;
+
+  const [didInitQuery, setDidInitQuery] = useState(false);
+  useEffect(() => {
+    if (didInitQuery) return;
+    if (constituencyItems.length === 0) return;
+    const selected = constituencyItems.find((c) => c.id === constituencyId) ?? constituencyItems[0];
+    setConstituencyId(selected.id);
+    setConstituencyQuery(getConstituencyLabel(selected));
+    setDidInitQuery(true);
+  }, [constituencyId, constituencyItems, didInitQuery]);
+
+  const partyOpts = { combineCduCsu: true };
 
   return (
     <div>
@@ -21,17 +41,30 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
         </div>
 
         <div className="form-group">
-          <label className="form-label">Enter constituency ID</label>
-          <input
-            type="number"
-            className="form-input"
-            value={constituencyId}
-            onChange={(e) => setConstituencyId(Number(e.target.value))}
-            min="1"
-            max="299"
-            placeholder="1-299"
+          <Autocomplete
+            id="constituency"
+            label="Select constituency (search by number or name)"
+            items={constituencyItems}
+            value={constituencyQuery}
+            onChange={setConstituencyQuery}
+            onSelect={(item) => {
+              setConstituencyId(item.id);
+              setConstituencyQuery(getConstituencyLabel(item));
+            }}
+            getItemLabel={getConstituencyLabel}
+            placeholder={loadingConstituencyList ? 'Loading constituencies…' : 'e.g. 75 or Berlin'}
+            disabled={loadingConstituencyList}
           />
         </div>
+
+        {constituencyListError && (
+          <div className="warning-box" style={{ marginTop: '0.75rem' }}>
+            <div className="warning-box-title">Could not load constituencies list</div>
+            <div>
+              The selector is still editable, but suggestions are unavailable until the backend is reachable.
+            </div>
+          </div>
+        )}
 
         {loadingOverview ? (
           <div className="loading">
@@ -74,8 +107,8 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                   {overview.winner.full_name}
                 </div>
                 <div style={{ marginBottom: '1rem' }}>
-                  <span className={`party-badge party-${overview.winner.party_name.toLowerCase().replace(/ü/g, 'u')}`}>
-                    {overview.winner.party_name}
+                  <span className="party-badge" style={partyBadgeStyle(overview.winner.party_name, partyOpts)}>
+                    {getPartyDisplayName(overview.winner.party_name, partyOpts)}
                   </span>
                   {' '}
                   <span className={`seat-badge ${overview.winner.got_seat ? 'seat-direct' : 'seat-none'}`}>
@@ -117,8 +150,8 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                   {overview.vote_distribution.map((party: VoteDistributionItem, idx: number) => (
                     <tr key={idx}>
                       <td>
-                        <span className={`party-badge party-${party.party_name.toLowerCase().replace(/ü/g, 'u').replace(/\s/g, '')}`}>
-                          {party.party_name}
+                        <span className="party-badge" style={partyBadgeStyle(party.party_name, partyOpts)}>
+                          {getPartyDisplayName(party.party_name, partyOpts)}
                         </span>
                       </td>
                       <td className="text-right">
@@ -164,15 +197,15 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                     <td>
                       {race.winner_name}
                       <br />
-                      <span className={`party-badge party-${race.winner_party.toLowerCase().replace(/ü/g, 'u')}`}>
-                        {race.winner_party}
+                      <span className="party-badge" style={partyBadgeStyle(race.winner_party, partyOpts)}>
+                        {getPartyDisplayName(race.winner_party, partyOpts)}
                       </span>
                     </td>
                     <td>
                       {race.runner_up_name}
                       <br />
-                      <span className={`party-badge party-${race.runner_up_party.toLowerCase().replace(/ü/g, 'u')}`}>
-                        {race.runner_up_party}
+                      <span className="party-badge" style={partyBadgeStyle(race.runner_up_party, partyOpts)}>
+                        {getPartyDisplayName(race.runner_up_party, partyOpts)}
                       </span>
                     </td>
                     <td className="text-right">
@@ -221,8 +254,8 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                     <td>{mandate.constituency_name}</td>
                     <td>{mandate.winner_name}</td>
                     <td>
-                      <span className={`party-badge party-${mandate.party_name.toLowerCase().replace(/ü/g, 'u')}`}>
-                        {mandate.party_name}
+                      <span className="party-badge" style={partyBadgeStyle(mandate.party_name, partyOpts)}>
+                        {getPartyDisplayName(mandate.party_name, partyOpts)}
                       </span>
                     </td>
                     <td>{mandate.state_name}</td>

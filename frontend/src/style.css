@@ -217,7 +217,9 @@ body {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .loading-text {
@@ -287,14 +289,38 @@ tr:hover {
   color: white;
 }
 
-.party-cdu { background: var(--party-cdu); }
-.party-spd { background: var(--party-spd); }
-.party-grune { background: var(--party-grune); }
-.party-fdp { background: var(--party-fdp); color: var(--text-primary); }
-.party-afd { background: var(--party-afd); }
-.party-linke { background: var(--party-linke); }
-.party-csu { background: var(--party-csu); }
-.party-ssw { background: var(--party-ssw); }
+.party-cdu {
+  background: var(--party-cdu);
+}
+
+.party-spd {
+  background: var(--party-spd);
+}
+
+.party-grune {
+  background: var(--party-grune);
+}
+
+.party-fdp {
+  background: var(--party-fdp);
+  color: var(--text-primary);
+}
+
+.party-afd {
+  background: var(--party-afd);
+}
+
+.party-linke {
+  background: var(--party-linke);
+}
+
+.party-csu {
+  background: var(--party-csu);
+}
+
+.party-ssw {
+  background: var(--party-ssw);
+}
 
 /* Stats grid */
 .stats-grid {
@@ -422,6 +448,19 @@ tr:hover {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
+}
+
+/* Grid layout for parliament hemicycle + side panel */
+.parliament-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 1024px) {
+  .parliament-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 1024px) {

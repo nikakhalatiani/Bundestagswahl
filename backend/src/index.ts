@@ -78,13 +78,30 @@ app.get('/api/members', ensureCache, async (req, res) => {
         s.id as state_id,
         s.name as state_name,
         sac.seat_type,
-        sac.constituency_name,
+        COALESCE(
+          sac.constituency_name,
+          top_second_votes.constituency_name
+        ) AS constituency_name,
         sac.list_position,
         sac.percent_first_votes
       FROM seat_allocation_cache sac
       JOIN persons p ON p.id = sac.person_id
       JOIN parties pt ON pt.id = sac.party_id
       JOIN states s ON s.id = sac.state_id
+      LEFT JOIN LATERAL (
+        SELECT
+          c2.name AS constituency_name
+        FROM constituency_elections ce2
+        JOIN constituency_party_votes cpv2 ON cpv2.bridge_id = ce2.bridge_id
+        JOIN constituencies c2 ON c2.id = ce2.constituency_id
+        WHERE
+          ce2.year = $1
+          AND c2.state_id = sac.state_id
+          AND cpv2.vote_type = 2
+          AND cpv2.party_id = sac.party_id
+        ORDER BY cpv2.votes DESC
+        LIMIT 1
+      ) top_second_votes ON true
       WHERE sac.year = $1
       ORDER BY pt.short_name, s.name, p.last_name, p.first_name
     `, [year]);
@@ -110,6 +127,32 @@ app.get('/api/constituency/:id/parties', async (req, res) => {
        WHERE ce.constituency_id = $1 AND ce.year = $2 AND cp.vote_type = 2
        ORDER BY p.short_name`,
       [constituencyId, year]
+    );
+
+    res.json({ data: result.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'db_error' });
+  }
+});
+
+// Constituency list for selection/autocomplete
+app.get('/api/constituencies', async (req, res) => {
+  const year = req.query.year ? Number(req.query.year) : 2025;
+
+  try {
+    const result = await pool.query(
+      `SELECT
+         c.id,
+         c.number,
+         c.name,
+         s.name AS state_name
+       FROM constituency_elections ce
+       JOIN constituencies c ON c.id = ce.constituency_id
+       JOIN states s ON s.id = c.state_id
+       WHERE ce.year = $1
+       ORDER BY c.number ASC`,
+      [year]
     );
 
     res.json({ data: result.rows });

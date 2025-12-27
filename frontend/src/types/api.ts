@@ -50,6 +50,13 @@ export interface ConstituencyInfo {
     name: string;
 }
 
+export interface ConstituencyListItem {
+    id: number;
+    number: number;
+    name: string;
+    state_name: string;
+}
+
 export interface VoteDistributionItem {
     party_name: string;
     first_votes: number;

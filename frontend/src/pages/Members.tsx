@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMembers } from '../hooks/useQueries';
 import type { MemberItem } from '../types/api';
+import { getPartyDisplayName, partyBadgeStyle } from '../utils/party';
 
 interface MembersProps {
   year: number;
@@ -31,14 +32,17 @@ export function Members({ year }: MembersProps) {
 
   const items: MemberItem[] = data.data;
 
+  const partyOpts = { combineCduCsu: true };
+  const displayParty = (partyName: string) => getPartyDisplayName(partyName, partyOpts);
+
   // Get unique values for filters
-  const parties = [...new Set(items.map((m) => m.party_name))].sort();
+  const parties = [...new Set(items.map((m) => displayParty(m.party_name)))].sort();
   const states = [...new Set(items.map((m) => m.state_name))].sort();
   const seatTypes = [...new Set(items.map((m) => m.seat_type))].sort();
 
   // Apply filters
   const filteredData = items.filter((member) => {
-    if (filterParty && member.party_name !== filterParty) return false;
+    if (filterParty && displayParty(member.party_name) !== filterParty) return false;
     if (filterState && member.state_name !== filterState) return false;
     if (filterSeatType && member.seat_type !== filterSeatType) return false;
     return true;
@@ -116,9 +120,10 @@ export function Members({ year }: MembersProps) {
                   </td>
                   <td>
                     <span
-                      className={`party-badge party-${member.party_name.toLowerCase().replace(/ü/g, 'u').replace(/\s/g, '')}`}
+                      className="party-badge"
+                      style={partyBadgeStyle(member.party_name, partyOpts)}
                     >
-                      {member.party_name}
+                      {displayParty(member.party_name)}
                     </span>
                   </td>
                   <td>{member.state_name}</td>

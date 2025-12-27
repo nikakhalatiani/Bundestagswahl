@@ -4,6 +4,7 @@ import type {
   ClosestWinnerItem,
   ConstituenciesSingleItem,
   ConstituencyOverviewResponse,
+  ConstituencyListItem,
   ConstituencyWinnerItem,
   DirectWithoutCoverageResponse,
   MemberItem,
@@ -84,6 +85,15 @@ export function useConstituenciesSingle(year: number, ids?: string) {
         ? `${API_BASE}/api/constituencies-single?year=${year}&ids=${ids}`
         : `${API_BASE}/api/constituencies-single?year=${year}`;
       return fetchJson<{ data: ConstituenciesSingleItem[] }>(url);
+    },
+  });
+}
+
+export function useConstituencyList(year: number) {
+  return useQuery({
+    queryKey: ['constituencies', year],
+    queryFn: async () => {
+      return fetchJson<ApiResponse<ConstituencyListItem[]>>(`${API_BASE}/api/constituencies?year=${year}`);
     },
   });
 }
