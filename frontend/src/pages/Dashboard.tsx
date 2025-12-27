@@ -1,9 +1,18 @@
 import { useMemo, useState } from 'react';
-import { Briefcase, MapPin, Percent, User, ListOrdered } from 'lucide-react';
+import { Briefcase, MapPin, Percent, User, ListOrdered, ChevronDown, ChevronUp } from 'lucide-react';
 import { useMembers, useSeatDistribution } from '../hooks/useQueries';
 import type { SeatDistributionItem } from '../types/api';
 import { Hemicycle, type Seat } from '../components/parliament/Hemicycle';
 import { getPartyColor, getPartyDisplayName, partyBadgeStyle } from '../utils/party';
+
+const COALITION_DESCRIPTIONS: Record<string, string> = {
+  'Grand Coalition': 'A coalition of the two largest parties, typically CDU/CSU and SPD. Historically the most common coalition in Germany.',
+  'Traffic Light (Ampel)': 'A coalition of SPD (Red), FDP (Yellow), and Greens. First formed at the federal level in 2021.',
+  'Jamaica': 'A coalition of CDU/CSU (Black), Greens, and FDP (Yellow). Named after the colors of the Jamaican flag.',
+  'Kenya': 'A coalition of CDU/CSU (Black), SPD (Red), and Greens. Named after the colors of the Kenyan flag.',
+  'Germany': 'A coalition of CDU/CSU (Black), SPD (Red), and FDP (Yellow). Named after the German flag colors.',
+  'Red-Green-Red': 'A left-wing coalition of SPD, Greens, and Die Linke.',
+};
 
 interface DashboardProps {
   year: number;
@@ -15,6 +24,7 @@ export function Dashboard({ year }: DashboardProps) {
 
   const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
   const [selectedParty, setSelectedParty] = useState<string | null>(null);
+  const [expandedCoalition, setExpandedCoalition] = useState<string | null>(null);
 
   const partyOpts = useMemo(() => ({ combineCduCsu: true }), []);
 
@@ -67,6 +77,41 @@ export function Dashboard({ year }: DashboardProps) {
   const selectedPartyColor = useMemo(() => {
     return selectedSeat ? getPartyColor(selectedSeat.party, partyOpts) : getPartyColor('', partyOpts);
   }, [selectedSeat, partyOpts]);
+
+  const possibleCoalitions = useMemo(() => {
+    if (totalSeats === 0) return [];
+    const majority = Math.floor(totalSeats / 2) + 1;
+
+    const coalitions = [
+      { name: 'Grand Coalition', parties: ['CDU/CSU', 'SPD'] },
+      { name: 'Traffic Light (Ampel)', parties: ['SPD', 'GRÜNE', 'FDP'] },
+      { name: 'Jamaica', parties: ['CDU/CSU', 'GRÜNE', 'FDP'] },
+      { name: 'Kenya', parties: ['CDU/CSU', 'SPD', 'GRÜNE'] },
+      { name: 'Germany', parties: ['CDU/CSU', 'SPD', 'FDP'] },
+      { name: 'Red-Green-Red', parties: ['SPD', 'GRÜNE', 'DIE LINKE'] },
+    ];
+
+    return coalitions.map(c => {
+      let totalSeatsInCoalition = 0;
+      let strongestParty = { name: '', seats: -1 };
+
+      c.parties.forEach(pName => {
+        const party = combinedItems.find(item => item.party_name === pName);
+        const seats = party ? party.seats : 0;
+        totalSeatsInCoalition += seats;
+        if (seats > strongestParty.seats) {
+          strongestParty = { name: pName, seats };
+        }
+      });
+
+      return {
+        ...c,
+        seats: totalSeatsInCoalition,
+        isMajority: totalSeatsInCoalition >= majority,
+        strongestParty: strongestParty.name
+      };
+    }).filter(c => c.isMajority).sort((a, b) => b.seats - a.seats);
+  }, [combinedItems, totalSeats]);
 
   if (isLoading) {
     return (
@@ -286,6 +331,57 @@ export function Dashboard({ year }: DashboardProps) {
             After the 2023 electoral reform, there are no overhang mandates.
           </div>
         </div>
+
+        {possibleCoalitions.length > 0 && (
+          <div style={{ marginTop: '1.5rem' }}>
+            <h4 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '1rem' }}>
+              Possible Coalitions (Majority &gt; {Math.floor(totalSeats / 2)})
+            </h4>
+            <div className="info-grid">
+              {possibleCoalitions.map((c) => {
+                const isExpanded = expandedCoalition === c.name;
+                return (
+                  <div key={c.name} style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
+                    <div
+                      className="info-item"
+                      style={{ alignItems: 'center', padding: '0.75rem', cursor: 'pointer', background: isExpanded ? 'var(--bg-accent)' : 'transparent' }}
+                      onClick={() => setExpandedCoalition(isExpanded ? null : c.name)}
+                    >
+                      <div style={{ display: 'flex', gap: '0.25rem', marginRight: '0.75rem' }}>
+                        {c.parties.map((p) => (
+                          <div
+                            key={p}
+                            style={{
+                              width: 12,
+                              height: 12,
+                              borderRadius: '50%',
+                              backgroundColor: getPartyColor(p, partyOpts),
+                            }}
+                            title={p}
+                          />
+                        ))}
+                      </div>
+                      <div style={{ flex: 1, fontWeight: 500 }}>{c.name}</div>
+                      <div style={{ fontWeight: 600, marginRight: '0.5rem' }}>{c.seats} seats</div>
+                      {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </div>
+
+                    {isExpanded && (
+                      <div style={{ padding: '0.75rem', borderTop: '1px solid var(--border-color)', background: 'var(--bg-secondary)', fontSize: '0.9rem' }}>
+                        <div style={{ marginBottom: '0.5rem' }}>
+                          <strong>Possible Chancellor:</strong> Candidate from <span style={{ color: getPartyColor(c.strongestParty, partyOpts), fontWeight: 600 }}>{c.strongestParty}</span>
+                        </div>
+                        <div style={{ color: 'var(--text-secondary)' }}>
+                          {COALITION_DESCRIPTIONS[c.name] || 'A possible governing coalition.'}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
