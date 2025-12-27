@@ -23,6 +23,7 @@ const MAJOR_COLORS: Record<string, string> = {
     GRUNE: '#46962b',
     'DIE LINKE': '#B40089',
     FDP: '#F5D000',
+    BSW: '#FF8002',
     SSW: '#003063',
 };
 
@@ -48,6 +49,7 @@ export function getPartyColor(displayNameOrRaw: string, opts?: { combineCduCsu?:
     if (normalized === 'AFD') return MAJOR_COLORS.AFD;
     if (normalized === 'SPD') return MAJOR_COLORS.SPD;
     if (normalized === 'FDP') return MAJOR_COLORS.FDP;
+    if (normalized === 'BSW' || normalized.includes('WAGENKNECHT')) return MAJOR_COLORS.BSW;
     if (normalized === 'SSW') return MAJOR_COLORS.SSW;
     if (normalized === 'CDU/CSU') return MAJOR_COLORS['CDU/CSU'];
 

@@ -719,6 +719,21 @@ app.get('/api/election-results', async (req, res) => {
   const prevYear = year === 2025 ? 2021 : 2017;
 
   try {
+    type ElectionResultsRow = {
+      short_name: string;
+      long_name: string;
+      votes: string | number | null;
+    };
+
+    const toInt = (value: unknown): number => {
+      if (typeof value === 'number') return Math.trunc(value);
+      if (typeof value === 'string') {
+        const parsed = parseInt(value, 10);
+        return Number.isFinite(parsed) ? parsed : 0;
+      }
+      return 0;
+    };
+
     const getVotes = async (y: number) => {
       let query = '';
       let params = [y];
@@ -768,7 +783,7 @@ app.get('/api/election-results', async (req, res) => {
         `;
       }
 
-      const result = await pool.query(query, params);
+      const result = await pool.query<ElectionResultsRow>(query, params);
       return result.rows;
     };
 
@@ -777,20 +792,44 @@ app.get('/api/election-results', async (req, res) => {
       getVotes(prevYear)
     ]);
 
-    const totalCurrent = currentVotes.reduce((sum: number, r: any) => sum + parseInt(r.votes), 0);
-    const totalPrev = prevVotes.reduce((sum: number, r: any) => sum + parseInt(r.votes), 0);
+    const totalCurrent = currentVotes.reduce((sum, row) => sum + toInt(row.votes), 0);
+    const totalPrev = prevVotes.reduce((sum, row) => sum + toInt(row.votes), 0);
 
-    const data = currentVotes.map((curr: any) => {
-      const prev = prevVotes.find((p: any) => p.short_name === curr.short_name);
-      return {
-        name: curr.long_name,
-        abbreviation: curr.short_name,
-        votes: parseInt(curr.votes),
-        percentage: totalCurrent > 0 ? (parseInt(curr.votes) / totalCurrent * 100) : 0,
-        prevVotes: prev ? parseInt(prev.votes) : 0,
-        prevPercentage: prev && totalPrev > 0 ? (parseInt(prev.votes) / totalPrev * 100) : 0
-      };
-    });
+    const byShortName = new Map<string, { name: string; abbreviation: string; votes: number; prevVotes: number }>();
+
+    for (const row of currentVotes) {
+      byShortName.set(row.short_name, {
+        name: row.long_name,
+        abbreviation: row.short_name,
+        votes: toInt(row.votes),
+        prevVotes: 0,
+      });
+    }
+
+    for (const row of prevVotes) {
+      const existing = byShortName.get(row.short_name);
+      if (existing) {
+        existing.prevVotes = toInt(row.votes);
+      } else {
+        byShortName.set(row.short_name, {
+          name: row.long_name,
+          abbreviation: row.short_name,
+          votes: 0,
+          prevVotes: toInt(row.votes),
+        });
+      }
+    }
+
+    const data = Array.from(byShortName.values())
+      .map((entry) => ({
+        name: entry.name,
+        abbreviation: entry.abbreviation,
+        votes: entry.votes,
+        percentage: totalCurrent > 0 ? (entry.votes / totalCurrent * 100) : 0,
+        prevVotes: entry.prevVotes,
+        prevPercentage: totalPrev > 0 ? (entry.prevVotes / totalPrev * 100) : 0,
+      }))
+      .sort((a, b) => Math.max(b.votes, b.prevVotes) - Math.max(a.votes, a.prevVotes));
 
     res.json({ data, totalVotes: totalCurrent, prevTotalVotes: totalPrev });
   } catch (err) {

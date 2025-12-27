@@ -558,7 +558,12 @@ export function Dashboard({ year }: DashboardProps) {
             <div>
               <select
                 value={comparisonMode}
-                onChange={(e) => setComparisonMode(e.target.value as any)}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  if (next === 'seats' || next === 'first' || next === 'second') {
+                    setComparisonMode(next);
+                  }
+                }}
                 style={{
                   padding: '0.5rem 2rem 0.5rem 1rem',
                   border: '1px solid var(--border-color)',
@@ -582,7 +587,16 @@ export function Dashboard({ year }: DashboardProps) {
             </div>
           </div>
           <div style={{ padding: '1rem 0' }}>
-            {resultsData.data.slice(0, 8).map((party) => {
+            {[...resultsData.data]
+              .sort((a, b) => {
+                const aVal = comparisonMode === 'seats' ? a.votes : a.percentage;
+                const aPrev = comparisonMode === 'seats' ? a.prevVotes : a.prevPercentage;
+                const bVal = comparisonMode === 'seats' ? b.votes : b.percentage;
+                const bPrev = comparisonMode === 'seats' ? b.prevVotes : b.prevPercentage;
+                return Math.max(bVal, bPrev) - Math.max(aVal, aPrev);
+              })
+              .slice(0, 8)
+              .map((party) => {
               const change = party.percentage - party.prevPercentage;
               const color = getPartyColor(party.abbreviation, partyOpts);
 
