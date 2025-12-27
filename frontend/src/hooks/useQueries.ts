@@ -9,6 +9,7 @@ import type {
   DirectWithoutCoverageResponse,
   MemberItem,
   SeatDistributionItem,
+  ElectionResultsResponse,
 } from '../types/api';
 
 const API_BASE = ''; // Use relative URLs with Vite proxy
@@ -17,6 +18,15 @@ async function fetchJson<T>(url: string): Promise<T> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Request failed: ${res.status} ${res.statusText}`);
   return res.json() as Promise<T>;
+}
+
+export function useElectionResults(year: number, type: 'first' | 'second' | 'seats' = 'second') {
+  return useQuery({
+    queryKey: ['electionResults', year, type],
+    queryFn: async () => {
+      return fetchJson<ElectionResultsResponse>(`${API_BASE}/api/election-results?year=${year}&type=${type}`);
+    },
+  });
 }
 
 export function useSeatDistribution(year: number) {

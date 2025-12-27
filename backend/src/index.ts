@@ -713,5 +713,91 @@ app.post('/api/ballot', async (req, res) => {
   }
 });
 
+app.get('/api/election-results', async (req, res) => {
+  const year = req.query.year ? Number(req.query.year) : 2025;
+  const type = req.query.type ? String(req.query.type) : 'second'; // 'first', 'second', 'seats'
+  const prevYear = year === 2025 ? 2021 : 2017;
+
+  try {
+    const getVotes = async (y: number) => {
+      let query = '';
+      let params = [y];
+
+      if (type === 'seats') {
+        // For seats, we use seat_allocation_cache
+        // Note: This requires cache to be populated for the year.
+        // We group CDU/CSU here.
+        query = `
+          SELECT
+            CASE 
+              WHEN p.short_name IN ('CDU', 'CSU') THEN 'CDU/CSU' 
+              ELSE p.short_name 
+            END as short_name,
+            CASE 
+              WHEN p.short_name IN ('CDU', 'CSU') THEN 'CDU/CSU' 
+              ELSE p.long_name 
+            END as long_name,
+            COUNT(*) as votes
+          FROM seat_allocation_cache sac
+          JOIN parties p ON p.id = sac.party_id
+          WHERE sac.year = $1
+          GROUP BY 1, 2
+          ORDER BY votes DESC
+        `;
+      } else {
+        // For first/second votes
+        const voteType = type === 'first' ? 1 : 2;
+        params.push(voteType);
+        query = `
+          SELECT
+            CASE 
+              WHEN p.short_name IN ('CDU', 'CSU') THEN 'CDU/CSU' 
+              ELSE p.short_name 
+            END as short_name,
+            CASE 
+              WHEN p.short_name IN ('CDU', 'CSU') THEN 'CDU/CSU' 
+              ELSE p.long_name 
+            END as long_name,
+            SUM(cpv.votes) as votes
+          FROM constituency_party_votes cpv
+          JOIN constituency_elections ce ON ce.bridge_id = cpv.bridge_id
+          JOIN parties p ON p.id = cpv.party_id
+          WHERE ce.year = $1 AND cpv.vote_type = $2
+          GROUP BY 1, 2
+          ORDER BY votes DESC
+        `;
+      }
+
+      const result = await pool.query(query, params);
+      return result.rows;
+    };
+
+    const [currentVotes, prevVotes] = await Promise.all([
+      getVotes(year),
+      getVotes(prevYear)
+    ]);
+
+    const totalCurrent = currentVotes.reduce((sum: number, r: any) => sum + parseInt(r.votes), 0);
+    const totalPrev = prevVotes.reduce((sum: number, r: any) => sum + parseInt(r.votes), 0);
+
+    const data = currentVotes.map((curr: any) => {
+      const prev = prevVotes.find((p: any) => p.short_name === curr.short_name);
+      return {
+        name: curr.long_name,
+        abbreviation: curr.short_name,
+        votes: parseInt(curr.votes),
+        percentage: totalCurrent > 0 ? (parseInt(curr.votes) / totalCurrent * 100) : 0,
+        prevVotes: prev ? parseInt(prev.votes) : 0,
+        prevPercentage: prev && totalPrev > 0 ? (parseInt(prev.votes) / totalPrev * 100) : 0
+      };
+    });
+
+    res.json({ data, totalVotes: totalCurrent, prevTotalVotes: totalPrev });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'db_error' });
+  }
+});
+
 const port = process.env.PORT ? Number(process.env.PORT) : 4000;
 app.listen(port, () => console.log(`Backend running at http://localhost:${port}`));

@@ -28,6 +28,21 @@ export interface MemberItem {
     previously_elected: boolean;
 }
 
+export interface ElectionResultItem {
+    name: string;
+    abbreviation: string;
+    votes: number;
+    percentage: number;
+    prevVotes: number;
+    prevPercentage: number;
+}
+
+export interface ElectionResultsResponse {
+    data: ElectionResultItem[];
+    totalVotes: number;
+    prevTotalVotes: number;
+}
+
 export interface ConstituencyPartyListItem {
     id: number;
     short_name: string;
