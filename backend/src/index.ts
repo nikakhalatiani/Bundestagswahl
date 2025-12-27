@@ -72,6 +72,9 @@ app.get('/api/members', ensureCache, async (req, res) => {
         p.title,
         p.first_name,
         p.last_name,
+        p.profession,
+        p.birth_year,
+        p.gender,
         pt.id as party_id,
         pt.short_name as party_name,
         pt.long_name as party_long_name,
@@ -83,11 +86,15 @@ app.get('/api/members', ensureCache, async (req, res) => {
           top_second_votes.constituency_name
         ) AS constituency_name,
         sac.list_position,
-        sac.percent_first_votes
+        sac.percent_first_votes,
+        COALESCE(dc.previously_elected, plc.previously_elected, false) as previously_elected
       FROM seat_allocation_cache sac
       JOIN persons p ON p.id = sac.person_id
       JOIN parties pt ON pt.id = sac.party_id
       JOIN states s ON s.id = sac.state_id
+      LEFT JOIN direct_candidacy dc ON dc.person_id = sac.person_id AND dc.year = sac.year
+      LEFT JOIN party_lists pl ON pl.party_id = sac.party_id AND pl.state_id = sac.state_id AND pl.year = sac.year
+      LEFT JOIN party_list_candidacy plc ON plc.person_id = sac.person_id AND plc.party_list_id = pl.id
       LEFT JOIN LATERAL (
         SELECT
           c2.name AS constituency_name

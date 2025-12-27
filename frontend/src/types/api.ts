@@ -22,6 +22,10 @@ export interface MemberItem {
     constituency_name: string | null;
     list_position: number | null;
     percent_first_votes: number | null;
+    profession: string | null;
+    birth_year: number | null;
+    gender: string | null;
+    previously_elected: boolean;
 }
 
 export interface ConstituencyPartyListItem {

@@ -12,7 +12,11 @@ export type Seat = {
     constituency?: string;
     votes?: number;
     percentage?: number;
+    listPosition?: number;
     profession?: string;
+    birthYear?: number;
+    gender?: string;
+    previouslyElected?: boolean;
     age?: number;
     firstElected?: number;
     yearsInParliament?: number;
@@ -118,7 +122,7 @@ export function Hemicycle({
             >
 
                 {/* Seat dots */}
-                {seatPoints.map(({ p, seat }) => {
+                {seatPoints.map(({ p, seat }, index) => {
                     const partyLabel = getPartyDisplayName(seat.party, partyOpts);
                     const color = getPartyColor(seat.party, partyOpts);
 
@@ -130,6 +134,9 @@ export function Hemicycle({
                     const stroke = isSelected ? 'var(--text-primary)' : 'transparent';
                     const strokeWidth = isSelected ? 2 : 0;
                     const r = isHovered ? dotRadius + 0.8 : dotRadius;
+
+                    // Animation: wipe from left to right (index 0 is left-most)
+                    const animationDelay = `${(index / seatPoints.length) * 800}ms`;
 
                     return (
                         <circle
@@ -144,6 +151,10 @@ export function Hemicycle({
                                 cursor: 'pointer',
                                 opacity,
                                 transition: 'opacity 160ms ease, r 120ms ease, stroke-width 120ms ease',
+                                animation: 'seat-appear 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) backwards',
+                                animationDelay,
+                                transformBox: 'fill-box',
+                                transformOrigin: 'center',
                             }}
                             onMouseEnter={() => setHoveredSeatId(seat.id)}
                             onFocus={() => setHoveredSeatId(seat.id)}

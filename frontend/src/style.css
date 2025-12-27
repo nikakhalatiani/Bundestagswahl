@@ -450,37 +450,34 @@ tr:hover {
   gap: 1.5rem;
 }
 
-/* Pie → hemicycle fold transition */
-.viz-stage {
-  position: relative;
-  width: 100%;
-  perspective: 1000px;
+
+
+.info-panel {
+  position: sticky;
+  top: 1rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: var(--shadow-md);
+  min-height: 420px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.viz-pane {
-  position: absolute;
-  inset: 0;
-  transform-style: preserve-3d;
-  backface-visibility: hidden;
-  transition: transform 520ms ease, opacity 520ms ease;
+.info-panel-header {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-secondary);
 }
 
-.viz-pane.is-visible {
-  opacity: 1;
-  transform: rotateY(0deg) scale(1);
-  pointer-events: auto;
-}
-
-.viz-pane--pie.is-hidden {
-  opacity: 0;
-  transform: rotateY(-90deg) scale(0.96);
-  pointer-events: none;
-}
-
-.viz-pane--hemi.is-hidden {
-  opacity: 0;
-  transform: rotateY(90deg) scale(0.96);
-  pointer-events: none;
+.info-panel-content {
+  padding: 1rem;
+  flex: 1;
+  overflow-y: auto;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -521,6 +518,21 @@ tr:hover {
   color: white;
 }
 
+/* Interactive table rows */
+.table-row-interactive {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.table-row-interactive:hover {
+  background-color: var(--bg-accent);
+}
+
+.table-row-interactive.is-selected {
+  background-color: var(--bg-accent);
+  box-shadow: inset 4px 0 0 var(--text-primary);
+}
+
 /* Info box */
 .info-box {
   background: #E3F2FD;
@@ -554,4 +566,53 @@ tr:hover {
   font-weight: 600;
   color: #F57C00;
   margin-bottom: 0.5rem;
+}
+
+/* Info Grid */
+.info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.info-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: var(--bg-accent);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.info-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+.info-value {
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+@keyframes seat-appear {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }

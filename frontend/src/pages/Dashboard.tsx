@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
-import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from 'recharts';
+import { useMemo, useState } from 'react';
+import { Briefcase, MapPin, Percent, User, ListOrdered } from 'lucide-react';
 import { useMembers, useSeatDistribution } from '../hooks/useQueries';
 import type { SeatDistributionItem } from '../types/api';
 import { Hemicycle, type Seat } from '../components/parliament/Hemicycle';
-import { SidePanel } from '../components/parliament/SidePanel';
 import { getPartyColor, getPartyDisplayName, partyBadgeStyle } from '../utils/party';
 
 interface DashboardProps {
@@ -15,8 +14,7 @@ export function Dashboard({ year }: DashboardProps) {
   const { data: membersRes, isLoading: isMembersLoading, error: membersError } = useMembers(year);
 
   const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
-  const [showHemicycle, setShowHemicycle] = useState(false);
-  const [renderPie, setRenderPie] = useState(true);
+  const [selectedParty, setSelectedParty] = useState<string | null>(null);
 
   const partyOpts = useMemo(() => ({ combineCduCsu: true }), []);
 
@@ -36,13 +34,6 @@ export function Dashboard({ year }: DashboardProps) {
     return Array.from(combinedMap.values()).sort((a, b) => b.seats - a.seats);
   }, [items, partyOpts]);
 
-  const chartData = useMemo(() => {
-    return combinedItems.map((party) => ({
-      name: party.party_name,
-      value: party.seats,
-    }));
-  }, [combinedItems]);
-
   const totalSeats = useMemo(() => {
     return combinedItems.reduce((sum, p) => sum + p.seats, 0);
   }, [combinedItems]);
@@ -50,13 +41,18 @@ export function Dashboard({ year }: DashboardProps) {
   const seats: Seat[] = useMemo(() => {
     const members = membersRes?.data ?? [];
     return members.map((m) => ({
-      id: String(m.person_id),
+      id: `${year}-${m.person_id}`,
       party: m.party_name,
       seatType: m.seat_type.toLowerCase().includes('direct') ? 'direct' : 'list',
       memberName: `${m.title ? `${m.title} ` : ''}${m.first_name} ${m.last_name}`,
       region: m.state_name,
       constituency: m.constituency_name || undefined,
       percentage: m.percent_first_votes ?? undefined,
+      listPosition: m.list_position ?? undefined,
+      profession: m.profession || undefined,
+      birthYear: m.birth_year || undefined,
+      gender: m.gender || undefined,
+      previouslyElected: m.previously_elected,
     }));
   }, [membersRes?.data]);
 
@@ -71,25 +67,6 @@ export function Dashboard({ year }: DashboardProps) {
   const selectedPartyColor = useMemo(() => {
     return selectedSeat ? getPartyColor(selectedSeat.party, partyOpts) : getPartyColor('', partyOpts);
   }, [selectedSeat, partyOpts]);
-
-  useEffect(() => {
-    // One-time fold transition: pie folds out → hemicycle folds in.
-    // If members are unavailable, keep the pie.
-    if (isMembersLoading) return;
-    if (membersError) return;
-    if (seats.length === 0) return;
-
-    setShowHemicycle(false);
-    setRenderPie(true);
-    const t = window.setTimeout(() => setShowHemicycle(true), 380);
-    return () => window.clearTimeout(t);
-  }, [year, isMembersLoading, membersError, seats.length]);
-
-  useEffect(() => {
-    if (!showHemicycle) return;
-    const t = window.setTimeout(() => setRenderPie(false), 600);
-    return () => window.clearTimeout(t);
-  }, [showHemicycle]);
 
   if (isLoading) {
     return (
@@ -118,103 +95,181 @@ export function Dashboard({ year }: DashboardProps) {
 
         <div className="dashboard-grid">
           <div>
-            <div className="viz-stage" style={{ height: 400 }}>
-              {renderPie && (
-                <div className={`viz-pane viz-pane--pie ${showHemicycle ? 'is-hidden' : 'is-visible'}`}>
-                  <ResponsiveContainer width="100%" height={400}>
-                    <PieChart>
-                      <Pie
-                        data={chartData}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={120}
-                        label={(entry) => `${entry.name}: ${entry.value}`}
-                      >
-                        {chartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={getPartyColor(entry.name, partyOpts)} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
+            <div style={{ height: 400 }}>
+              {isMembersLoading ? (
+                <div className="loading" style={{ padding: '2rem 1rem' }}>
+                  <div className="spinner"></div>
+                  <div className="loading-text">Loading members…</div>
                 </div>
+              ) : membersError ? (
+                <div className="warning-box" style={{ marginTop: 0 }}>
+                  <div className="warning-box-title">Hemicycle unavailable</div>
+                  <div>Could not load members: {String(membersError)}</div>
+                </div>
+              ) : (
+                <Hemicycle
+                  seats={seats}
+                  height={400}
+                  combineCduCsu={true}
+                  selectedSeatId={selectedSeatId}
+                  onSelectSeatId={setSelectedSeatId}
+                  partyFilter={selectedParty ? new Set([selectedParty]) : undefined}
+                />
               )}
-
-              <div className={`viz-pane viz-pane--hemi ${showHemicycle ? 'is-visible' : 'is-hidden'}`}>
-                {isMembersLoading ? (
-                  <div className="loading" style={{ padding: '2rem 1rem' }}>
-                    <div className="spinner"></div>
-                    <div className="loading-text">Loading members…</div>
-                  </div>
-                ) : membersError ? (
-                  <div className="warning-box" style={{ marginTop: 0 }}>
-                    <div className="warning-box-title">Hemicycle unavailable</div>
-                    <div>Could not load members: {String(membersError)}</div>
-                  </div>
-                ) : (
-                  <Hemicycle
-                    seats={seats}
-                    height={400}
-                    combineCduCsu={true}
-                    selectedSeatId={selectedSeatId}
-                    onSelectSeatId={setSelectedSeatId}
-                  />
-                )}
-              </div>
             </div>
           </div>
 
           <div>
-            <SidePanel
-              open={Boolean(selectedSeat)}
-              seat={
-                selectedSeat
-                  ? {
-                    id: selectedSeat.id,
-                    memberName: selectedSeat.memberName,
-                    party: selectedPartyLabel,
-                    seatType: selectedSeat.seatType,
-                    region: selectedSeat.region,
-                    constituency: selectedSeat.constituency,
-                    percentage: selectedSeat.percentage,
-                  }
-                  : null
-              }
-              partyColor={selectedPartyColor}
-              onClose={() => setSelectedSeatId(null)}
-            />
-
-            <div className="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Party</th>
-                    <th className="text-right">Seats</th>
-                    <th className="text-right">Share (%)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {combinedItems.map((party) => (
-                    <tr key={party.party_name}>
-                      <td>
-                        <span
-                          className="party-badge"
-                          style={partyBadgeStyle(party.party_name, partyOpts)}
-                        >
-                          {party.party_name}
+            <div className="info-panel">
+              {selectedSeat ? (
+                <>
+                  <div className="info-panel-header">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                        {selectedSeat.memberName}
+                      </div>
+                      <span
+                        className="party-badge"
+                        style={{ backgroundColor: selectedPartyColor, color: '#fff' }}
+                      >
+                        {selectedPartyLabel}
+                      </span>
+                    </div>
+                    <button className="btn" onClick={() => setSelectedSeatId(null)} type="button">
+                      ✕
+                    </button>
+                  </div>
+                  <div className="info-panel-content">
+                    <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <span className="seat-badge" style={{
+                        backgroundColor: selectedSeat.seatType === 'direct' ? '#4CAF50' : '#2196F3',
+                        color: 'white'
+                      }}>
+                        {selectedSeat.seatType === 'direct' ? 'Direct Mandate' : 'List Mandate'}
+                      </span>
+                      {selectedSeat.previouslyElected ? (
+                        <span className="seat-badge" style={{ backgroundColor: '#9613a2ff', color: 'white' }}>
+                          Re-elected
                         </span>
-                      </td>
-                      <td className="text-right">{party.seats}</td>
-                      <td className="text-right">
-                        {((party.seats / totalSeats) * 100).toFixed(1)}%
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      ) : (
+                        <span className="seat-badge" style={{ backgroundColor: '#FF9800', color: 'white' }}>
+                          New Member
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="info-grid">
+                      <div className="info-item">
+                        <div className="info-icon">
+                          <MapPin size={18} />
+                        </div>
+                        <div>
+                          <div className="info-label">Region / Constituency</div>
+                          <div className="info-value">{selectedSeat.constituency || selectedSeat.region}</div>
+                        </div>
+                      </div>
+
+                      {selectedSeat.profession && (
+                        <div className="info-item">
+                          <div className="info-icon">
+                            <Briefcase size={18} />
+                          </div>
+                          <div>
+                            <div className="info-label">Profession</div>
+                            <div className="info-value">{selectedSeat.profession}</div>
+                          </div>
+                        </div>
+                      )}
+
+                      {(selectedSeat.birthYear || selectedSeat.gender) && (
+                        <div className="info-item">
+                          <div className="info-icon">
+                            <User size={18} />
+                          </div>
+                          <div>
+                            <div className="info-label">Personal Details</div>
+                            <div className="info-value">
+                              {selectedSeat.gender ? `${selectedSeat.gender === 'm' ? 'Male' : selectedSeat.gender === 'w' ? 'Female' : selectedSeat.gender}` : ''}
+                              {selectedSeat.gender && selectedSeat.birthYear ? ', ' : ''}
+                              {selectedSeat.birthYear ? `${year - selectedSeat.birthYear} years old` : ''}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {selectedSeat.seatType === 'direct' && selectedSeat.percentage !== undefined ? (
+                        <div className="info-item">
+                          <div className="info-icon">
+                            <Percent size={18} />
+                          </div>
+                          <div>
+                            <div className="info-label">First Vote Share</div>
+                            <div className="info-value">{selectedSeat.percentage.toFixed(1)}%</div>
+                          </div>
+                        </div>
+                      ) : selectedSeat.listPosition !== undefined ? (
+                        <div className="info-item">
+                          <div className="info-icon">
+                            <ListOrdered size={18} />
+                          </div>
+                          <div>
+                            <div className="info-label">List Position</div>
+                            <div className="info-value">{selectedSeat.listPosition}</div>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="info-panel-header">
+                    <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>Party Breakdown</div>
+                  </div>
+                  <div className="info-panel-content" style={{ padding: 0 }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid var(--border-color)', background: 'var(--bg-secondary)' }}>
+                          <th style={{ padding: '0.75rem 1rem', textAlign: 'left' }}>Party</th>
+                          <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Seats</th>
+                          <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Share</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {combinedItems.map((party) => {
+                          const isSelected = selectedParty === party.party_name;
+                          const color = getPartyColor(party.party_name, partyOpts);
+                          return (
+                            <tr
+                              key={party.party_name}
+                              className={`table-row-interactive ${isSelected ? 'is-selected' : ''}`}
+                              onClick={() => setSelectedParty(isSelected ? null : party.party_name)}
+                              style={{
+                                borderBottom: '1px solid var(--border-color)',
+                                backgroundColor: isSelected ? 'var(--bg-accent)' : undefined,
+                                boxShadow: isSelected ? `inset 4px 0 0 ${color}` : 'none'
+                              }}
+                            >
+                              <td style={{ padding: '0.75rem 1rem' }}>
+                                <span
+                                  className="party-badge"
+                                  style={partyBadgeStyle(party.party_name, partyOpts)}
+                                >
+                                  {party.party_name}
+                                </span>
+                              </td>
+                              <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 500 }}>{party.seats}</td>
+                              <td style={{ padding: '0.75rem 1rem', textAlign: 'right', color: 'var(--text-secondary)' }}>
+                                {((party.seats / totalSeats) * 100).toFixed(1)}%
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
