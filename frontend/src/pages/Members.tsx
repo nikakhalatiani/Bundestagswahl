@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Users, MapPin, Briefcase, User, Search, Award, Calendar, ListOrdered, Percent } from 'lucide-react';
+import { Users, MapPin, Briefcase, User, Search, Calendar, ListOrdered, Percent, Download, ChevronLeft, ChevronRight, Star, UserPlus } from 'lucide-react';
 import { useMembers } from '../hooks/useQueries';
 import type { MemberItem } from '../types/api';
 import { getPartyDisplayName, getPartyColor, partyBadgeStyle } from '../utils/party';
@@ -8,10 +8,12 @@ interface MembersProps {
   year: number;
 }
 
+const ITEMS_PER_PAGE = 50;
+
 export function Members({ year }: MembersProps) {
   const { data, isLoading, error } = useMembers(year);
   const [filterParty, setFilterParty] = useState('');
-  const [filterState, setFilterState] = useState('');
+  const [selectedStates, setSelectedStates] = useState<Set<string>>(new Set());
   const [filterSeatType, setFilterSeatType] = useState<'all' | 'direct' | 'list'>('all');
   const [filterGender, setFilterGender] = useState<'all' | 'm' | 'w'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'new' | 'reelected'>('all');
@@ -19,6 +21,7 @@ export function Members({ year }: MembersProps) {
   const [sortKey, setSortKey] = useState<'name' | 'party' | 'state' | 'mandate' | 'constituency' | 'age'>('name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [selectedMember, setSelectedMember] = useState<MemberItem | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const partyOpts = useMemo(() => ({ combineCduCsu: true }), []);
 
@@ -30,15 +33,25 @@ export function Members({ year }: MembersProps) {
     [...new Set(items.map((m) => displayParty(m.party_name)))].sort(),
     [items]
   );
-  const states = useMemo(() =>
-    [...new Set(items.map((m) => m.state_name))].sort(),
-    [items]
-  );
+
+  // Toggle state multi-select
+  const toggleState = (state: string) => {
+    setSelectedStates(prev => {
+      const next = new Set(prev);
+      if (next.has(state)) {
+        next.delete(state);
+      } else {
+        next.add(state);
+      }
+      return next;
+    });
+    setCurrentPage(1);
+  };
 
   const filteredData = useMemo(() => {
     return items.filter((member) => {
       if (filterParty && displayParty(member.party_name) !== filterParty) return false;
-      if (filterState && member.state_name !== filterState) return false;
+      if (selectedStates.size > 0 && !selectedStates.has(member.state_name)) return false;
       if (filterSeatType !== 'all') {
         const isDirect = member.seat_type.toLowerCase().includes('direct');
         if (filterSeatType === 'direct' && !isDirect) return false;
@@ -53,7 +66,7 @@ export function Members({ year }: MembersProps) {
       }
       return true;
     });
-  }, [items, filterParty, filterState, filterSeatType, filterGender, filterStatus, searchTerm]);
+  }, [items, filterParty, selectedStates, filterSeatType, filterGender, filterStatus, searchTerm]);
 
   const sortedData = useMemo(() => {
     const getAge = (m: MemberItem) => (m.birth_year ? year - m.birth_year : null);
@@ -94,6 +107,13 @@ export function Members({ year }: MembersProps) {
     return [...filteredData].sort(compare);
   }, [filteredData, sortDir, sortKey, displayParty, year]);
 
+  // Pagination
+  const totalPages = Math.ceil(sortedData.length / ITEMS_PER_PAGE);
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return sortedData.slice(start, start + ITEMS_PER_PAGE);
+  }, [sortedData, currentPage]);
+
   const toggleSort = (key: typeof sortKey) => {
     if (sortKey === key) {
       setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
@@ -101,14 +121,27 @@ export function Members({ year }: MembersProps) {
       setSortKey(key);
       setSortDir('asc');
     }
+    setCurrentPage(1);
   };
 
+  // Stats including new/reelected and age distribution
   const stats = useMemo(() => {
     const genderCounts = { m: 0, w: 0 };
     const seatTypeCounts = { direct: 0, list: 0 };
+    const statusCounts = { new: 0, reelected: 0 };
     let totalAge = 0;
     let ageCount = 0;
     const partyStats: Record<string, number> = {};
+    const professionStats: Record<string, number> = {};
+    const stateStats: Record<string, { total: number; direct: number; list: number }> = {};
+    const ageRanges: Record<string, number> = {
+      '18-29': 0,
+      '30-39': 0,
+      '40-49': 0,
+      '50-59': 0,
+      '60-69': 0,
+      '70+': 0,
+    };
 
     filteredData.forEach(m => {
       if (m.gender) {
@@ -116,14 +149,38 @@ export function Members({ year }: MembersProps) {
         if (g === 'm') genderCounts.m++;
         else if (g === 'w') genderCounts.w++;
       }
-      if (m.seat_type.toLowerCase().includes('direct')) seatTypeCounts.direct++;
+      const isDirect = m.seat_type.toLowerCase().includes('direct');
+      if (isDirect) seatTypeCounts.direct++;
       else seatTypeCounts.list++;
+
+      if (m.previously_elected) statusCounts.reelected++;
+      else statusCounts.new++;
+
       if (m.birth_year) {
-        totalAge += (year - m.birth_year);
+        const age = year - m.birth_year;
+        totalAge += age;
         ageCount++;
+        if (age < 30) ageRanges['18-29']++;
+        else if (age < 40) ageRanges['30-39']++;
+        else if (age < 50) ageRanges['40-49']++;
+        else if (age < 60) ageRanges['50-59']++;
+        else if (age < 70) ageRanges['60-69']++;
+        else ageRanges['70+']++;
       }
+
       const party = displayParty(m.party_name);
       partyStats[party] = (partyStats[party] || 0) + 1;
+
+      if (m.profession) {
+        professionStats[m.profession] = (professionStats[m.profession] || 0) + 1;
+      }
+
+      if (!stateStats[m.state_name]) {
+        stateStats[m.state_name] = { total: 0, direct: 0, list: 0 };
+      }
+      stateStats[m.state_name].total++;
+      if (isDirect) stateStats[m.state_name].direct++;
+      else stateStats[m.state_name].list++;
     });
 
     const avgAge = ageCount > 0 ? (totalAge / ageCount).toFixed(1) : 'N/A';
@@ -131,8 +188,61 @@ export function Members({ year }: MembersProps) {
       ? ((genderCounts.w / filteredData.length) * 100).toFixed(1)
       : '0';
 
-    return { genderCounts, seatTypeCounts, avgAge, femalePercent, partyStats };
-  }, [filteredData, year]);
+    const topProfessions = Object.entries(professionStats)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8);
+
+    const stateDistribution = Object.entries(stateStats)
+      .map(([name, data]) => ({ name, ...data }))
+      .sort((a, b) => b.total - a.total);
+
+    return { genderCounts, seatTypeCounts, statusCounts, avgAge, femalePercent, partyStats, ageRanges, topProfessions, stateDistribution };
+  }, [filteredData, year, displayParty]);
+
+  // All states distribution (from all items, not filtered) for greyed out display
+  const allStateDistribution = useMemo(() => {
+    const stateStats: Record<string, { total: number; direct: number; list: number }> = {};
+    items.forEach(m => {
+      const isDirect = m.seat_type.toLowerCase().includes('direct');
+      if (!stateStats[m.state_name]) {
+        stateStats[m.state_name] = { total: 0, direct: 0, list: 0 };
+      }
+      stateStats[m.state_name].total++;
+      if (isDirect) stateStats[m.state_name].direct++;
+      else stateStats[m.state_name].list++;
+    });
+    return Object.entries(stateStats)
+      .map(([name, data]) => ({ name, ...data }))
+      .sort((a, b) => b.total - a.total);
+  }, [items]);
+
+  // Export to CSV
+  const exportToCSV = () => {
+    const headers = ['Title', 'First Name', 'Last Name', 'Party', 'State', 'Seat Type', 'Constituency', 'Age', 'Gender', 'Profession', 'Status'];
+    const rows = sortedData.map(m => [
+      m.title || '',
+      m.first_name,
+      m.last_name,
+      displayParty(m.party_name),
+      m.state_name,
+      m.seat_type.toLowerCase().includes('direct') ? 'Direct' : 'List',
+      m.constituency_name || '',
+      m.birth_year ? String(year - m.birth_year) : '',
+      m.gender || '',
+      m.profession || '',
+      m.previously_elected ? 'Re-elected' : 'New'
+    ]);
+
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `bundestag_members_${year}.csv`;
+    link.click();
+  };
 
   if (isLoading) {
     return (
@@ -151,25 +261,50 @@ export function Members({ year }: MembersProps) {
     return <div className="error">No data returned.</div>;
   }
 
+  const hasActiveFilters = filterParty || selectedStates.size > 0 || filterSeatType !== 'all' || filterGender !== 'all' || filterStatus !== 'all' || searchTerm;
+
   return (
     <div>
-      <div className="card mb-1">
-        <div className="card-header">
-          <h2 className="card-title">Members of the Bundestag {year}</h2>
-          <div className="card-subtitle">
-            {filteredData.length} of {items.length} members shown
+      {/* State Distribution - above main card */}
+      {allStateDistribution.length > 0 && (
+        <div className="card mb-1">
+          <div className="state-card-header">
+            <div className="card-title">Seats by Federal State</div>
+            <div className="card-subtitle">Click to filter (multi-select)</div>
+          </div>
+          <div className="state-card-content">
+            <div className="state-grid">
+              {allStateDistribution.map(state => {
+                const isSelected = selectedStates.has(state.name);
+                const isGreyedOut = selectedStates.size > 0 && !isSelected;
+                const maxTotal = Math.max(...allStateDistribution.map(s => s.total), 1);
+                const widthPct = (state.total / maxTotal) * 100;
+                const directPct = (state.direct / state.total) * widthPct;
+                const listPct = (state.list / state.total) * widthPct;
+                return (
+                  <div
+                    key={state.name}
+                    onClick={() => toggleState(state.name)}
+                    className={`state-item ${isSelected ? 'is-selected' : ''} ${isGreyedOut ? 'is-greyed' : ''}`}
+                  >
+                    <div className="state-item-header">
+                      <span className="state-item-name">{state.name}</span>
+                      <span className="state-item-count">{state.total}</span>
+                    </div>
+                    <div className="state-bar-track" title={`${state.direct} direct, ${state.list} list`}>
+                      <div className="state-bar-direct" style={{ width: `${directPct}%` }} />
+                      <div className="state-bar-list" style={{ width: `${listPct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
+      )}
+
+      <div className="quickstats-strip mb-1">
         <div className="quick-stats-grid">
-          <div className="quick-stat-card">
-            <div className="quick-stat-icon">
-              <Users size={20} />
-            </div>
-            <div className="quick-stat-content">
-              <div className="quick-stat-value">{filteredData.length}</div>
-              <div className="quick-stat-label">Total Members</div>
-            </div>
-          </div>
           <div className="quick-stat-card">
             <div className="quick-stat-icon">
               <MapPin size={20} />
@@ -188,7 +323,24 @@ export function Members({ year }: MembersProps) {
               <div className="quick-stat-label">List Mandates</div>
             </div>
           </div>
-
+          <div className="quick-stat-card">
+            <div className="quick-stat-icon">
+              <UserPlus size={20} />
+            </div>
+            <div className="quick-stat-content">
+              <div className="quick-stat-value">{stats.statusCounts.new}</div>
+              <div className="quick-stat-label">New Members</div>
+            </div>
+          </div>
+          <div className="quick-stat-card">
+            <div className="quick-stat-icon">
+              <Users size={20} />
+            </div>
+            <div className="quick-stat-content">
+              <div className="quick-stat-value">{stats.statusCounts.reelected}</div>
+              <div className="quick-stat-label">Re-elected</div>
+            </div>
+          </div>
           <div className="quick-stat-card">
             <div className="quick-stat-icon">
               <Calendar size={20} />
@@ -217,6 +369,18 @@ export function Members({ year }: MembersProps) {
       </div>
 
       <div className="card">
+        <div className="card-header members-card-header">
+          <div className="members-header-left">
+            <h2 className="card-title">Members of the Bundestag {year}</h2>
+            <div className="card-subtitle">
+              {filteredData.length} of {items.length} members shown
+            </div>
+          </div>
+          <button className="btn btn-secondary export-btn" onClick={exportToCSV} title="Export to CSV">
+            <Download size={16} />
+            <span>Export CSV</span>
+          </button>
+        </div>
         <div className="dashboard-grid">
           <div>
             <div className="filter-bar">
@@ -227,26 +391,14 @@ export function Members({ year }: MembersProps) {
                     type="text"
                     placeholder="Search by name..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                     className="search-input"
                   />
                 </div>
 
                 <select
-                  value={filterState}
-                  onChange={(e) => setFilterState(e.target.value)}
-                  className="filter-select"
-                  title="Filter by state"
-                >
-                  <option value="">All States</option>
-                  {states.map((state: string) => (
-                    <option key={state} value={state}>{state}</option>
-                  ))}
-                </select>
-
-                <select
                   value={filterSeatType}
-                  onChange={(e) => setFilterSeatType(e.target.value as 'all' | 'direct' | 'list')}
+                  onChange={(e) => { setFilterSeatType(e.target.value as 'all' | 'direct' | 'list'); setCurrentPage(1); }}
                   className="filter-select"
                   title="Filter by seat type"
                 >
@@ -257,7 +409,7 @@ export function Members({ year }: MembersProps) {
 
                 <select
                   value={filterGender}
-                  onChange={(e) => setFilterGender(e.target.value as 'all' | 'm' | 'w')}
+                  onChange={(e) => { setFilterGender(e.target.value as 'all' | 'm' | 'w'); setCurrentPage(1); }}
                   className="filter-select"
                   title="Filter by gender"
                 >
@@ -268,7 +420,7 @@ export function Members({ year }: MembersProps) {
 
                 <select
                   value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value as 'all' | 'new' | 'reelected')}
+                  onChange={(e) => { setFilterStatus(e.target.value as 'all' | 'new' | 'reelected'); setCurrentPage(1); }}
                   className="filter-select"
                   title="Filter by member status"
                 >
@@ -279,18 +431,19 @@ export function Members({ year }: MembersProps) {
               </div>
             </div>
 
-            {(filterParty || filterState || filterSeatType !== 'all' || filterGender !== 'all' || filterStatus !== 'all' || searchTerm) && (
+            {hasActiveFilters && (
               <div className="filter-summary">
                 <span>{filteredData.length} of {items.length} members match filters</span>
                 <button
                   className="filter-clear-btn"
                   onClick={() => {
                     setFilterParty('');
-                    setFilterState('');
+                    setSelectedStates(new Set());
                     setFilterSeatType('all');
                     setFilterGender('all');
                     setFilterStatus('all');
                     setSearchTerm('');
+                    setCurrentPage(1);
                   }}
                 >
                   ✕ Clear
@@ -342,7 +495,7 @@ export function Members({ year }: MembersProps) {
                     </tr>
                   </thead>
                   <tbody>
-                    {sortedData.slice(0, 100).map((member) => {
+                    {paginatedData.map((member) => {
                       const isSelected = selectedMember?.person_id === member.person_id;
                       const selectedColor = isSelected ? getPartyColor(member.party_name, partyOpts) : undefined;
                       return (
@@ -388,20 +541,43 @@ export function Members({ year }: MembersProps) {
                 </table>
               </div>
             </div>
-            {sortedData.length > 100 && (
-              <div className="table-pagination-info">
-                Showing first 100 of {sortedData.length} members. Use filters to refine.
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="pagination-controls">
+                <button
+                  className="pagination-btn"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft size={16} />
+                  Prev
+                </button>
+                <div className="pagination-info">
+                  Page {currentPage} of {totalPages}
+                  <span className="pagination-range">
+                    ({(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, sortedData.length)} of {sortedData.length})
+                  </span>
+                </div>
+                <button
+                  className="pagination-btn"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                  <ChevronRight size={16} />
+                </button>
               </div>
             )}
           </div>
 
           <div className="info-panel">
             <div className="info-panel-header">
-              <h3>Members & Parties</h3>
+              <h3>Analytics</h3>
             </div>
             <div className="info-panel-content">
               {selectedMember && (
-                <div className="info-grid">
+                <div className="info-grid mb-1">
                   <div className="panel-title">Member Details</div>
                   <div className="member-panel-header">
                     <div
@@ -505,7 +681,8 @@ export function Members({ year }: MembersProps) {
                 </div>
               )}
 
-              <div className={`party-dist-vertical ${selectedMember ? 'mt-1' : ''}`}>
+              {/* Party Distribution */}
+              <div className="sidebar-section">
                 <div className="panel-title">Party Distribution</div>
                 {Object.entries(stats.partyStats)
                   .sort((a, b) => b[1] - a[1])
@@ -515,7 +692,7 @@ export function Members({ year }: MembersProps) {
                       <div
                         key={party}
                         className={`party-dist-card ${filterParty === party ? 'is-selected' : ''}`}
-                        onClick={() => setFilterParty(filterParty === party ? '' : party)}
+                        onClick={() => { setFilterParty(filterParty === party ? '' : party); setCurrentPage(1); }}
                       >
                         <div className="party-dist-bar-bg">
                           <div
@@ -533,7 +710,7 @@ export function Members({ year }: MembersProps) {
                           >
                             {party}
                           </span>
-                          <span className="party-dist-count-text">{count} seats ({pct.toFixed(1)}%)</span>
+                          <span className="party-dist-count-text">{count} ({pct.toFixed(1)}%)</span>
                         </div>
                       </div>
                     );

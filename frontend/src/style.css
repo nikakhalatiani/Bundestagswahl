@@ -2110,6 +2110,25 @@ tr:hover {
   font-weight: 500;
 }
 
+/* Members card header tweaks */
+.members-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.members-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.export-btn {
+  margin-left: auto;
+  align-self: flex-start;
+}
+
 /* Responsive quick stats grid */
 @media (max-width: 1024px) {
   .quick-stats-grid {
@@ -2121,4 +2140,188 @@ tr:hover {
   .quick-stats-grid {
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   }
+}
+
+/* Pagination Controls */
+.pagination-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.pagination-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: var(--bg-accent);
+  border-color: var(--text-secondary);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pagination-info {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pagination-range {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+/* Status Indicator */
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+
+.status-indicator.status-new {
+  background: rgba(255, 152, 0, 0.15);
+  color: #FF9800;
+}
+
+.status-indicator.status-reelected {
+  background: rgba(150, 19, 162, 0.15);
+  color: #9613a2;
+}
+
+/* Age Histogram */
+.age-histogram {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.age-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.age-label {
+  width: 45px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.age-bar-track {
+  flex: 1;
+  height: 14px;
+  background: var(--bg-accent);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.age-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4CAF50, #8BC34A);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.age-count {
+  width: 30px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* Profession List */
+.profession-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.profession-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.35rem 0.5rem;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+}
+
+.profession-name {
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+.profession-count {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+/* Sidebar Sections */
+.sidebar-section {
+  margin-bottom: 1.5rem;
+}
+
+.sidebar-section:last-child {
+  margin-bottom: 0;
+}
+
+/* Export Button Styling */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: none;
+}
+
+.btn-secondary {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+  background: var(--bg-accent);
+  border-color: var(--text-secondary);
+}
+
+/* Empty text placeholder */
+.empty-text {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-style: italic;
 }
