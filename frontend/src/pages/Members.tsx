@@ -12,7 +12,7 @@ const ITEMS_PER_PAGE = 50;
 
 export function Members({ year }: MembersProps) {
   const { data, isLoading, error } = useMembers(year);
-  const [filterParty, setFilterParty] = useState('');
+  const [selectedParties, setSelectedParties] = useState<Set<string>>(new Set());
   const [selectedStates, setSelectedStates] = useState<Set<string>>(new Set());
   const [filterSeatType, setFilterSeatType] = useState<'all' | 'direct' | 'list'>('all');
   const [filterGender, setFilterGender] = useState<'all' | 'm' | 'w'>('all');
@@ -29,10 +29,19 @@ export function Members({ year }: MembersProps) {
 
   const displayParty = (partyName: string) => getPartyDisplayName(partyName, partyOpts);
 
-  const parties = useMemo(() =>
-    [...new Set(items.map((m) => displayParty(m.party_name)))].sort(),
-    [items]
-  );
+  // Toggle party multi-select
+  const toggleParty = (party: string) => {
+    setSelectedParties(prev => {
+      const next = new Set(prev);
+      if (next.has(party)) {
+        next.delete(party);
+      } else {
+        next.add(party);
+      }
+      return next;
+    });
+    setCurrentPage(1);
+  };
 
   // Toggle state multi-select
   const toggleState = (state: string) => {
@@ -50,7 +59,8 @@ export function Members({ year }: MembersProps) {
 
   const filteredData = useMemo(() => {
     return items.filter((member) => {
-      if (filterParty && displayParty(member.party_name) !== filterParty) return false;
+      const partyName = displayParty(member.party_name);
+      if (selectedParties.size > 0 && !selectedParties.has(partyName)) return false;
       if (selectedStates.size > 0 && !selectedStates.has(member.state_name)) return false;
       if (filterSeatType !== 'all') {
         const isDirect = member.seat_type.toLowerCase().includes('direct');
@@ -66,7 +76,17 @@ export function Members({ year }: MembersProps) {
       }
       return true;
     });
-  }, [items, filterParty, selectedStates, filterSeatType, filterGender, filterStatus, searchTerm]);
+  }, [items, selectedParties, selectedStates, filterSeatType, filterGender, filterStatus, searchTerm]);
+
+  // Party distribution should always show all parties, even when filters are active
+  const allPartyStats = useMemo(() => {
+    const totals: Record<string, number> = {};
+    items.forEach(member => {
+      const partyName = displayParty(member.party_name);
+      totals[partyName] = (totals[partyName] || 0) + 1;
+    });
+    return totals;
+  }, [items, displayParty]);
 
   const sortedData = useMemo(() => {
     const getAge = (m: MemberItem) => (m.birth_year ? year - m.birth_year : null);
@@ -261,7 +281,7 @@ export function Members({ year }: MembersProps) {
     return <div className="error">No data returned.</div>;
   }
 
-  const hasActiveFilters = filterParty || selectedStates.size > 0 || filterSeatType !== 'all' || filterGender !== 'all' || filterStatus !== 'all' || searchTerm;
+  const hasActiveFilters = selectedParties.size > 0 || selectedStates.size > 0 || filterSeatType !== 'all' || filterGender !== 'all' || filterStatus !== 'all' || searchTerm;
 
   return (
     <div>
@@ -437,7 +457,7 @@ export function Members({ year }: MembersProps) {
                 <button
                   className="filter-clear-btn"
                   onClick={() => {
-                    setFilterParty('');
+                    setSelectedParties(new Set());
                     setSelectedStates(new Set());
                     setFilterSeatType('all');
                     setFilterGender('all');
@@ -684,37 +704,41 @@ export function Members({ year }: MembersProps) {
               {/* Party Distribution */}
               <div className="sidebar-section">
                 <div className="panel-title">Party Distribution</div>
-                {Object.entries(stats.partyStats)
-                  .sort((a, b) => b[1] - a[1])
-                  .map(([party, count]) => {
-                    const pct = filteredData.length > 0 ? (count / filteredData.length) * 100 : 0;
-                    return (
-                      <div
-                        key={party}
-                        className={`party-dist-card ${filterParty === party ? 'is-selected' : ''}`}
-                        onClick={() => { setFilterParty(filterParty === party ? '' : party); setCurrentPage(1); }}
-                      >
-                        <div className="party-dist-bar-bg">
-                          <div
-                            className="party-dist-bar-fill"
-                            style={{
-                              width: `${pct}%`,
-                              backgroundColor: getPartyColor(party, partyOpts)
-                            }}
-                          />
+                <div className="party-dist-vertical">
+                  {Object.entries(allPartyStats)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([party, count]) => {
+                      const pct = items.length > 0 ? (count / items.length) * 100 : 0;
+                      const isSelected = selectedParties.has(party);
+                      const isDimmed = selectedParties.size > 0 && !isSelected;
+                      return (
+                        <div
+                          key={party}
+                          className={`party-dist-card ${isSelected ? 'is-selected' : ''} ${isDimmed ? 'is-greyed' : ''}`}
+                          onClick={() => toggleParty(party)}
+                        >
+                          <div className="party-dist-bar-bg">
+                            <div
+                              className="party-dist-bar-fill"
+                              style={{
+                                width: `${pct}%`,
+                                backgroundColor: getPartyColor(party, partyOpts)
+                              }}
+                            />
+                          </div>
+                          <div className="party-dist-info">
+                            <span
+                              className="party-badge"
+                              style={partyBadgeStyle(party, partyOpts)}
+                            >
+                              {party}
+                            </span>
+                            <span className="party-dist-count-text">{count} ({pct.toFixed(1)}%)</span>
+                          </div>
                         </div>
-                        <div className="party-dist-info">
-                          <span
-                            className="party-badge"
-                            style={partyBadgeStyle(party, partyOpts)}
-                          >
-                            {party}
-                          </span>
-                          <span className="party-dist-count-text">{count} ({pct.toFixed(1)}%)</span>
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                </div>
               </div>
             </div>
           </div>

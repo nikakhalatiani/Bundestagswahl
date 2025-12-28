@@ -2084,6 +2084,11 @@ tr:hover {
   box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
 }
 
+.party-dist-card.is-greyed {
+  opacity: 0.45;
+  filter: grayscale(0.1);
+}
+
 .party-dist-bar-bg {
   height: 8px;
   background: var(--bg-accent);
