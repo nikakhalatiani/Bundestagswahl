@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Briefcase, MapPin, Percent, User, ListOrdered, ChevronDown, ChevronUp, Search, BarChart3, Users, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { useMembers, useSeatDistribution, useElectionResults } from '../hooks/useQueries';
+import { useMembers, useSeatDistribution, useElectionResults, type ElectionResultsFilters } from '../hooks/useQueries';
 import type { SeatDistributionItem } from '../types/api';
 import { Hemicycle, type Seat } from '../components/parliament/Hemicycle';
 import { getPartyColor, getPartyDisplayName, partyBadgeStyle } from '../utils/party';
@@ -22,10 +22,8 @@ export function Dashboard({ year }: DashboardProps) {
   const { data: membersRes, isLoading: isMembersLoading, error: membersError } = useMembers(year);
 
   const [comparisonMode, setComparisonMode] = useState<'first' | 'second' | 'seats'>('second');
-  const { data: resultsData } = useElectionResults(year, comparisonMode);
-
   const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
-  const [selectedParty, setSelectedParty] = useState<string | null>(null);
+  const [selectedParties, setSelectedParties] = useState<Set<string>>(new Set());
   const [expandedCoalition, setExpandedCoalition] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -33,7 +31,68 @@ export function Dashboard({ year }: DashboardProps) {
   const [mandateFilter, setMandateFilter] = useState<'all' | 'direct' | 'list'>('all');
   const [genderFilter, setGenderFilter] = useState<'all' | 'm' | 'w'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'new' | 'reelected'>('all');
-  const [stateFilter, setStateFilter] = useState<string>('all');
+  const [selectedStates, setSelectedStates] = useState<Set<string>>(new Set());
+
+  // Toggle functions for multi-select
+  const toggleParty = (party: string) => {
+    setSelectedParties(prev => {
+      const next = new Set(prev);
+      if (next.has(party)) {
+        next.delete(party);
+      } else {
+        next.add(party);
+      }
+      return next;
+    });
+  };
+
+  const toggleState = (state: string) => {
+    setSelectedStates(prev => {
+      const next = new Set(prev);
+      if (next.has(state)) {
+        next.delete(state);
+      } else {
+        next.add(state);
+      }
+      return next;
+    });
+  };
+
+  // Map state name → state_id from members data
+  const stateNameToId = useMemo(() => {
+    const map = new Map<string, number>();
+    membersRes?.data?.forEach(m => {
+      if (m.state_name && m.state_id) {
+        map.set(m.state_name, m.state_id);
+      }
+    });
+    return map;
+  }, [membersRes?.data]);
+
+  // Build election results filters from current filter state
+  const electionResultsFilters = useMemo<ElectionResultsFilters>(() => {
+    const filters: ElectionResultsFilters = {};
+    if (selectedStates.size > 0) {
+      filters.stateIds = Array.from(selectedStates)
+        .map(name => stateNameToId.get(name))
+        .filter((id): id is number => id !== undefined);
+    }
+    if (mandateFilter !== 'all') {
+      filters.mandateType = mandateFilter;
+    }
+    if (genderFilter !== 'all') {
+      filters.gender = genderFilter;
+    }
+    if (selectedParties.size > 0) {
+      filters.parties = Array.from(selectedParties);
+    }
+    if (statusFilter !== 'all') {
+      filters.status = statusFilter;
+    }
+    return filters;
+  }, [selectedStates, stateNameToId, mandateFilter, genderFilter, selectedParties, statusFilter]);
+
+  const { data: resultsData } = useElectionResults(year, comparisonMode, electionResultsFilters);
 
   const partyOpts = useMemo(() => ({ combineCduCsu: true }), []);
 
@@ -90,19 +149,19 @@ export function Dashboard({ year }: DashboardProps) {
   // Combined filter function used by Hemicycle and Demographics
   const seatPassesFilters = useMemo(() => {
     const hasActiveFilter =
-      selectedParty !== null ||
+      selectedParties.size > 0 ||
       mandateFilter !== 'all' ||
       genderFilter !== 'all' ||
       statusFilter !== 'all' ||
-      stateFilter !== 'all';
+      selectedStates.size > 0;
 
     if (!hasActiveFilter) return undefined; // No filter active → show all
 
     return (s: Seat) => {
-      // Party filter
-      if (selectedParty !== null) {
+      // Party filter (multi-select)
+      if (selectedParties.size > 0) {
         const displayName = getPartyDisplayName(s.party, partyOpts);
-        if (displayName !== selectedParty) return false;
+        if (!selectedParties.has(displayName)) return false;
       }
       // Mandate type filter
       if (mandateFilter !== 'all' && s.seatType !== mandateFilter) return false;
@@ -111,11 +170,11 @@ export function Dashboard({ year }: DashboardProps) {
       // Status filter
       if (statusFilter === 'new' && s.previouslyElected) return false;
       if (statusFilter === 'reelected' && !s.previouslyElected) return false;
-      // State filter
-      if (stateFilter !== 'all' && s.region !== stateFilter) return false;
+      // State filter (multi-select)
+      if (selectedStates.size > 0 && (!s.region || !selectedStates.has(s.region))) return false;
       return true;
     };
-  }, [selectedParty, mandateFilter, genderFilter, statusFilter, stateFilter, partyOpts]);
+  }, [selectedParties, mandateFilter, genderFilter, statusFilter, selectedStates, partyOpts]);
 
   // Seats that pass all filters (for demographics and counts)
   const filteredSeats = useMemo(() => {
@@ -162,7 +221,23 @@ export function Dashboard({ year }: DashboardProps) {
 
     return { avgAge, genderCounts, femalePercent, topProfessions };
   }, [filteredSeats, year]);
-  // State distribution
+
+  // State distribution from ALL seats (for display, not filtering)
+  const allStateDistribution = useMemo(() => {
+    const dist: Record<string, { total: number; direct: number; list: number }> = {};
+    seats.forEach(s => {
+      if (!s.region) return;
+      if (!dist[s.region]) dist[s.region] = { total: 0, direct: 0, list: 0 };
+      dist[s.region].total++;
+      if (s.seatType === 'direct') dist[s.region].direct++;
+      else dist[s.region].list++;
+    });
+    return Object.entries(dist)
+      .map(([name, data]) => ({ name, ...data }))
+      .sort((a, b) => b.total - a.total);
+  }, [seats]);
+
+  // State distribution from filtered seats (for counts when filters active)
   const stateDistribution = useMemo(() => {
     const dist: Record<string, { total: number; direct: number; list: number }> = {};
     filteredSeats.forEach(s => {
@@ -189,11 +264,11 @@ export function Dashboard({ year }: DashboardProps) {
     return breakdown;
   }, [seats, partyOpts]);
 
-  // Quick stats
+  // Quick stats (based on filtered seats)
   const quickStats = useMemo(() => {
-    if (seats.length === 0) return null;
+    if (filteredSeats.length === 0) return null;
 
-    const seatsWithAge = seats.filter(s => s.birthYear);
+    const seatsWithAge = filteredSeats.filter(s => s.birthYear);
     const youngest = seatsWithAge.length > 0
       ? seatsWithAge.reduce((min, s) => (s.birthYear! > min.birthYear! ? s : min))
       : null;
@@ -201,14 +276,14 @@ export function Dashboard({ year }: DashboardProps) {
       ? seatsWithAge.reduce((max, s) => (s.birthYear! < max.birthYear! ? s : max))
       : null;
 
-    const directCount = seats.filter(s => s.seatType === 'direct').length;
-    const listCount = seats.filter(s => s.seatType === 'list').length;
-    const newMemberCount = seats.filter(s => !s.previouslyElected).length;
-    const reelectedCount = seats.filter(s => s.previouslyElected).length;
+    const directCount = filteredSeats.filter(s => s.seatType === 'direct').length;
+    const listCount = filteredSeats.filter(s => s.seatType === 'list').length;
+    const newMemberCount = filteredSeats.filter(s => !s.previouslyElected).length;
+    const reelectedCount = filteredSeats.filter(s => s.previouslyElected).length;
 
     // Most represented state
     const stateCounts: Record<string, number> = {};
-    seats.forEach(s => {
+    filteredSeats.forEach(s => {
       if (s.region) stateCounts[s.region] = (stateCounts[s.region] || 0) + 1;
     });
     const topState = Object.entries(stateCounts).sort((a, b) => b[1] - a[1])[0];
@@ -222,7 +297,7 @@ export function Dashboard({ year }: DashboardProps) {
       reelectedCount,
       topState: topState ? { name: topState[0], count: topState[1] } : null,
     };
-  }, [seats]);
+  }, [filteredSeats]);
 
   // Age distribution (brackets)
   const ageDistribution = useMemo(() => {
@@ -301,25 +376,26 @@ export function Dashboard({ year }: DashboardProps) {
   return (
     <div>
       {/* State Distribution - above main card */}
-      {stateDistribution.length > 0 && (
+      {allStateDistribution.length > 0 && (
         <div className="card mb-1">
           <div className="state-card-header">
             <div className="card-title">Seats by Federal State</div>
-            <div className="card-subtitle">Click to filter</div>
+            <div className="card-subtitle">Click to filter (multi-select)</div>
           </div>
           <div className="state-card-content">
             <div className="state-grid">
-              {stateDistribution.map(state => {
-                const isSelected = stateFilter === state.name;
-                const maxTotal = Math.max(...stateDistribution.map(s => s.total), 1);
+              {allStateDistribution.map(state => {
+                const isSelected = selectedStates.has(state.name);
+                const isGreyedOut = selectedStates.size > 0 && !isSelected;
+                const maxTotal = Math.max(...allStateDistribution.map(s => s.total), 1);
                 const widthPct = (state.total / maxTotal) * 100;
                 const directPct = (state.direct / state.total) * widthPct;
                 const listPct = (state.list / state.total) * widthPct;
                 return (
                   <div
                     key={state.name}
-                    onClick={() => setStateFilter(isSelected ? 'all' : state.name)}
-                    className={`state-item ${isSelected ? 'is-selected' : ''}`}
+                    onClick={() => toggleState(state.name)}
+                    className={`state-item ${isSelected ? 'is-selected' : ''} ${isGreyedOut ? 'is-greyed' : ''}`}
                   >
                     <div className="state-item-header">
                       <span className="state-item-name">{state.name}</span>
@@ -414,11 +490,11 @@ export function Dashboard({ year }: DashboardProps) {
 
                   <button
                     onClick={() => {
-                      setSelectedParty(null);
+                      setSelectedParties(new Set());
                       setMandateFilter('all');
                       setGenderFilter('all');
                       setStatusFilter('all');
-                      setStateFilter('all');
+                      setSelectedStates(new Set());
                     }}
                     className="filter-clear-btn"
                     title="Clear all filters"
@@ -575,9 +651,7 @@ export function Dashboard({ year }: DashboardProps) {
                 </>
               ) : (
                 <>
-                  <div className="info-panel-header">
-                    <div className="panel-title">Party Breakdown</div>
-                  </div>
+
                   <div className="info-panel-content p-0">
                     <table className="party-table">
                       <thead>
@@ -590,14 +664,14 @@ export function Dashboard({ year }: DashboardProps) {
                       </thead>
                       <tbody>
                         {combinedItems.map((party) => {
-                          const isSelected = selectedParty === party.party_name;
+                          const isSelected = selectedParties.has(party.party_name);
                           const color = getPartyColor(party.party_name, partyOpts);
                           const breakdown = partyMandateBreakdown[party.party_name] || { direct: 0, list: 0 };
                           return (
                             <tr
                               key={party.party_name}
                               className={`table-row-interactive ${isSelected ? 'is-selected' : ''}`}
-                              onClick={() => setSelectedParty(isSelected ? null : party.party_name)}
+                              onClick={() => toggleParty(party.party_name)}
                               style={{
                                 boxShadow: isSelected ? `inset 4px 0 0 ${color}` : 'none'
                               }}
@@ -635,34 +709,62 @@ export function Dashboard({ year }: DashboardProps) {
       {/* Quick Stats Row */}
       {quickStats && (
         <div className="quick-stats-grid">
-          <div className="card stat-card-compact">
-            <div className="stat-card-label">Direct Mandates</div>
-            <div className="stat-card-value direct">{quickStats.directCount}</div>
+          <div className="quick-stat-card">
+            <div className="quick-stat-icon">
+              <MapPin size={20} />
+            </div>
+            <div className="quick-stat-content">
+              <div className="quick-stat-value direct">{quickStats.directCount}</div>
+              <div className="quick-stat-label">Direct Mandates</div>
+            </div>
           </div>
-          <div className="card stat-card-compact">
-            <div className="stat-card-label">List Mandates</div>
-            <div className="stat-card-value list">{quickStats.listCount}</div>
+          <div className="quick-stat-card">
+            <div className="quick-stat-icon">
+              <ListOrdered size={20} />
+            </div>
+            <div className="quick-stat-content">
+              <div className="quick-stat-value list">{quickStats.listCount}</div>
+              <div className="quick-stat-label">List Mandates</div>
+            </div>
           </div>
-          <div className="card stat-card-compact">
-            <div className="stat-card-label">New Members</div>
-            <div className="stat-card-value new">{quickStats.newMemberCount}</div>
+          <div className="quick-stat-card">
+            <div className="quick-stat-icon">
+              <TrendingUp size={20} />
+            </div>
+            <div className="quick-stat-content">
+              <div className="quick-stat-value new">{quickStats.newMemberCount}</div>
+              <div className="quick-stat-label">New Members</div>
+            </div>
           </div>
-          <div className="card stat-card-compact">
-            <div className="stat-card-label">Re-elected</div>
-            <div className="stat-card-value reelected">{quickStats.reelectedCount}</div>
+          <div className="quick-stat-card">
+            <div className="quick-stat-icon">
+              <Users size={20} />
+            </div>
+            <div className="quick-stat-content">
+              <div className="quick-stat-value reelected">{quickStats.reelectedCount}</div>
+              <div className="quick-stat-label">Re-elected</div>
+            </div>
           </div>
           {quickStats.youngest && (
-            <div className="card stat-card-compact">
-              <div className="stat-card-label">Youngest</div>
-              <div className="stat-card-subvalue">{quickStats.youngest.memberName.split(' ').slice(-1)[0]}</div>
-              <div className="stat-card-meta">{year - quickStats.youngest.birthYear!} years</div>
+            <div className="quick-stat-card">
+              <div className="quick-stat-icon">
+                <User size={20} />
+              </div>
+              <div className="quick-stat-content">
+                <div className="quick-stat-value">{quickStats.youngest.memberName.split(' ').slice(-1)[0]}</div>
+                <div className="quick-stat-label">Youngest ({year - quickStats.youngest.birthYear!}y)</div>
+              </div>
             </div>
           )}
           {quickStats.oldest && (
-            <div className="card stat-card-compact">
-              <div className="stat-card-label">Oldest</div>
-              <div className="stat-card-subvalue">{quickStats.oldest.memberName.split(' ').slice(-1)[0]}</div>
-              <div className="stat-card-meta">{year - quickStats.oldest.birthYear!} years</div>
+            <div className="quick-stat-card">
+              <div className="quick-stat-icon">
+                <User size={20} />
+              </div>
+              <div className="quick-stat-content">
+                <div className="quick-stat-value">{quickStats.oldest.memberName.split(' ').slice(-1)[0]}</div>
+                <div className="quick-stat-label">Oldest ({year - quickStats.oldest.birthYear!}y)</div>
+              </div>
             </div>
           )}
         </div>
@@ -834,8 +936,15 @@ export function Dashboard({ year }: DashboardProps) {
             </div>
           </div>
 
+          {/* Empty state when no data for the selected filter combination */}
+          {resultsData.data.length === 0 && (
+            <div className="empty-state">
+              <div className="empty-state-title">No data for this filter combination. Try removing a state or party filter to see results.</div>
+            </div>
+          )}
+
           {/* Summary Statistics */}
-          {(() => {
+          {resultsData.data.length > 0 && (() => {
             const partiesGained = resultsData.data.filter(p => p.percentage > p.prevPercentage).length;
             const partiesLost = resultsData.data.filter(p => p.percentage < p.prevPercentage).length;
             const biggestWinner = resultsData.data.reduce((max, p) =>

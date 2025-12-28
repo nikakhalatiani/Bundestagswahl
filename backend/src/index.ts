@@ -716,6 +716,21 @@ app.post('/api/ballot', async (req, res) => {
 app.get('/api/election-results', async (req, res) => {
   const year = req.query.year ? Number(req.query.year) : 2025;
   const type = req.query.type ? String(req.query.type) : 'second'; // 'first', 'second', 'seats'
+  // Support both single state_id (legacy) and state_ids (array)
+  const stateIds: number[] = req.query.state_ids
+    ? String(req.query.state_ids).split(',').map(Number).filter(n => !isNaN(n))
+    : req.query.state_id
+      ? [Number(req.query.state_id)]
+      : [];
+  const mandateType = req.query.mandate_type ? String(req.query.mandate_type) : null; // 'direct', 'list' (seats only)
+  const gender = req.query.gender ? String(req.query.gender) : null; // 'm', 'w' (seats only)
+  // Support both single party (legacy) and parties (array)
+  const parties: string[] = req.query.parties
+    ? String(req.query.parties).split(',').filter(p => p.trim())
+    : req.query.party
+      ? [String(req.query.party)]
+      : [];
+  const status = req.query.status ? String(req.query.status) : null; // 'new', 'reelected' (seats only)
   const prevYear = year === 2025 ? 2021 : 2017;
 
   try {
@@ -735,14 +750,54 @@ app.get('/api/election-results', async (req, res) => {
     };
 
     const getVotes = async (y: number) => {
-      let query = '';
-      let params = [y];
+      const params: (number | string | null)[] = [y];
+      let paramIdx = 2;
 
       if (type === 'seats') {
-        // For seats, we use seat_allocation_cache
-        // Note: This requires cache to be populated for the year.
-        // We group CDU/CSU here.
-        query = `
+        // For seats, we use seat_allocation_cache with extended filters
+        const conditions: string[] = ['sac.year = $1'];
+        let joins = `
+          FROM seat_allocation_cache sac
+          JOIN parties p ON p.id = sac.party_id
+          JOIN persons per ON per.id = sac.person_id
+        `;
+
+        if (stateIds.length > 0) {
+          const placeholders = stateIds.map(() => `$${paramIdx++}`).join(', ');
+          conditions.push(`sac.state_id IN (${placeholders})`);
+          params.push(...stateIds);
+        }
+        if (mandateType) {
+          const seatTypeVal = mandateType === 'direct' ? 'Direct Mandate' : 'List Mandate';
+          conditions.push(`sac.seat_type = $${paramIdx++}`);
+          params.push(seatTypeVal);
+        }
+        if (gender) {
+          conditions.push(`LOWER(per.gender) = $${paramIdx++}`);
+          params.push(gender.toLowerCase());
+        }
+        if (parties.length > 0) {
+          // Handle CDU/CSU combined filter - expand it to CDU and CSU
+          const expandedParties = parties.flatMap(p => p === 'CDU/CSU' ? ['CDU', 'CSU'] : [p]);
+          const placeholders = expandedParties.map(() => `$${paramIdx++}`).join(', ');
+          conditions.push(`p.short_name IN (${placeholders})`);
+          params.push(...expandedParties);
+        }
+        if (status) {
+          // Need to join with candidacy tables for previously_elected
+          joins += `
+            LEFT JOIN direct_candidacy dc ON dc.person_id = sac.person_id AND dc.year = sac.year
+            LEFT JOIN party_lists pl ON pl.party_id = sac.party_id AND pl.state_id = sac.state_id AND pl.year = sac.year
+            LEFT JOIN party_list_candidacy plc ON plc.person_id = sac.person_id AND plc.party_list_id = pl.id
+          `;
+          if (status === 'new') {
+            conditions.push(`COALESCE(dc.previously_elected, plc.previously_elected, false) = false`);
+          } else if (status === 'reelected') {
+            conditions.push(`COALESCE(dc.previously_elected, plc.previously_elected, false) = true`);
+          }
+        }
+
+        const query = `
           SELECT
             CASE 
               WHEN p.short_name IN ('CDU', 'CSU') THEN 'CDU/CSU' 
@@ -753,17 +808,33 @@ app.get('/api/election-results', async (req, res) => {
               ELSE p.long_name 
             END as long_name,
             COUNT(*) as votes
-          FROM seat_allocation_cache sac
-          JOIN parties p ON p.id = sac.party_id
-          WHERE sac.year = $1
+          ${joins}
+          WHERE ${conditions.join(' AND ')}
           GROUP BY 1, 2
           ORDER BY votes DESC
         `;
+        const result = await pool.query<ElectionResultsRow>(query, params);
+        return result.rows;
       } else {
-        // For first/second votes
+        // For first/second votes - only state and party filters apply
         const voteType = type === 'first' ? 1 : 2;
         params.push(voteType);
-        query = `
+        paramIdx++;
+
+        const conditions: string[] = ['ce.year = $1', `cpv.vote_type = $2`];
+        if (stateIds.length > 0) {
+          const placeholders = stateIds.map(() => `$${paramIdx++}`).join(', ');
+          conditions.push(`c.state_id IN (${placeholders})`);
+          params.push(...stateIds);
+        }
+        if (parties.length > 0) {
+          const expandedParties = parties.flatMap(p => p === 'CDU/CSU' ? ['CDU', 'CSU'] : [p]);
+          const placeholders = expandedParties.map(() => `$${paramIdx++}`).join(', ');
+          conditions.push(`p.short_name IN (${placeholders})`);
+          params.push(...expandedParties);
+        }
+
+        const query = `
           SELECT
             CASE 
               WHEN p.short_name IN ('CDU', 'CSU') THEN 'CDU/CSU' 
@@ -776,15 +847,15 @@ app.get('/api/election-results', async (req, res) => {
             SUM(cpv.votes) as votes
           FROM constituency_party_votes cpv
           JOIN constituency_elections ce ON ce.bridge_id = cpv.bridge_id
+          JOIN constituencies c ON c.id = ce.constituency_id
           JOIN parties p ON p.id = cpv.party_id
-          WHERE ce.year = $1 AND cpv.vote_type = $2
+          WHERE ${conditions.join(' AND ')}
           GROUP BY 1, 2
           ORDER BY votes DESC
         `;
+        const result = await pool.query<ElectionResultsRow>(query, params);
+        return result.rows;
       }
-
-      const result = await pool.query<ElectionResultsRow>(query, params);
-      return result.rows;
     };
 
     const [currentVotes, prevVotes] = await Promise.all([

@@ -20,11 +20,29 @@ async function fetchJson<T>(url: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export function useElectionResults(year: number, type: 'first' | 'second' | 'seats' = 'second') {
+export interface ElectionResultsFilters {
+  stateIds?: number[];
+  mandateType?: 'direct' | 'list';
+  gender?: 'm' | 'w';
+  parties?: string[];
+  status?: 'new' | 'reelected';
+}
+
+export function useElectionResults(
+  year: number,
+  type: 'first' | 'second' | 'seats' = 'second',
+  filters?: ElectionResultsFilters
+) {
   return useQuery({
-    queryKey: ['electionResults', year, type],
+    queryKey: ['electionResults', year, type, filters],
     queryFn: async () => {
-      return fetchJson<ElectionResultsResponse>(`${API_BASE}/api/election-results?year=${year}&type=${type}`);
+      const params = new URLSearchParams({ year: String(year), type });
+      if (filters?.stateIds?.length) params.set('state_ids', filters.stateIds.join(','));
+      if (filters?.mandateType) params.set('mandate_type', filters.mandateType);
+      if (filters?.gender) params.set('gender', filters.gender);
+      if (filters?.parties?.length) params.set('parties', filters.parties.join(','));
+      if (filters?.status) params.set('status', filters.status);
+      return fetchJson<ElectionResultsResponse>(`${API_BASE}/api/election-results?${params.toString()}`);
     },
   });
 }
