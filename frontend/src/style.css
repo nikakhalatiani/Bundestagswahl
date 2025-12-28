@@ -50,7 +50,6 @@ body {
 
 /* Header with German flag accent */
 .header {
-  background: linear-gradient(to bottom, var(--color-black) 33.33%, var(--color-red) 33.33%, var(--color-red) 66.66%, var(--color-gold) 66.66%);
   padding: 0;
   box-shadow: var(--shadow-md);
   position: sticky;
@@ -61,16 +60,26 @@ body {
 .header-content {
   background: var(--bg-primary);
   margin-left: 6px;
-  padding: 1.5rem 2rem;
+  padding: 0rem 2rem 0rem 0rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
+}
+
+.header-branding {
+  display: flex;
+  align-items: center;
   gap: 1rem;
 }
 
+.header-logo {
+  height: 90px;
+  width: auto;
+}
+
 .header-title {
-  font-size: 1.75rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: var(--text-primary);
   display: flex;
@@ -78,10 +87,8 @@ body {
   gap: 0.75rem;
 }
 
-.header-title::before {
-  content: "🏛️";
-  font-size: 2rem;
-}
+/* Emoji removed */
+
 
 .year-selector {
   display: flex;
@@ -92,14 +99,15 @@ body {
 .year-selector label {
   font-weight: 600;
   color: var(--text-secondary);
+  font-size: 0.9rem;
 }
 
 .year-selector select {
   padding: 0.5rem 1rem;
-  border: 2px solid var(--border-color);
-  border-radius: 6px;
-  background: var(--bg-primary);
-  font-size: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  font-size: 0.95rem;
   font-weight: 600;
   color: var(--text-primary);
   cursor: pointer;
@@ -107,13 +115,14 @@ body {
 }
 
 .year-selector select:hover {
-  border-color: var(--color-black);
+  border-color: var(--text-muted);
+  background: var(--bg-accent);
 }
 
 .year-selector select:focus {
   outline: none;
   border-color: var(--color-black);
-  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
 }
 
 /* Navigation */

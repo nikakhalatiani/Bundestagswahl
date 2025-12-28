@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import logo from './assets/Bundesarchiv-logo.svg';
 import { Dashboard } from './pages/Dashboard';
 import { Members } from './pages/Members';
 import { ConstituencyAnalysis } from './pages/ConstituencyAnalysis';
@@ -21,7 +22,10 @@ function Navigation({ year, setYear }: { year: number; setYear: (y: number) => v
     <>
       <header className="header">
         <div className="header-content">
-          <h1 className="header-title">German Federal Election Explorer</h1>
+          <div className="header-branding">
+            <img src={logo} alt="Bundesarchiv Logo" className="header-logo" />
+            <h1 className="header-title">German Federal Election Explorer</h1>
+          </div>
           <div className="year-selector">
             <label>Election year:</label>
             <select value={year} onChange={(e) => setYear(Number(e.target.value))}>
