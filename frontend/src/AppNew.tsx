@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import logo from './assets/Bundesarchiv-logo.svg';
+import logo from './assets/Bundesarchiv-Logo.svg';
 import { Dashboard } from './pages/Dashboard';
 import { Members } from './pages/Members';
 import { ConstituencyAnalysis } from './pages/ConstituencyAnalysis';
