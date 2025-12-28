@@ -2325,3 +2325,92 @@ tr:hover {
   font-size: 0.85rem;
   font-style: italic;
 }
+
+/* Lame Mode Toggle */
+.lame-mode-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-left: auto;
+}
+
+.lame-mode-toggle:hover {
+  background: var(--bg-accent);
+  border-color: var(--text-secondary);
+}
+
+.lame-mode-toggle.is-active {
+  background: var(--color-gold);
+  color: var(--text-primary);
+  border-color: var(--color-gold);
+}
+
+.lame-mode-toggle.is-active:hover {
+  background: #e6b800;
+}
+
+/* Pie Chart */
+.pie-chart-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1rem;
+}
+
+.pie-slice {
+  transition: opacity 0.15s ease;
+  cursor: pointer;
+}
+
+.pie-slice:hover {
+  opacity: 0.85;
+}
+
+.pie-center-text {
+  fill: var(--text-primary);
+}
+
+.pie-center-label {
+  fill: var(--text-secondary);
+}
+
+.pie-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem 1.5rem;
+  max-width: 500px;
+}
+
+.pie-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.pie-legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.pie-legend-label {
+  color: var(--text-secondary);
+}
+
+.pie-legend-value {
+  font-weight: 600;
+  color: var(--text-primary);
+}

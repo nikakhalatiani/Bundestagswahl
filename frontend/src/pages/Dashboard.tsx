@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Briefcase, MapPin, Percent, User, ListOrdered, ChevronDown, ChevronUp, Search, BarChart3, Users, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Briefcase, MapPin, Percent, User, ListOrdered, ChevronDown, ChevronUp, Search, BarChart3, Users, TrendingUp, TrendingDown, Minus, ToggleLeft, ToggleRight, UserPlus } from 'lucide-react';
 import { useMembers, useSeatDistribution, useElectionResults, type ElectionResultsFilters } from '../hooks/useQueries';
 import type { SeatDistributionItem } from '../types/api';
 import { Hemicycle, type Seat } from '../components/parliament/Hemicycle';
+import { PieChart } from '../components/parliament/PieChart';
 import { getPartyColor, getPartyDisplayName, partyBadgeStyle } from '../utils/party';
 
 const COALITION_DESCRIPTIONS: Record<string, string> = {
@@ -26,6 +27,7 @@ export function Dashboard({ year }: DashboardProps) {
   const [selectedParties, setSelectedParties] = useState<Set<string>>(new Set());
   const [expandedCoalition, setExpandedCoalition] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [lameMode, setLameMode] = useState(false);
 
   // Filter states
   const [mandateFilter, setMandateFilter] = useState<'all' | 'direct' | 'list'>('all');
@@ -252,6 +254,21 @@ export function Dashboard({ year }: DashboardProps) {
       .sort((a, b) => b.total - a.total);
   }, [filteredSeats]);
 
+  // Filtered seat distribution for PieChart (computed from filteredSeats)
+  const filteredCombinedItems = useMemo(() => {
+    const combinedMap = new Map<string, { party_name: string; seats: number }>();
+    for (const seat of filteredSeats) {
+      const displayName = getPartyDisplayName(seat.party, partyOpts);
+      const existing = combinedMap.get(displayName);
+      if (existing) {
+        existing.seats += 1;
+      } else {
+        combinedMap.set(displayName, { party_name: displayName, seats: 1 });
+      }
+    }
+    return Array.from(combinedMap.values()).sort((a, b) => b.seats - a.seats);
+  }, [filteredSeats, partyOpts]);
+
   // Party mandate breakdown (direct vs list per party)
   const partyMandateBreakdown = useMemo(() => {
     const breakdown: Record<string, { direct: number; list: number }> = {};
@@ -414,9 +431,27 @@ export function Dashboard({ year }: DashboardProps) {
       )}
 
       <div className="card">
-        <div className="card-header">
-          <h2 className="card-title">Seat distribution in the Bundestag {year}</h2>
-          <div className="card-subtitle">Total seats: {totalSeats}</div>
+        <div className="card-header" style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+          <div>
+            <h2 className="card-title">Seat distribution in the Bundestag {year}</h2>
+            <div className="card-subtitle">Total seats: {totalSeats}</div>
+          </div>
+          <button
+            className="lame-mode-toggle"
+            style={{
+              marginLeft: 'auto',
+              alignSelf: 'flex-start',
+              background: 'transparent',
+              color: 'inherit',
+              boxShadow: 'none',
+            }}
+            onClick={() => setLameMode(!lameMode)}
+            title={lameMode ? 'Switch to Hemicycle view' : 'Switch to Pie Chart view'}
+            type="button"
+          >
+            <span>{lameMode ? 'Switch to Hemicycle' : 'Switch to Pie Chart'}</span>
+          </button>
+
         </div>
 
         <div className="dashboard-grid">
@@ -534,9 +569,18 @@ export function Dashboard({ year }: DashboardProps) {
                 </div>
               ) : membersError ? (
                 <div className="warning-box mt-0">
-                  <div className="warning-box-title">Hemicycle unavailable</div>
+                  <div className="warning-box-title">Visualization unavailable</div>
                   <div>Could not load members: {String(membersError)}</div>
                 </div>
+              ) : lameMode ? (
+                <PieChart
+                  data={seatPassesFilters ? filteredCombinedItems : combinedItems}
+                  size={400}
+                  combineCduCsu={true}
+                  animateKey={`pie-${lameMode ? 'on' : 'off'}`}
+                  selectedParties={selectedParties}
+                  onToggleParty={toggleParty}
+                />
               ) : (
                 <Hemicycle
                   seats={seats}
@@ -729,7 +773,7 @@ export function Dashboard({ year }: DashboardProps) {
           </div>
           <div className="quick-stat-card">
             <div className="quick-stat-icon">
-              <TrendingUp size={20} />
+              <UserPlus size={20} />
             </div>
             <div className="quick-stat-content">
               <div className="quick-stat-value new">{quickStats.newMemberCount}</div>
