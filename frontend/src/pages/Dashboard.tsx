@@ -162,14 +162,6 @@ export function Dashboard({ year }: DashboardProps) {
 
     return { avgAge, genderCounts, femalePercent, topProfessions };
   }, [filteredSeats, year]);
-
-  // Get unique states for filter dropdown
-  const availableStates = useMemo(() => {
-    const states = new Set<string>();
-    seats.forEach(s => { if (s.region) states.add(s.region); });
-    return Array.from(states).sort();
-  }, [seats]);
-
   // State distribution
   const stateDistribution = useMemo(() => {
     const dist: Record<string, { total: number; direct: number; list: number }> = {};
@@ -310,37 +302,32 @@ export function Dashboard({ year }: DashboardProps) {
     <div>
       {/* State Distribution - above main card */}
       {stateDistribution.length > 0 && (
-        <div className="card" style={{ marginBottom: '1rem' }}>
-          <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-color)' }}>
+        <div className="card mb-1">
+          <div className="state-card-header">
             <div className="card-title">Seats by Federal State</div>
             <div className="card-subtitle">Click to filter</div>
           </div>
-          <div style={{ padding: '0.75rem 1rem' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '0.5rem' }}>
+          <div className="state-card-content">
+            <div className="state-grid">
               {stateDistribution.map(state => {
                 const isSelected = stateFilter === state.name;
                 const maxTotal = Math.max(...stateDistribution.map(s => s.total), 1);
                 const widthPct = (state.total / maxTotal) * 100;
+                const directPct = (state.direct / state.total) * widthPct;
+                const listPct = (state.list / state.total) * widthPct;
                 return (
                   <div
                     key={state.name}
                     onClick={() => setStateFilter(isSelected ? 'all' : state.name)}
-                    style={{
-                      padding: '0.4rem 0.6rem',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      background: isSelected ? 'var(--bg-accent)' : 'transparent',
-                      border: isSelected ? '2px solid var(--text-primary)' : '1px solid var(--border-color)',
-                      transition: 'all 0.2s'
-                    }}
+                    className={`state-item ${isSelected ? 'is-selected' : ''}`}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 500 }}>{state.name}</span>
-                      <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{state.total}</span>
+                    <div className="state-item-header">
+                      <span className="state-item-name">{state.name}</span>
+                      <span className="state-item-count">{state.total}</span>
                     </div>
-                    <div style={{ height: '4px', background: 'var(--bg-primary)', borderRadius: '2px', overflow: 'hidden', display: 'flex' }}>
-                      <div style={{ width: `${(state.direct / state.total) * widthPct}%`, background: '#4CAF50' }} title={`${state.direct} direct, ${state.list} list`} />
-                      <div style={{ width: `${(state.list / state.total) * widthPct}%`, background: '#2196F3' }} title={`${state.direct} direct, ${state.list} list`} />
+                    <div className="state-bar-track" title={`${state.direct} direct, ${state.list} list`}>
+                      <div className="state-bar-direct" style={{ width: `${directPct}%` }} />
+                      <div className="state-bar-list" style={{ width: `${listPct}%` }} />
                     </div>
                   </div>
                 );
@@ -358,22 +345,16 @@ export function Dashboard({ year }: DashboardProps) {
 
         <div className="dashboard-grid">
           <div>
-            <div style={{ position: 'relative', marginBottom: '1rem' }}>
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                <div style={{ position: 'relative', flex: 1, minWidth: '180px' }}>
-                  <Search size={18} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+            <div className="filter-bar">
+              <div className="filter-row">
+                <div className="search-wrapper">
+                  <Search size={18} className="search-icon" />
                   <input
                     type="text"
                     placeholder="Search for a member..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.6rem 1rem 0.6rem 2.2rem',
-                      borderRadius: '6px',
-                      border: '1px solid var(--border-color)',
-                      fontSize: '0.95rem'
-                    }}
+                    className="search-input"
                   />
                 </div>
 
@@ -384,19 +365,7 @@ export function Dashboard({ year }: DashboardProps) {
                     const val = e.target.value;
                     if (val === 'all' || val === 'direct' || val === 'list') setMandateFilter(val);
                   }}
-                  style={{
-                    padding: '0.6rem 1.8rem 0.6rem 0.75rem',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '6px',
-                    background: 'var(--bg-primary)',
-                    fontSize: '0.9rem',
-                    cursor: 'pointer',
-                    appearance: 'none',
-                    backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'right 0.5rem center',
-                    backgroundSize: '0.9em'
-                  }}
+                  className="filter-select"
                   title="Filter by mandate type"
                 >
                   <option value="all">All Mandates</option>
@@ -410,19 +379,7 @@ export function Dashboard({ year }: DashboardProps) {
                     const val = e.target.value;
                     if (val === 'all' || val === 'm' || val === 'w') setGenderFilter(val);
                   }}
-                  style={{
-                    padding: '0.6rem 1.8rem 0.6rem 0.75rem',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '6px',
-                    background: 'var(--bg-primary)',
-                    fontSize: '0.9rem',
-                    cursor: 'pointer',
-                    appearance: 'none',
-                    backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'right 0.5rem center',
-                    backgroundSize: '0.9em'
-                  }}
+                  className="filter-select"
                   title="Filter by gender"
                 >
                   <option value="all">All Genders</option>
@@ -436,19 +393,7 @@ export function Dashboard({ year }: DashboardProps) {
                     const val = e.target.value;
                     if (val === 'all' || val === 'new' || val === 'reelected') setStatusFilter(val);
                   }}
-                  style={{
-                    padding: '0.6rem 1.8rem 0.6rem 0.75rem',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '6px',
-                    background: 'var(--bg-primary)',
-                    fontSize: '0.9rem',
-                    cursor: 'pointer',
-                    appearance: 'none',
-                    backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'right 0.5rem center',
-                    backgroundSize: '0.9em'
-                  }}
+                  className="filter-select"
                   title="Filter by member status"
                 >
                   <option value="all">All Members</option>
@@ -459,22 +404,11 @@ export function Dashboard({ year }: DashboardProps) {
 
               {/* Filter summary */}
               {seatPassesFilters && (
-                <div style={{
-                  marginTop: '0.5rem',
-                  padding: '0.5rem 0.75rem',
-                  background: 'var(--bg-accent)',
-                  borderRadius: '6px',
-                  fontSize: '0.85rem',
-                  color: 'var(--text-secondary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '0.5rem'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div className="filter-summary">
+                  <div className="filter-summary-content">
                     <Users size={14} />
                     <span>
-                      <strong style={{ color: 'var(--text-primary)' }}>{filteredSeats.length}</strong> of {seats.length} members match filters
+                      <strong className="text-primary">{filteredSeats.length}</strong> of {seats.length} members match filters
                     </span>
                   </div>
 
@@ -486,28 +420,7 @@ export function Dashboard({ year }: DashboardProps) {
                       setStatusFilter('all');
                       setStateFilter('all');
                     }}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      padding: '0.25rem 0.5rem',
-                      fontSize: '0.8rem',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.25rem',
-                      color: 'var(--text-secondary)',
-                      fontWeight: 600,
-                      borderRadius: '4px',
-                      transition: 'background 0.2s, color 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(0,0,0,0.06)';
-                      e.currentTarget.style.color = 'var(--text-primary)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'none';
-                      e.currentTarget.style.color = 'var(--text-secondary)';
-                    }}
+                    className="filter-clear-btn"
                     title="Clear all filters"
                     type="button"
                   >
@@ -516,20 +429,7 @@ export function Dashboard({ year }: DashboardProps) {
                 </div>
               )}
               {searchResults.length > 0 && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: 0,
-                  background: 'var(--bg-primary)',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '6px',
-                  marginTop: '4px',
-                  boxShadow: 'var(--shadow-md)',
-                  zIndex: 10,
-                  maxHeight: '300px',
-                  overflowY: 'auto'
-                }}>
+                <div className="search-results">
                   {searchResults.map(s => (
                     <div
                       key={s.id}
@@ -537,40 +437,27 @@ export function Dashboard({ year }: DashboardProps) {
                         setSelectedSeatId(s.id);
                         setSearchTerm('');
                       }}
-                      style={{
-                        padding: '0.75rem 1rem',
-                        cursor: 'pointer',
-                        borderBottom: '1px solid var(--bg-accent)',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}
                       className="search-result-item"
                     >
                       <div>
-                        <div style={{ fontWeight: 500 }}>{s.memberName}</div>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{s.party} • {s.region}</div>
+                        <div className="search-result-name">{s.memberName}</div>
+                        <div className="search-result-meta">{s.party} • {s.region}</div>
                       </div>
-                      <div style={{
-                        width: 10,
-                        height: 10,
-                        borderRadius: '50%',
-                        background: getPartyColor(s.party, partyOpts)
-                      }} />
+                      <div className="party-dot" style={{ background: getPartyColor(s.party, partyOpts) }} />
                     </div>
                   ))}
                 </div>
               )}
             </div>
 
-            <div style={{ height: 400 }}>
+            <div className="hemicycle-container">
               {isMembersLoading ? (
-                <div className="loading" style={{ padding: '2rem 1rem' }}>
+                <div className="loading">
                   <div className="spinner"></div>
                   <div className="loading-text">Loading members…</div>
                 </div>
               ) : membersError ? (
-                <div className="warning-box" style={{ marginTop: 0 }}>
+                <div className="warning-box mt-0">
                   <div className="warning-box-title">Hemicycle unavailable</div>
                   <div>Could not load members: {String(membersError)}</div>
                 </div>
@@ -592,8 +479,8 @@ export function Dashboard({ year }: DashboardProps) {
               {selectedSeat ? (
                 <>
                   <div className="info-panel-header">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                    <div className="member-header">
+                      <div className="member-name">
                         {selectedSeat.memberName}
                       </div>
                       <span
@@ -608,11 +495,8 @@ export function Dashboard({ year }: DashboardProps) {
                     </button>
                   </div>
                   <div className="info-panel-content">
-                    <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <span className="seat-badge" style={{
-                        backgroundColor: selectedSeat.seatType === 'direct' ? '#4CAF50' : '#2196F3',
-                        color: 'white'
-                      }}>
+                    <div className="member-badges">
+                      <span className={`seat-badge ${selectedSeat.seatType === 'direct' ? 'seat-direct' : 'seat-list'}`}>
                         {selectedSeat.seatType === 'direct' ? 'Direct Mandate' : 'List Mandate'}
                       </span>
                       {selectedSeat.previouslyElected ? (
@@ -692,16 +576,16 @@ export function Dashboard({ year }: DashboardProps) {
               ) : (
                 <>
                   <div className="info-panel-header">
-                    <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>Party Breakdown</div>
+                    <div className="panel-title">Party Breakdown</div>
                   </div>
-                  <div className="info-panel-content" style={{ padding: 0 }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <div className="info-panel-content p-0">
+                    <table className="party-table">
                       <thead>
-                        <tr style={{ borderBottom: '1px solid var(--border-color)', background: 'var(--bg-secondary)' }}>
-                          <th style={{ padding: '0.75rem 1rem', textAlign: 'left' }}>Party</th>
-                          <th style={{ padding: '0.75rem 0.5rem', textAlign: 'right' }}>Seats</th>
-                          <th style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontSize: '0.75rem' }} title="Direct / List mandates">D / L</th>
-                          <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Share</th>
+                        <tr>
+                          <th>Party</th>
+                          <th className="text-right">Seats</th>
+                          <th className="text-center small-text" title="Direct / List mandates">D / L</th>
+                          <th className="text-right">Share</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -715,12 +599,10 @@ export function Dashboard({ year }: DashboardProps) {
                               className={`table-row-interactive ${isSelected ? 'is-selected' : ''}`}
                               onClick={() => setSelectedParty(isSelected ? null : party.party_name)}
                               style={{
-                                borderBottom: '1px solid var(--border-color)',
-                                backgroundColor: isSelected ? 'var(--bg-accent)' : undefined,
                                 boxShadow: isSelected ? `inset 4px 0 0 ${color}` : 'none'
                               }}
                             >
-                              <td style={{ padding: '0.75rem 1rem' }}>
+                              <td>
                                 <span
                                   className="party-badge"
                                   style={partyBadgeStyle(party.party_name, partyOpts)}
@@ -728,13 +610,13 @@ export function Dashboard({ year }: DashboardProps) {
                                   {party.party_name}
                                 </span>
                               </td>
-                              <td style={{ padding: '0.75rem 0.5rem', textAlign: 'right', fontWeight: 500 }}>{party.seats}</td>
-                              <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                                <span style={{ color: '#4CAF50' }}>{breakdown.direct}</span>
+                              <td className="text-right seats-count">{party.seats}</td>
+                              <td className="text-center mandate-split">
+                                <span className="mandate-direct">{breakdown.direct}</span>
                                 {' / '}
-                                <span style={{ color: '#2196F3' }}>{breakdown.list}</span>
+                                <span className="mandate-list">{breakdown.list}</span>
                               </td>
-                              <td style={{ padding: '0.75rem 1rem', textAlign: 'right', color: 'var(--text-secondary)' }}>
+                              <td className="text-right share-value">
                                 {((party.seats / totalSeats) * 100).toFixed(1)}%
                               </td>
                             </tr>
@@ -752,66 +634,54 @@ export function Dashboard({ year }: DashboardProps) {
 
       {/* Quick Stats Row */}
       {quickStats && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginTop: '1.5rem' }}>
-          <div className="card" style={{ padding: '1rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.25rem' }}>
-              Direct Mandates
-            </div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#4CAF50' }}>{quickStats.directCount}</div>
+        <div className="quick-stats-grid">
+          <div className="card stat-card-compact">
+            <div className="stat-card-label">Direct Mandates</div>
+            <div className="stat-card-value direct">{quickStats.directCount}</div>
           </div>
-          <div className="card" style={{ padding: '1rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.25rem' }}>
-              List Mandates
-            </div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#2196F3' }}>{quickStats.listCount}</div>
+          <div className="card stat-card-compact">
+            <div className="stat-card-label">List Mandates</div>
+            <div className="stat-card-value list">{quickStats.listCount}</div>
           </div>
-          <div className="card" style={{ padding: '1rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.25rem' }}>
-              New Members
-            </div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#FF9800' }}>{quickStats.newMemberCount}</div>
+          <div className="card stat-card-compact">
+            <div className="stat-card-label">New Members</div>
+            <div className="stat-card-value new">{quickStats.newMemberCount}</div>
           </div>
-          <div className="card" style={{ padding: '1rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.25rem' }}>
-              Re-elected
-            </div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#9613a2' }}>{quickStats.reelectedCount}</div>
+          <div className="card stat-card-compact">
+            <div className="stat-card-label">Re-elected</div>
+            <div className="stat-card-value reelected">{quickStats.reelectedCount}</div>
           </div>
           {quickStats.youngest && (
-            <div className="card" style={{ padding: '1rem', textAlign: 'center' }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.25rem' }}>
-                Youngest
-              </div>
-              <div style={{ fontSize: '0.95rem', fontWeight: 600 }}>{quickStats.youngest.memberName.split(' ').slice(-1)[0]}</div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{year - quickStats.youngest.birthYear!} years</div>
+            <div className="card stat-card-compact">
+              <div className="stat-card-label">Youngest</div>
+              <div className="stat-card-subvalue">{quickStats.youngest.memberName.split(' ').slice(-1)[0]}</div>
+              <div className="stat-card-meta">{year - quickStats.youngest.birthYear!} years</div>
             </div>
           )}
           {quickStats.oldest && (
-            <div className="card" style={{ padding: '1rem', textAlign: 'center' }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.25rem' }}>
-                Oldest
-              </div>
-              <div style={{ fontSize: '0.95rem', fontWeight: 600 }}>{quickStats.oldest.memberName.split(' ').slice(-1)[0]}</div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{year - quickStats.oldest.birthYear!} years</div>
+            <div className="card stat-card-compact">
+              <div className="stat-card-label">Oldest</div>
+              <div className="stat-card-subvalue">{quickStats.oldest.memberName.split(' ').slice(-1)[0]}</div>
+              <div className="stat-card-meta">{year - quickStats.oldest.birthYear!} years</div>
             </div>
           )}
         </div>
       )}
 
-      <div className="dashboard-grid" style={{ marginTop: '1.5rem' }}>
+      <div className="dashboard-grid mt-1-5">
         <div className="card">
           <div className="card-header">
             <h3 className="card-title">Key Information</h3>
           </div>
-          <div style={{ lineHeight: 1.5, color: 'var(--text-primary)' }}>
+          <div className="key-info-text">
             <div>
               The German Bundestag has 630 seats. Seat allocation uses the Sainte-Laguë method based on second votes. After the 2023 electoral reform, there are no overhang mandates.
             </div>
           </div>
 
           {possibleCoalitions.length > 0 && (
-            <div style={{ marginTop: '1.5rem' }}>
-              <h4 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '1rem' }}>
+            <div className="coalitions-section">
+              <h4 className="coalitions-title">
                 Possible Coalitions (Majority &gt; {Math.floor(totalSeats / 2)})
               </h4>
               <div className="info-grid">
@@ -819,40 +689,35 @@ export function Dashboard({ year }: DashboardProps) {
                   const isExpanded = expandedCoalition === c.name;
                   const seatPct = ((c.seats / totalSeats) * 100).toFixed(1);
                   return (
-                    <div key={c.name} style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
+                    <div key={c.name} className="coalition-card">
                       <div
-                        className="info-item"
-                        style={{ alignItems: 'center', padding: '0.75rem', cursor: 'pointer', background: isExpanded ? 'var(--bg-accent)' : 'transparent' }}
+                        className={`info-item coalition-header ${isExpanded ? 'is-expanded' : ''}`}
                         onClick={() => setExpandedCoalition(isExpanded ? null : c.name)}
                       >
-                        <div style={{ display: 'flex', gap: '0.25rem', marginRight: '0.75rem' }}>
+                        <div className="coalition-dots">
                           {c.parties.map((p) => (
                             <div
                               key={p}
-                              style={{
-                                width: 12,
-                                height: 12,
-                                borderRadius: '50%',
-                                backgroundColor: getPartyColor(p, partyOpts),
-                              }}
+                              className="coalition-dot"
+                              style={{ backgroundColor: getPartyColor(p, partyOpts) }}
                               title={p}
                             />
                           ))}
                         </div>
-                        <div style={{ flex: 1, fontWeight: 500 }}>{c.name}</div>
-                        <div style={{ fontWeight: 600, marginRight: '0.5rem', whiteSpace: 'nowrap' }}>
+                        <div className="coalition-name">{c.name}</div>
+                        <div className="coalition-seats">
                           {c.seats} seats
-                          <span style={{ marginLeft: '0.35rem', color: 'var(--text-secondary)', fontWeight: 500 }}>({seatPct}%)</span>
+                          <span className="coalition-seats-pct">({seatPct}%)</span>
                         </div>
                         {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                       </div>
 
                       {isExpanded && (
-                        <div style={{ padding: '0.75rem', borderTop: '1px solid var(--border-color)', background: 'var(--bg-secondary)', fontSize: '0.9rem' }}>
-                          <div style={{ marginBottom: '0.5rem' }}>
+                        <div className="coalition-details">
+                          <div className="coalition-chancellor">
                             <strong>Possible Chancellor:</strong> Candidate from <span style={{ color: getPartyColor(c.strongestParty, partyOpts), fontWeight: 600 }}>{c.strongestParty}</span>
                           </div>
-                          <div style={{ color: 'var(--text-secondary)' }}>
+                          <div className="coalition-description">
                             {COALITION_DESCRIPTIONS[c.name] || 'A possible governing coalition.'}
                           </div>
                         </div>
@@ -876,15 +741,15 @@ export function Dashboard({ year }: DashboardProps) {
                 <div className="info-icon">
                   <Users size={18} />
                 </div>
-                <div style={{ flex: 1 }}>
+                <div className="demographics-flex">
                   <div className="info-label">Gender Balance</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                    <div style={{ flex: 1, height: '8px', background: '#eee', borderRadius: '4px', overflow: 'hidden', display: 'flex' }}>
-                      <div style={{ width: `${demographics.femalePercent}%`, background: '#E91E63' }} title="Female" />
-                      <div style={{ flex: 1, background: '#2196F3' }} title="Male" />
+                  <div className="gender-bar-container">
+                    <div className="gender-bar-track">
+                      <div className="gender-bar-female" style={{ width: `${demographics.femalePercent}%` }} title="Female" />
+                      <div className="gender-bar-male" title="Male" />
                     </div>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  <div className="gender-labels">
                     <span>{demographics.femalePercent}% Female</span>
                     <span>{(100 - Number(demographics.femalePercent)).toFixed(1)}% Male</span>
                   </div>
@@ -895,52 +760,44 @@ export function Dashboard({ year }: DashboardProps) {
                 <div className="info-icon">
                   <BarChart3 size={18} />
                 </div>
-                <div style={{ flex: 1 }}>
+                <div className="demographics-flex">
                   <div className="info-label">Age Distribution</div>
-                  <div style={{ display: 'flex', gap: '2px', marginTop: '0.5rem', height: '50px', alignItems: 'flex-end' }}>
+                  <div className="age-chart">
                     {ageDistribution.map(({ range, count }) => {
                       const maxCount = Math.max(...ageDistribution.map(a => a.count), 1);
                       const heightPx = Math.round((count / maxCount) * 46);
                       return (
                         <div
                           key={range}
-                          style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end' }}
+                          className="age-bar-wrapper"
                           title={`${range}: ${count} members`}
                         >
                           <div
-                            style={{
-                              width: '100%',
-                              height: count > 0 ? `${heightPx}px` : '0px',
-                              minHeight: count > 0 ? '4px' : '0',
-                              background: 'var(--text-secondary)',
-                              borderRadius: '2px 2px 0 0',
-                              opacity: 0.7,
-                            }}
+                            className="age-bar"
+                            style={{ height: count > 0 ? `${heightPx}px` : '0px' }}
                           />
                         </div>
                       );
                     })}
                   </div>
-                  <div style={{ display: 'flex', gap: '2px', marginTop: '2px' }}>
+                  <div className="age-labels">
                     {ageDistribution.map(({ range }) => (
-                      <div key={range} style={{ flex: 1, textAlign: 'center', fontSize: '0.65rem', color: 'var(--text-secondary)' }}>
-                        {range}
-                      </div>
+                      <div key={range} className="age-label">{range}</div>
                     ))}
                   </div>
-                  <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                    Average: <strong style={{ color: 'var(--text-primary)' }}>{demographics.avgAge}</strong> years
+                  <div className="age-average">
+                    Average: <strong className="text-primary">{demographics.avgAge}</strong> years
                   </div>
                 </div>
               </div>
 
-              <div style={{ marginTop: '1rem' }}>
-                <div className="info-label" style={{ marginBottom: '0.5rem' }}>Top Professions</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div className="professions-section">
+                <div className="info-label mb-0-5">Top Professions</div>
+                <div className="professions-list">
                   {demographics.topProfessions.map(([prof, count], i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
-                      <span style={{ color: 'var(--text-primary)' }}>{prof || 'Unknown'}</span>
-                      <span style={{ fontWeight: 500, color: 'var(--text-secondary)' }}>{count}</span>
+                    <div key={i} className="profession-item">
+                      <span className="profession-name">{prof || 'Unknown'}</span>
+                      <span className="profession-count">{count}</span>
                     </div>
                   ))}
                 </div>
@@ -951,8 +808,8 @@ export function Dashboard({ year }: DashboardProps) {
       </div>
 
       {resultsData && (
-        <div className="card" style={{ marginTop: '1.5rem' }}>
-          <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="card mt-1-5">
+          <div className="card-header comparison-header">
             <div>
               <h3 className="card-title">Election Results Comparison</h3>
               <div className="card-subtitle">
@@ -968,21 +825,7 @@ export function Dashboard({ year }: DashboardProps) {
                     setComparisonMode(next);
                   }
                 }}
-                style={{
-                  padding: '0.5rem 2rem 0.5rem 1rem',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '6px',
-                  background: 'var(--bg-primary)',
-                  fontSize: '0.9rem',
-                  fontWeight: 500,
-                  color: 'var(--text-primary)',
-                  cursor: 'pointer',
-                  appearance: 'none',
-                  backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'right 0.7rem center',
-                  backgroundSize: '1em'
-                }}
+                className="filter-select filter-select-wide"
               >
                 <option value="seats">Seats</option>
                 <option value="first">First Votes</option>
@@ -1005,48 +848,40 @@ export function Dashboard({ year }: DashboardProps) {
             const loserChange = biggestLoser.percentage - biggestLoser.prevPercentage;
 
             return (
-              <div style={{
-                padding: '0.75rem 1.5rem',
-                background: 'var(--bg-secondary)',
-                borderBottom: '1px solid var(--border-color)',
-                display: 'flex',
-                gap: '1.5rem',
-                flexWrap: 'wrap',
-                fontSize: '0.85rem'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <div className="comparison-summary">
+                <div className="summary-item">
                   <TrendingUp size={14} color="#2D8659" />
-                  <span style={{ fontWeight: 600, color: '#2D8659' }}>{partiesGained}</span>
-                  <span style={{ color: 'var(--text-secondary)' }}>gained</span>
+                  <span className="summary-value-gain">{partiesGained}</span>
+                  <span className="summary-label">gained</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <div className="summary-item">
                   <TrendingDown size={14} color="#E3000F" />
-                  <span style={{ fontWeight: 600, color: '#E3000F' }}>{partiesLost}</span>
-                  <span style={{ color: 'var(--text-secondary)' }}>lost</span>
+                  <span className="summary-value-loss">{partiesLost}</span>
+                  <span className="summary-label">lost</span>
                 </div>
                 {winnerChange > 0 && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Biggest gain:</span>
-                    <span style={{ fontWeight: 600, color: getPartyColor(biggestWinner.abbreviation, partyOpts) }}>
+                  <div className="summary-item">
+                    <span className="summary-label">Biggest gain:</span>
+                    <span className="fw-semibold" style={{ color: getPartyColor(biggestWinner.abbreviation, partyOpts) }}>
                       {biggestWinner.abbreviation}
                     </span>
-                    <span style={{ fontWeight: 600, color: '#2D8659' }}>+{winnerChange.toFixed(1)}%</span>
+                    <span className="summary-value-gain">+{winnerChange.toFixed(1)}%</span>
                   </div>
                 )}
                 {loserChange < 0 && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Biggest loss:</span>
-                    <span style={{ fontWeight: 600, color: getPartyColor(biggestLoser.abbreviation, partyOpts) }}>
+                  <div className="summary-item">
+                    <span className="summary-label">Biggest loss:</span>
+                    <span className="fw-semibold" style={{ color: getPartyColor(biggestLoser.abbreviation, partyOpts) }}>
                       {biggestLoser.abbreviation}
                     </span>
-                    <span style={{ fontWeight: 600, color: '#E3000F' }}>{loserChange.toFixed(1)}%</span>
+                    <span className="summary-value-loss">{loserChange.toFixed(1)}%</span>
                   </div>
                 )}
               </div>
             );
           })()}
 
-          <div style={{ padding: '1rem 0' }}>
+          <div className="comparison-content">
             {[...resultsData.data]
               .sort((a, b) => {
                 const aVal = comparisonMode === 'seats' ? a.votes : a.percentage;
@@ -1070,78 +905,54 @@ export function Dashboard({ year }: DashboardProps) {
                 const displayValue = comparisonMode === 'seats' ? party.votes : `${party.percentage.toFixed(1)}%`;
 
                 return (
-                  <div key={party.abbreviation} style={{ marginBottom: '1.5rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', alignItems: 'center' }}>
-                      <div style={{ fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div key={party.abbreviation} className="party-comparison">
+                    <div className="party-comparison-header">
+                      <div className="party-comparison-name">
                         {party.abbreviation}
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div className="party-comparison-change">
                         {change > 0 ? <TrendingUp size={16} color="#2D8659" /> : change < 0 ? <TrendingDown size={16} color="#E3000F" /> : <Minus size={16} color="#999" />}
-                        <span style={{
-                          fontWeight: 700,
-                          fontSize: '0.9rem',
-                          color: change > 0 ? '#2D8659' : change < 0 ? '#E3000F' : '#999'
-                        }}>
+                        <span className={`change-value ${change > 0 ? 'positive' : change < 0 ? 'negative' : 'neutral'}`}>
                           {change > 0 ? '+' : ''}{change.toFixed(1)}%
                         </span>
                       </div>
                     </div>
 
                     {/* Current Year Bar */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
-                      <div style={{ flex: 1, height: '28px', display: 'flex', alignItems: 'center', position: 'relative' }}>
-                        <div style={{
-                          width: `${Math.max(widthPercent, 1)}%`,
-                          background: color,
-                          height: '100%',
-                          borderRadius: '4px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'flex-end',
-                          paddingRight: isSmall ? 0 : '0.5rem',
-                          color: '#fff',
-                          fontSize: '0.9rem',
-                          fontWeight: 700,
-                          boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-                          transition: 'width 0.5s ease-out',
-                          position: 'relative',
-                          zIndex: 0
-                        }}>
+                    <div className="bar-row current">
+                      <div className="bar-container">
+                        <div
+                          className="result-bar"
+                          style={{
+                            width: `${Math.max(widthPercent, 1)}%`,
+                            background: color,
+                            paddingRight: isSmall ? 0 : '0.5rem'
+                          }}
+                        >
                           {!isSmall && displayValue}
                         </div>
                         {isSmall && (
-                          <div style={{ marginLeft: '0.5rem', color: '#000', fontWeight: 700, fontSize: '0.9rem' }}>
-                            {displayValue}
-                          </div>
+                          <span className="bar-value-outside">{displayValue}</span>
                         )}
                       </div>
                     </div>
 
                     {/* Previous Year Bar */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <div style={{ flex: 1, height: '16px', display: 'flex', alignItems: 'center', position: 'relative' }}>
-                        <div style={{
-                          width: `${Math.max((prevValue / maxVal) * 100, 1)}%`,
-                          background: `repeating-linear-gradient(45deg, ${color}, ${color} 2px, transparent 2px, transparent 6px)`,
-                          backgroundColor: `${color}33`,
-                          border: `1px solid ${color}`,
-                          height: '100%',
-                          borderRadius: '3px',
-                          transition: 'width 0.5s ease-out',
-                          position: 'relative',
-                          zIndex: 0
-                        }} />
-                        <div style={{
-                          marginLeft: '0.5rem',
-                          color: 'var(--text-primary)',
-                          fontWeight: 500,
-                          fontSize: '0.85rem'
-                        }}>
+                    <div className="bar-row">
+                      <div className="bar-container prev">
+                        <div
+                          className="result-bar prev"
+                          style={{
+                            width: `${Math.max((prevValue / maxVal) * 100, 1)}%`,
+                            background: `repeating-linear-gradient(45deg, ${color}, ${color} 2px, transparent 2px, transparent 6px)`,
+                            backgroundColor: `${color}33`,
+                            border: `1px solid ${color}`
+                          }}
+                        />
+                        <span className="prev-value">
                           {comparisonMode === 'seats' ? party.prevVotes : `${party.prevPercentage.toFixed(1)}%`}
-                          <span style={{ marginLeft: '0.35rem', fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 400 }}>
-                            ({year === 2025 ? 2021 : 2017})
-                          </span>
-                        </div>
+                          <span className="prev-year">({year === 2025 ? 2021 : 2017})</span>
+                        </span>
                       </div>
                     </div>
                   </div>
