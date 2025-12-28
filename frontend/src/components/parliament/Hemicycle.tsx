@@ -33,6 +33,8 @@ type Props = {
     combineCduCsu?: boolean;
     /** Optional party filter: if provided, only seats whose (display) party is included will be emphasized. */
     partyFilter?: Set<string>;
+    /** Generic seat filter callback. Return true to emphasize the seat, false to dim it. Takes precedence over partyFilter. */
+    seatFilter?: (seat: Seat) => boolean;
     /** Controlled selection. */
     selectedSeatId?: string | null;
     onSelectSeatId?: (id: string | null) => void;
@@ -49,6 +51,7 @@ export function Hemicycle({
     height = 520,
     combineCduCsu = true,
     partyFilter,
+    seatFilter,
     selectedSeatId,
     onSelectSeatId,
 }: Props) {
@@ -128,7 +131,13 @@ export function Hemicycle({
 
                     const isSelected = seat.id === effectiveSelectedSeatId;
                     const isHovered = seat.id === hoveredSeatId;
-                    const passesFilter = partyFilter ? partyFilter.has(partyLabel) : true;
+
+                    // Use seatFilter if provided, otherwise fall back to partyFilter
+                    const passesFilter = seatFilter
+                        ? seatFilter(seat)
+                        : partyFilter
+                            ? partyFilter.has(partyLabel)
+                            : true;
 
                     const opacity = passesFilter ? 1 : 0.12;
                     const stroke = isSelected ? 'var(--text-primary)' : 'transparent';
