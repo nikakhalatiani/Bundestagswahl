@@ -825,7 +825,7 @@ tr:hover {
 
 /* Hemicycle Container */
 .hemicycle-container {
-  height: 400px;
+  height: 440px;
 }
 
 /* Member Info */
@@ -1157,11 +1157,14 @@ tr:hover {
 }
 
 .comparison-summary {
-  padding: 0.75rem 1.5rem;
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
+  margin: 0.5rem 0;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-accent);
+  border-radius: 6px;
+  color: var(--text-secondary);
   display: flex;
-  gap: 1.5rem;
+  align-items: center;
+  gap: 0.75rem;
   flex-wrap: wrap;
   font-size: 0.85rem;
 }

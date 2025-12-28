@@ -71,9 +71,11 @@ export function Hemicycle({
             maxRadius: 370,
             angleSpan: Math.PI,
             spacingMin: 8,
-            spacingMax: 15,
+            spacingMax: 19,
         });
     }, [seats.length]);
+
+    const setRadius = dotRadius * 1.15;
 
     // Pair the computed points with the seat data.
     const seatPoints = useMemo(() => {
@@ -142,7 +144,7 @@ export function Hemicycle({
                     const opacity = passesFilter ? 1 : 0.12;
                     const stroke = isSelected ? 'var(--text-primary)' : 'transparent';
                     const strokeWidth = isSelected ? 2 : 0;
-                    const r = isHovered ? dotRadius + 0.8 : dotRadius;
+                    const r = isHovered ? setRadius + 0.8 : setRadius;
 
                     // Animation: wipe from left to right (index 0 is left-most)
                     const animationDelay = `${(index / seatPoints.length) * 800}ms`;
