@@ -2419,3 +2419,348 @@ tr:hover {
   font-weight: 600;
   color: var(--text-primary);
 }
+
+/* ==============================================
+   Constituency Analysis Page Styles
+   ============================================== */
+
+.constituency-analysis {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.constituency-main-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 1200px) {
+  .constituency-main-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.constituency-map-card {
+  position: sticky;
+  top: 120px;
+}
+
+.constituency-details-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Map Container */
+.constituency-map-container {
+  position: relative;
+}
+
+.constituency-map-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 3rem;
+  color: var(--text-secondary);
+}
+
+.constituency-map-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 1rem 0;
+}
+
+.constituency-map-svg {
+  width: 100%;
+  max-width: 550px;
+  height: auto;
+}
+
+.constituency-path {
+  cursor: pointer;
+  transition: fill-opacity 0.12s ease;
+}
+
+.constituency-path:hover {
+  fill-opacity: 1 !important;
+}
+
+/* Tooltip - like reference design */
+.constituency-tooltip {
+  position: fixed;
+  z-index: 1000;
+  background: #fff;
+  border-radius: 4px;
+  padding: 0.75rem 1rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+  min-width: 220px;
+  max-width: 300px;
+}
+
+.constituency-tooltip-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #eee;
+}
+
+.constituency-tooltip-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 0.5rem;
+  align-items: center;
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
+  position: relative;
+}
+
+.constituency-tooltip-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  opacity: 0.25;
+  border-radius: 2px;
+  z-index: 0;
+}
+
+.constituency-tooltip-party {
+  font-weight: 600;
+  color: var(--text-primary);
+  z-index: 1;
+  padding: 0.15rem 0.4rem;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 2px;
+}
+
+.constituency-tooltip-pct {
+  font-weight: 600;
+  color: var(--text-primary);
+  z-index: 1;
+  text-align: right;
+}
+
+.constituency-tooltip-votes {
+  color: var(--text-muted);
+  z-index: 1;
+  text-align: right;
+  min-width: 50px;
+}
+
+.constituency-tooltip-candidate {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #eee;
+}
+
+/* Legend */
+.constituency-map-legend {
+  padding: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.constituency-map-legend-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.constituency-map-legend-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+  justify-content: center;
+}
+
+.constituency-map-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.constituency-map-legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* Constituency Details Styles */
+.constituency-name-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.constituency-name-header h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.constituency-state-badge {
+  background: var(--bg-accent);
+  color: var(--text-secondary);
+  padding: 0.35rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Compact stats grid */
+.stats-grid-compact {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.stat-card-compact {
+  padding: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+}
+
+.stat-card-compact .stat-icon {
+  background: var(--bg-primary);
+  padding: 0.5rem;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-card-compact .stat-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.15rem;
+}
+
+.stat-card-compact .stat-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+/* Winner Card */
+.constituency-winner-card {
+  background: var(--bg-secondary);
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 4px solid;
+  margin-top: 0.5rem;
+}
+
+.constituency-winner-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.constituency-winner-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.constituency-winner-votes {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+/* Toggle Button */
+.toggle-btn {
+  display: flex;
+  align-items: center;
+  padding: 0.4rem 0.75rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  transition: all 0.15s ease;
+}
+
+.toggle-btn:hover {
+  background: var(--bg-accent);
+  color: var(--text-primary);
+}
+
+/* Compact Table */
+.table-compact {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.table-compact th,
+.table-compact td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.table-compact th {
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.table-compact .text-right {
+  text-align: right;
+}
+
+.table-compact .text-muted {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.row-highlight {
+  background: rgba(255, 206, 0, 0.1);
+}
+
+.row-highlight td {
+  font-weight: 600;
+}
+
+/* Clickable rows */
+.clickable-row {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.clickable-row:hover {
+  background: var(--bg-secondary);
+}
+
+/* Small party badges */
+.party-badge-sm {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+}
