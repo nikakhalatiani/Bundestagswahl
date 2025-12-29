@@ -327,9 +327,13 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
                     {paths.map(({ number, path }) => {
                         const winnerData = getWinnerByVoteType(number);
                         const fillColor = winnerData ? getPartyColor(winnerData.party, partyOpts) : '#ccc';
-                        // Map percentage (25-45%) to opacity (0.6-1.0) for more subtle variation
+                        // Map percentage to discrete opacity segments: 0.2, 0.4, 0.6, 0.8, 1.0
                         const percent = winnerData?.percent || 0;
-                        const baseOpacity = Math.min(1, Math.max(0.6, 0.6 + (percent - 25) / 50));
+                        let baseOpacity = 0.6;
+                        if (percent >= 40) baseOpacity = 0.8;
+                        else if (percent >= 35) baseOpacity = 0.75;
+                        else if (percent >= 30) baseOpacity = 0.7;
+                        else if (percent >= 25) baseOpacity = 0.65;
                         const isSelected = selectedConstituencyNumber === number;
                         const isHovered = hoveredNumber === number;
 
@@ -338,7 +342,7 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
                                 key={number}
                                 d={path}
                                 fill={fillColor}
-                                fillOpacity={isSelected || isHovered ? 1 : baseOpacity}
+                                fillOpacity={isSelected || isHovered ? 0.85 : baseOpacity}
                                 stroke="none"
                                 className="constituency-path"
                                 onMouseEnter={() => setHoveredNumber(number)}
