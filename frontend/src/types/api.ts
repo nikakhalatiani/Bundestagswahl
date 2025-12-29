@@ -178,3 +178,19 @@ export interface ConstituenciesSingleItem {
     total_first_votes: number;
     total_second_votes: number;
 }
+
+// Bulk vote distribution for map tooltips
+export interface ConstituencyPartyVoteItem {
+    party_name: string;
+    first_votes: number;
+    second_votes: number;
+    first_percent: number;
+    second_percent: number;
+    rank_first: number;
+    rank_second: number;
+}
+
+export interface ConstituencyVotesBulkItem {
+    constituency_number: number;
+    parties: ConstituencyPartyVoteItem[];
+}

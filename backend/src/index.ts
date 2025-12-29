@@ -909,5 +909,131 @@ app.get('/api/election-results', async (req, res) => {
   }
 });
 
+// Bulk Constituency Vote Distribution - returns top 5 parties per constituency for map coloring/tooltips
+app.get('/api/constituency-votes-bulk', async (req, res) => {
+  const year = req.query.year ? Number(req.query.year) : 2025;
+
+  try {
+    // Get first and second votes for all parties in all constituencies
+    const result = await pool.query(
+      `WITH FirstVotes AS (
+         SELECT
+           c.number AS constituency_number,
+           pt.short_name AS party_name,
+           SUM(dc.first_votes) AS first_votes
+         FROM direct_candidacy dc
+         JOIN constituencies c ON c.id = dc.constituency_id
+         JOIN parties pt ON pt.id = dc.party_id
+         WHERE dc.year = $1 AND dc.first_votes > 0
+         GROUP BY c.number, pt.short_name
+       ),
+       SecondVotes AS (
+         SELECT
+           c.number AS constituency_number,
+           pt.short_name AS party_name,
+           cpv.votes AS second_votes
+         FROM constituency_party_votes cpv
+         JOIN constituency_elections ce ON ce.bridge_id = cpv.bridge_id
+         JOIN constituencies c ON c.id = ce.constituency_id
+         JOIN parties pt ON pt.id = cpv.party_id
+         WHERE ce.year = $1 AND cpv.vote_type = 2 AND cpv.votes > 0
+       ),
+       ConstituencyTotals AS (
+         SELECT
+           c.number AS constituency_number,
+           ce.valid_first,
+           ce.valid_second
+         FROM constituency_elections ce
+         JOIN constituencies c ON c.id = ce.constituency_id
+         WHERE ce.year = $1
+       ),
+       Combined AS (
+         SELECT
+           COALESCE(fv.constituency_number, sv.constituency_number) AS constituency_number,
+           COALESCE(fv.party_name, sv.party_name) AS party_name,
+           COALESCE(fv.first_votes, 0) AS first_votes,
+           COALESCE(sv.second_votes, 0) AS second_votes
+         FROM FirstVotes fv
+         FULL OUTER JOIN SecondVotes sv
+           ON fv.constituency_number = sv.constituency_number
+           AND fv.party_name = sv.party_name
+       ),
+       RankedFirst AS (
+         SELECT
+           c.constituency_number,
+           c.party_name,
+           c.first_votes,
+           c.second_votes,
+           ct.valid_first,
+           ct.valid_second,
+           ROW_NUMBER() OVER (PARTITION BY c.constituency_number ORDER BY c.first_votes DESC) AS rank_first
+         FROM Combined c
+         JOIN ConstituencyTotals ct ON ct.constituency_number = c.constituency_number
+       ),
+       RankedSecond AS (
+         SELECT
+           c.constituency_number,
+           c.party_name,
+           c.first_votes,
+           c.second_votes,
+           ct.valid_first,
+           ct.valid_second,
+           ROW_NUMBER() OVER (PARTITION BY c.constituency_number ORDER BY c.second_votes DESC) AS rank_second
+         FROM Combined c
+         JOIN ConstituencyTotals ct ON ct.constituency_number = c.constituency_number
+       )
+       SELECT
+         rf.constituency_number,
+         rf.party_name,
+         rf.first_votes,
+         rf.second_votes,
+         CASE WHEN rf.valid_first > 0 THEN (rf.first_votes * 100.0 / rf.valid_first) ELSE 0 END AS first_percent,
+         CASE WHEN rf.valid_second > 0 THEN (rf.second_votes * 100.0 / rf.valid_second) ELSE 0 END AS second_percent,
+         rf.rank_first,
+         rs.rank_second
+       FROM RankedFirst rf
+       JOIN RankedSecond rs ON rf.constituency_number = rs.constituency_number AND rf.party_name = rs.party_name
+       WHERE rf.rank_first <= 5 OR rs.rank_second <= 5
+       ORDER BY rf.constituency_number, rf.first_votes DESC`,
+      [year]
+    );
+
+    // Group by constituency
+    const constituencies: Record<number, {
+      constituency_number: number;
+      parties: Array<{
+        party_name: string;
+        first_votes: number;
+        second_votes: number;
+        first_percent: number;
+        second_percent: number;
+        rank_first: number;
+        rank_second: number;
+      }>;
+    }> = {};
+
+    for (const row of result.rows) {
+      const num = row.constituency_number;
+      if (!constituencies[num]) {
+        constituencies[num] = { constituency_number: num, parties: [] };
+      }
+      constituencies[num].parties.push({
+        party_name: row.party_name,
+        first_votes: parseInt(row.first_votes),
+        second_votes: parseInt(row.second_votes),
+        first_percent: parseFloat(row.first_percent),
+        second_percent: parseFloat(row.second_percent),
+        rank_first: parseInt(row.rank_first),
+        rank_second: parseInt(row.rank_second),
+      });
+    }
+
+    res.json({ data: Object.values(constituencies) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'db_error' });
+  }
+});
+
 const port = process.env.PORT ? Number(process.env.PORT) : 4000;
 app.listen(port, () => console.log(`Backend running at http://localhost:${port}`));

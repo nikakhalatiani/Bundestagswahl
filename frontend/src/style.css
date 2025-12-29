@@ -2448,6 +2448,13 @@ tr:hover {
   top: 120px;
 }
 
+.constituency-map-card .card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
 .constituency-details-panel {
   display: flex;
   flex-direction: column;
@@ -2562,6 +2569,66 @@ tr:hover {
   margin-top: 0.5rem;
   padding-top: 0.5rem;
   border-top: 1px solid #eee;
+}
+
+/* Tooltip enhancements for 5-party display */
+.constituency-tooltip-state {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+.constituency-tooltip-vote-type {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px dashed #ddd;
+}
+
+.constituency-tooltip-parties {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.constituency-tooltip-no-data {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Map vote type toggle */
+.map-vote-toggle {
+  display: flex;
+  gap: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.vote-toggle-btn {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: none;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.vote-toggle-btn:hover {
+  background: var(--bg-hover);
+}
+
+.vote-toggle-btn.active {
+  background: var(--primary-color);
+  color: #fff;
 }
 
 /* Legend */

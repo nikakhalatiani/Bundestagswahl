@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { ConstituencyWinnerItem } from '../types/api';
+import type { ConstituencyWinnerItem, ConstituencyVotesBulkItem } from '../types/api';
 import { getPartyColor, getPartyDisplayName } from '../utils/party';
 
 // GeoJSON types
@@ -25,8 +25,10 @@ interface GeoFeatureCollection {
 interface ConstituencyMapProps {
     year: number;
     winners: ConstituencyWinnerItem[];
+    votesBulk: ConstituencyVotesBulkItem[];
     selectedConstituencyNumber: number | null;
     onSelectConstituency: (number: number) => void;
+    voteType: 'first' | 'second';
 }
 
 // Create a lookup map from constituency_number to winner
@@ -124,7 +126,7 @@ const LEGEND_PARTIES = [
     { key: 'BSW', label: 'BSW' },
 ];
 
-export function ConstituencyMap({ year, winners, selectedConstituencyNumber, onSelectConstituency }: ConstituencyMapProps) {
+export function ConstituencyMap({ year, winners, votesBulk, selectedConstituencyNumber, onSelectConstituency, voteType }: ConstituencyMapProps) {
     const [geoData, setGeoData] = useState<GeoFeatureCollection | null>(null);
     const [hoveredNumber, setHoveredNumber] = useState<number | null>(null);
     const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
@@ -186,11 +188,54 @@ export function ConstituencyMap({ year, winners, selectedConstituencyNumber, onS
             number: feature.properties.WKR_NR,
             name: feature.properties.WKR_NAME,
             stateName: feature.properties.LAND_NAME,
+            stateId: feature.properties.LAND_NR,
             path: featureToPath(feature, boundsWithSize),
         }));
 
         return { bounds: boundsWithSize, paths: pathsData };
     }, [geoData]);
+
+    // Create a lookup map from constituency_number to vote distribution
+    const votesBulkMap = useMemo(() => {
+        const map = new Map<number, ConstituencyVotesBulkItem>();
+        votesBulk.forEach(v => map.set(v.constituency_number, v));
+        return map;
+    }, [votesBulk]);
+
+    // City coordinates (lon, lat) and projected positions
+    const cities = useMemo(() => {
+        if (!bounds) return [];
+        const cityData = [
+            { name: 'Berlin', lon: 13.405, lat: 52.52 },
+            { name: 'Hamburg', lon: 9.993, lat: 53.551 },
+            { name: 'Munich', lon: 11.582, lat: 48.135 },
+            { name: 'Frankfurt', lon: 8.682, lat: 50.110 },
+            { name: 'Düsseldorf', lon: 6.773, lat: 51.228 },
+        ];
+        return cityData.map(city => {
+            const [x, y] = projectPoint(city.lon, city.lat, bounds);
+            return { ...city, x, y };
+        });
+    }, [bounds]);
+
+    // Helper function to compute winner by vote type
+    const getWinnerByVoteType = (constituencyNumber: number): { party: string; percent: number } | null => {
+        if (voteType === 'first') {
+            const winner = winnerMap.get(constituencyNumber);
+            if (winner) {
+                return { party: winner.party_name, percent: winner.percent_of_valid || 0 };
+            }
+        } else {
+            // For second vote, find the party with highest second_votes from votesBulk
+            const voteData = votesBulkMap.get(constituencyNumber);
+            if (voteData && voteData.parties.length > 0) {
+                // Sort by second votes and get top
+                const sorted = [...voteData.parties].sort((a, b) => b.second_votes - a.second_votes);
+                return { party: sorted[0].party_name, percent: sorted[0].second_percent };
+            }
+        }
+        return null;
+    };
 
     const handleMouseMove = (e: React.MouseEvent) => {
         // Position tooltip, keeping it on screen
@@ -230,9 +275,13 @@ export function ConstituencyMap({ year, winners, selectedConstituencyNumber, onS
                     preserveAspectRatio="xMidYMid meet"
                     className="constituency-map-svg"
                 >
+                    {/* Layer 1: Constituency fills */}
                     {paths.map(({ number, path }) => {
-                        const winner = winnerMap.get(number);
-                        const fillColor = winner ? getPartyColor(winner.party_name, partyOpts) : '#ccc';
+                        const winnerData = getWinnerByVoteType(number);
+                        const fillColor = winnerData ? getPartyColor(winnerData.party, partyOpts) : '#ccc';
+                        // Map percentage (25-45%) to opacity (0.6-1.0) for more subtle variation
+                        const percent = winnerData?.percent || 0;
+                        const baseOpacity = Math.min(1, Math.max(0.6, 0.6 + (percent - 25) / 50));
                         const isSelected = selectedConstituencyNumber === number;
                         const isHovered = hoveredNumber === number;
 
@@ -241,22 +290,63 @@ export function ConstituencyMap({ year, winners, selectedConstituencyNumber, onS
                                 key={number}
                                 d={path}
                                 fill={fillColor}
-                                fillOpacity={isSelected || isHovered ? 1 : 0.85}
-                                stroke="#fff"
-                                strokeWidth={isSelected ? 1.5 : 0.3}
-                                strokeLinejoin="round"
+                                fillOpacity={isSelected || isHovered ? 1 : baseOpacity}
+                                stroke="none"
                                 className="constituency-path"
                                 onMouseEnter={() => setHoveredNumber(number)}
                                 onMouseLeave={() => setHoveredNumber(null)}
                                 onClick={() => onSelectConstituency(number)}
-                                style={isSelected ? { filter: 'drop-shadow(0 0 3px rgba(0,0,0,0.4))' } : undefined}
+                                style={isSelected ? { filter: 'drop-shadow(0 0 4px rgba(0,0,0,0.5))' } : undefined}
                             />
                         );
                     })}
+
+                    {/* Layer 2: Thin constituency borders */}
+                    <g className="constituency-borders-layer" pointerEvents="none">
+                        {paths.map(({ number, path }) => {
+                            const isSelected = selectedConstituencyNumber === number;
+                            return (
+                                <path
+                                    key={`border-${number}`}
+                                    d={path}
+                                    fill="none"
+                                    stroke={isSelected ? "#fff" : "rgba(255,255,255,0.35)"}
+                                    strokeWidth={isSelected ? 1.5 : 0.4}
+                                    strokeLinejoin="round"
+                                />
+                            );
+                        })}
+                    </g>
+
+                    {/* Layer 3: City markers */}
+                    <g className="city-markers-layer" pointerEvents="none">
+                        {cities.map(city => (
+                            <g key={city.name} transform={`translate(${city.x}, ${city.y})`}>
+                                <circle
+                                    r={3}
+                                    fill="#333"
+                                    stroke="#fff"
+                                    strokeWidth={1.5}
+                                />
+                                <text
+                                    x={8}
+                                    y={4}
+                                    fontSize={11}
+                                    fontWeight={600}
+                                    fill="#333"
+                                    stroke="#fff"
+                                    strokeWidth={2.5}
+                                    paintOrder="stroke"
+                                >
+                                    {city.name}
+                                </text>
+                            </g>
+                        ))}
+                    </g>
                 </svg>
             </div>
 
-            {/* Tooltip */}
+            {/* Tooltip with top 5 parties */}
             {hoveredNumber && tooltipPos && (
                 <div
                     className="constituency-tooltip"
@@ -264,38 +354,94 @@ export function ConstituencyMap({ year, winners, selectedConstituencyNumber, onS
                 >
                     <div className="constituency-tooltip-title">
                         {paths.find(p => p.number === hoveredNumber)?.name}
+                        <span className="constituency-tooltip-state">
+                            {paths.find(p => p.number === hoveredNumber)?.stateName}
+                        </span>
                     </div>
-                    {hoveredWinner && (
-                        <>
-                            <div className="constituency-tooltip-row">
-                                <div
-                                    className="constituency-tooltip-bar"
-                                    style={{
-                                        backgroundColor: getPartyColor(hoveredWinner.party_name, partyOpts),
-                                        width: `${Math.min(hoveredWinner.percent_of_valid || 0, 100)}%`
-                                    }}
-                                />
-                                <span className="constituency-tooltip-party">
-                                    {getPartyDisplayName(hoveredWinner.party_name, partyOpts)}
-                                </span>
-                                <span className="constituency-tooltip-pct">
-                                    {hoveredWinner.percent_of_valid?.toFixed(1)}%
-                                </span>
-                                <span className="constituency-tooltip-votes">
-                                    {hoveredWinner.first_votes?.toLocaleString()}
-                                </span>
+                    <div className="constituency-tooltip-vote-type">
+                        {voteType === 'first' ? 'First Votes (Erststimmen)' : 'Second Votes (Zweitstimmen)'}
+                    </div>
+                    {(() => {
+                        const voteData = votesBulkMap.get(hoveredNumber);
+                        if (!voteData || voteData.parties.length === 0) {
+                            // Fallback to winner data
+                            if (hoveredWinner) {
+                                return (
+                                    <div className="constituency-tooltip-row">
+                                        <div
+                                            className="constituency-tooltip-bar"
+                                            style={{
+                                                backgroundColor: getPartyColor(hoveredWinner.party_name, partyOpts),
+                                                width: `${Math.min(hoveredWinner.percent_of_valid || 0, 100)}%`
+                                            }}
+                                        />
+                                        <span className="constituency-tooltip-party">
+                                            {getPartyDisplayName(hoveredWinner.party_name, partyOpts)}
+                                        </span>
+                                        <span className="constituency-tooltip-pct">
+                                            {hoveredWinner.percent_of_valid?.toFixed(1)}%
+                                        </span>
+                                    </div>
+                                );
+                            }
+                            return <div className="constituency-tooltip-no-data">No data available</div>;
+                        }
+
+                        // Sort by the current vote type and take top 5
+                        const sorted = [...voteData.parties].sort((a, b) =>
+                            voteType === 'first'
+                                ? b.first_votes - a.first_votes
+                                : b.second_votes - a.second_votes
+                        );
+                        const top5 = sorted.slice(0, 5);
+                        const maxPercent = Math.max(
+                            ...top5.map(p => voteType === 'first' ? p.first_percent : p.second_percent)
+                        );
+
+                        return (
+                            <div className="constituency-tooltip-parties">
+                                {top5.map((party, idx) => {
+                                    const percent = voteType === 'first' ? party.first_percent : party.second_percent;
+                                    const votes = voteType === 'first' ? party.first_votes : party.second_votes;
+                                    const barWidth = maxPercent > 0 ? (percent / maxPercent) * 100 : 0;
+
+                                    return (
+                                        <div key={idx} className="constituency-tooltip-row">
+                                            <div
+                                                className="constituency-tooltip-bar"
+                                                style={{
+                                                    backgroundColor: getPartyColor(party.party_name, partyOpts),
+                                                    width: `${barWidth}%`
+                                                }}
+                                            />
+                                            <span className="constituency-tooltip-party">
+                                                {getPartyDisplayName(party.party_name, partyOpts)}
+                                            </span>
+                                            <span className="constituency-tooltip-pct">
+                                                {percent.toFixed(1)}%
+                                            </span>
+                                            <span className="constituency-tooltip-votes">
+                                                {votes.toLocaleString()}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
                             </div>
-                            <div className="constituency-tooltip-candidate">
-                                Winner: {hoveredWinner.winner_name}
-                            </div>
-                        </>
+                        );
+                    })()}
+                    {hoveredWinner && voteType === 'first' && (
+                        <div className="constituency-tooltip-candidate">
+                            Winner: {hoveredWinner.winner_name}
+                        </div>
                     )}
                 </div>
             )}
 
             {/* Legend */}
             <div className="constituency-map-legend">
-                <div className="constituency-map-legend-title">Winning Party</div>
+                <div className="constituency-map-legend-title">
+                    {voteType === 'first' ? 'Direct Winner (1st Vote)' : 'Top Party (2nd Vote)'}
+                </div>
                 <div className="constituency-map-legend-items">
                     {LEGEND_PARTIES.map(({ key, label }) => (
                         <div key={key} className="constituency-map-legend-item">

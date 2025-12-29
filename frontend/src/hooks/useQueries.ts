@@ -6,6 +6,7 @@ import type {
   ConstituencyOverviewResponse,
   ConstituencyListItem,
   ConstituencyWinnerItem,
+  ConstituencyVotesBulkItem,
   DirectWithoutCoverageResponse,
   MemberItem,
   SeatDistributionItem,
@@ -122,6 +123,16 @@ export function useConstituencyList(year: number) {
     queryKey: ['constituencies', year],
     queryFn: async () => {
       return fetchJson<ApiResponse<ConstituencyListItem[]>>(`${API_BASE}/api/constituencies?year=${year}`);
+    },
+  });
+}
+
+// Bulk vote distribution for map tooltips and coloring
+export function useConstituencyVotesBulk(year: number) {
+  return useQuery({
+    queryKey: ['constituencyVotesBulk', year],
+    queryFn: async () => {
+      return fetchJson<ApiResponse<ConstituencyVotesBulkItem[]>>(`${API_BASE}/api/constituency-votes-bulk?year=${year}`);
     },
   });
 }

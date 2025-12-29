@@ -9,6 +9,7 @@ import {
   useConstituencyWinners,
   useConstituenciesSingle,
   useDirectWithoutCoverage,
+  useConstituencyVotesBulk,
 } from '../hooks/useQueries';
 import type { ClosestWinnerItem, ConstituencyListItem, VoteDistributionItem } from '../types/api';
 import { getPartyDisplayName, getPartyColor, partyBadgeStyle } from '../utils/party';
@@ -22,10 +23,12 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
   const [constituencyNumber, setConstituencyNumber] = useState<number | null>(null);
   const [constituencyQuery, setConstituencyQuery] = useState('');
   const [showSingleVotes, setShowSingleVotes] = useState(false);
+  const [mapVoteType, setMapVoteType] = useState<'first' | 'second'>('first');
 
   const { data: constituencyList, isLoading: loadingConstituencyList, error: constituencyListError } = useConstituencyList(year);
   const { data: overview, isLoading: loadingOverview } = useConstituencyOverview(constituencyId, year);
   const { data: winners } = useConstituencyWinners(year);
+  const { data: votesBulk } = useConstituencyVotesBulk(year);
   const { data: closest } = useClosestWinners(year, 10);
   const { data: lostMandates } = useDirectWithoutCoverage(year);
 
@@ -85,12 +88,28 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
               </h2>
               <div className="card-subtitle">Click a constituency to view details</div>
             </div>
+            <div className="map-vote-toggle">
+              <button
+                className={`vote-toggle-btn ${mapVoteType === 'first' ? 'active' : ''}`}
+                onClick={() => setMapVoteType('first')}
+              >
+                First Vote
+              </button>
+              <button
+                className={`vote-toggle-btn ${mapVoteType === 'second' ? 'active' : ''}`}
+                onClick={() => setMapVoteType('second')}
+              >
+                Second Vote
+              </button>
+            </div>
           </div>
           <ConstituencyMap
             year={year}
             winners={winnersData}
+            votesBulk={votesBulk?.data ?? []}
             selectedConstituencyNumber={constituencyNumber}
             onSelectConstituency={handleMapSelect}
+            voteType={mapVoteType}
           />
         </div>
 
