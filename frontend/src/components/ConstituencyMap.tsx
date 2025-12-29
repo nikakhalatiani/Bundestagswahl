@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ConstituencyWinnerItem, ConstituencyVotesBulkItem } from '../types/api';
 import { getPartyColor, getPartyDisplayName } from '../utils/party';
 
-// GeoJSON types
+// GeoJSON types for constituencies
 interface GeoFeature {
     type: 'Feature';
     geometry: {
@@ -20,6 +20,23 @@ interface GeoFeature {
 interface GeoFeatureCollection {
     type: 'FeatureCollection';
     features: GeoFeature[];
+}
+
+// GeoJSON types for state borders (bundeslaender.json)
+interface StateGeoFeature {
+    type: 'Feature';
+    geometry: {
+        type: 'Polygon' | 'MultiPolygon';
+        coordinates: number[][][] | number[][][][];
+    };
+    properties: {
+        LAND_NAME: string;
+    };
+}
+
+interface StateGeoFeatureCollection {
+    type: 'FeatureCollection';
+    features: StateGeoFeature[];
 }
 
 interface ConstituencyMapProps {
@@ -128,13 +145,14 @@ const LEGEND_PARTIES = [
 
 export function ConstituencyMap({ year, winners, votesBulk, selectedConstituencyNumber, onSelectConstituency, voteType }: ConstituencyMapProps) {
     const [geoData, setGeoData] = useState<GeoFeatureCollection | null>(null);
+    const [stateGeoData, setStateGeoData] = useState<StateGeoFeatureCollection | null>(null);
     const [hoveredNumber, setHoveredNumber] = useState<number | null>(null);
     const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
 
     const partyOpts = { combineCduCsu: true };
     const winnerMap = useMemo(() => createWinnerMap(winners), [winners]);
 
-    // Import GeoJSON statically then switch
+    // Load constituency GeoJSON
     useEffect(() => {
         let cancelled = false;
         async function loadGeoData() {
@@ -153,6 +171,23 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
         loadGeoData();
         return () => { cancelled = true; };
     }, [year]);
+
+    // Load state borders GeoJSON
+    useEffect(() => {
+        let cancelled = false;
+        async function loadStateData() {
+            try {
+                const response = await fetch('/bundeslaender.json');
+                if (!response.ok) throw new Error('Failed to fetch bundeslaender.json');
+                const data: StateGeoFeatureCollection = await response.json();
+                if (!cancelled) setStateGeoData(data);
+            } catch (err) {
+                console.error('Failed to load state borders:', err);
+            }
+        }
+        loadStateData();
+        return () => { cancelled = true; };
+    }, []);
 
     // Compute bounds and paths
     const { bounds, paths } = useMemo(() => {
@@ -217,6 +252,19 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
             return { ...city, x, y };
         });
     }, [bounds]);
+
+    // Compute state border paths from bundeslaender.json
+    const stateBorderPaths = useMemo(() => {
+        if (!bounds || !stateGeoData) return [];
+        return stateGeoData.features.map(feature => {
+            // Use the same featureToPath but cast the feature
+            const geoFeature = feature as unknown as GeoFeature;
+            return {
+                name: feature.properties.LAND_NAME,
+                path: featureToPath(geoFeature, bounds),
+            };
+        });
+    }, [bounds, stateGeoData]);
 
     // Helper function to compute winner by vote type
     const getWinnerByVoteType = (constituencyNumber: number): { party: string; percent: number } | null => {
@@ -311,14 +359,28 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
                                     d={path}
                                     fill="none"
                                     stroke={isSelected ? "#fff" : "rgba(255,255,255,0.35)"}
-                                    strokeWidth={isSelected ? 1.5 : 0.4}
+                                    strokeWidth={isSelected ? 1 : 0.4}
                                     strokeLinejoin="round"
                                 />
                             );
                         })}
                     </g>
 
-                    {/* Layer 3: City markers */}
+                    {/* Layer 3: State borders (thick white lines) */}
+                    <g className="state-borders-layer" pointerEvents="none">
+                        {stateBorderPaths.map((state, idx) => (
+                            <path
+                                key={`state-${idx}`}
+                                d={state.path}
+                                fill="none"
+                                stroke="#fff"
+                                strokeWidth={0.7}
+                                strokeLinejoin="round"
+                            />
+                        ))}
+                    </g>
+
+                    {/* Layer 4: City markers */}
                     <g className="city-markers-layer" pointerEvents="none">
                         {cities.map(city => (
                             <g key={city.name} transform={`translate(${city.x}, ${city.y})`}>
