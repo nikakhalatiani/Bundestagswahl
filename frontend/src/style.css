@@ -2445,7 +2445,20 @@ tr:hover {
 
 .constituency-map-card {
   position: sticky;
-  top: 120px;
+  top: 182px;
+  max-height: calc(100vh - 110px);
+  overflow: hidden;
+  z-index: 10;
+  align-self: start;
+}
+
+/* Disable sticky on vertical/mobile screens */
+@media (max-width: 1200px),
+(orientation: portrait) {
+  .constituency-map-card {
+    position: static;
+    max-height: none;
+  }
 }
 
 .constituency-map-card .card-header {
@@ -2464,7 +2477,7 @@ tr:hover {
 /* Map Container */
 .constituency-map-container {
   position: relative;
-  min-height: 550px;
+  min-height: 480px;
 }
 
 .constituency-map-loading {
@@ -2473,32 +2486,36 @@ tr:hover {
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  padding: 3rem;
+  padding: 2rem;
   color: var(--text-secondary);
-  min-height: 550px;
+  min-height: 400px;
 }
 
 .constituency-map-wrapper {
   width: 100%;
   display: flex;
   justify-content: center;
-  padding: 1rem 0;
-  min-height: 550px;
+  padding: 0.25rem 0;
+  min-height: 480px;
 }
 
 .constituency-map-svg {
   width: 100%;
-  max-width: 550px;
+  max-width: 415px;
   height: auto;
 }
 
 .constituency-path {
   cursor: pointer;
-  transition: fill-opacity 0.15s ease;
+  transition: fill-opacity 0.15s ease, filter 0.15s ease;
 }
 
 .constituency-path:hover {
   fill-opacity: 0.85 !important;
+}
+
+.constituency-path.selected {
+  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.4));
 }
 
 /* Tooltip - like reference design */

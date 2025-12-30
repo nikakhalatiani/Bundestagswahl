@@ -344,11 +344,10 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
                                 fill={fillColor}
                                 fillOpacity={isSelected || isHovered ? 0.85 : baseOpacity}
                                 stroke="none"
-                                className="constituency-path"
+                                className={`constituency-path${isSelected ? ' selected' : ''}`}
                                 onMouseEnter={() => setHoveredNumber(number)}
                                 onMouseLeave={() => setHoveredNumber(null)}
                                 onClick={() => onSelectConstituency(number)}
-                                style={isSelected ? { filter: 'drop-shadow(0 0 4px rgba(0,0,0,0.5))' } : undefined}
                             />
                         );
                     })}
@@ -506,7 +505,7 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
             {/* Legend */}
             <div className="constituency-map-legend">
                 <div className="constituency-map-legend-title">
-                    {voteType === 'first' ? 'Direct Winner (1st Vote)' : 'Top Party (2nd Vote)'}
+                    {voteType === 'first' ? 'Direct Winner by constituency (1st Vote)' : 'Party vote by constituency (2nd Vote)'}
                 </div>
                 <div className="constituency-map-legend-items">
                     {LEGEND_PARTIES.map(({ key, label }) => (
