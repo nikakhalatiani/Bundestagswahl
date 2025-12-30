@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { MapPin, Vote, Users, TrendingUp, ToggleLeft, ToggleRight, Award, AlertTriangle } from 'lucide-react';
+import { MapPin, Vote, Users, TrendingUp, Award, AlertTriangle } from 'lucide-react';
 import { Autocomplete } from '../components/Autocomplete';
 import { ConstituencyMap } from '../components/ConstituencyMap';
 import {
@@ -229,10 +229,7 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                     onClick={() => setShowSingleVotes(!showSingleVotes)}
                     title={showSingleVotes ? 'Show aggregated votes' : 'Show single ballot votes (Q7)'}
                   >
-                    {showSingleVotes ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
-                    <span style={{ marginLeft: '0.5rem', fontSize: '0.8rem' }}>
-                      {showSingleVotes ? 'Single Votes' : 'Aggregated'}
-                    </span>
+                    <span>{showSingleVotes ? 'Switch to Aggregated' : 'Switch to Single Votes'}</span>
                   </button>
                 </div>
 

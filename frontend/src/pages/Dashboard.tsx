@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Briefcase, MapPin, Percent, User, ListOrdered, ChevronDown, ChevronUp, Search, BarChart3, Users, TrendingUp, TrendingDown, Minus, ToggleLeft, ToggleRight, UserPlus } from 'lucide-react';
+import { Briefcase, MapPin, Percent, User, ListOrdered, ChevronDown, ChevronUp, Search, BarChart3, Users, TrendingUp, TrendingDown, Minus, UserPlus } from 'lucide-react';
 import { useMembers, useSeatDistribution, useElectionResults, type ElectionResultsFilters } from '../hooks/useQueries';
 import type { SeatDistributionItem } from '../types/api';
 import { Hemicycle, type Seat } from '../components/parliament/Hemicycle';
