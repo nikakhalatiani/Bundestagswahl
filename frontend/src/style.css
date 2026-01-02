@@ -2446,7 +2446,7 @@ tr:hover {
 .constituency-map-card {
   position: sticky;
   top: 182px;
-  max-height: calc(100vh - 110px);
+  max-height: calc(110vh);
   overflow: hidden;
   z-index: 10;
   align-self: start;
@@ -2656,19 +2656,70 @@ tr:hover {
 
 /* Legend */
 .constituency-map-legend {
-  padding: 1rem;
+  padding: 0.75rem;
   border-top: 1px solid var(--border-color);
 }
 
-.constituency-map-legend-title {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  margin-bottom: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+.constituency-map-legend.compact {
+  padding: 0.5rem 0.75rem;
 }
 
+.constituency-map-legend-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.4rem;
+}
+
+.constituency-map-legend-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.constituency-map-legend-filter-note {
+  font-weight: 500;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  background: var(--bg-secondary);
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+}
+
+.constituency-map-legend-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+}
+
+.constituency-map-legend-item-compact {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.7rem;
+}
+
+.constituency-map-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.constituency-map-legend-party-abbr {
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 45px;
+}
+
+.constituency-map-legend-pct {
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* Legacy legend styles */
 .constituency-map-legend-items {
   display: flex;
   flex-wrap: wrap;
@@ -2689,6 +2740,127 @@ tr:hover {
   height: 12px;
   border-radius: 2px;
   flex-shrink: 0;
+}
+
+/* Dynamic Legend with Percentages */
+.constituency-map-legend-filter-note {
+  font-weight: 400;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-left: 0.5rem;
+}
+
+.constituency-map-legend-percentages {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 0.5rem;
+}
+
+.constituency-map-legend-party {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+}
+
+.constituency-map-legend-party-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.constituency-map-legend-party-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.constituency-map-legend-party-pct {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* State Filter Chips */
+.state-filter-chips {
+  padding: 0 1rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 0.5rem;
+}
+
+.state-filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.state-filter-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.state-filter-clear {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-red);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+}
+
+.state-filter-clear:hover {
+  background: rgba(208, 0, 0, 0.1);
+}
+
+.state-chips-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.state-chip {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.state-chip:hover {
+  background: var(--bg-accent);
+  border-color: var(--text-secondary);
+}
+
+.state-chip.active {
+  background: var(--color-black);
+  color: #fff;
+  border-color: var(--color-black);
+}
+
+.state-chip.greyed {
+  opacity: 0.4;
+}
+
+.state-chip.greyed:hover {
+  opacity: 0.7;
 }
 
 /* Constituency Details Styles */
@@ -2859,4 +3031,352 @@ tr:hover {
 .party-badge-sm {
   font-size: 0.7rem;
   padding: 0.15rem 0.4rem;
+}
+
+/* Vote Type Switch Toggle */
+.vote-type-switch {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.vote-type-switch:hover {
+  border-color: var(--text-secondary);
+}
+
+.vote-switch-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: color 0.15s ease;
+}
+
+.vote-switch-label.active {
+  color: var(--text-primary);
+}
+
+.vote-switch-toggle {
+  width: 32px;
+  height: 18px;
+  background: var(--bg-accent);
+  border-radius: 9px;
+  position: relative;
+  transition: background 0.15s ease;
+}
+
+.vote-switch-dot {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  background: var(--color-black);
+  border-radius: 50%;
+  transition: left 0.2s ease;
+}
+
+.vote-switch-dot.right {
+  left: 16px;
+}
+
+/* View Type Switch Toggle (Hemicycle/Pie) */
+.view-type-switch {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-left: auto;
+}
+
+.view-type-switch:hover {
+  border-color: var(--text-secondary);
+}
+
+.view-switch-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: color 0.15s ease;
+}
+
+.view-switch-label.active {
+  color: var(--text-primary);
+}
+
+.view-switch-toggle {
+  width: 32px;
+  height: 18px;
+  background: var(--bg-accent);
+  border-radius: 9px;
+  position: relative;
+  transition: background 0.15s ease;
+}
+
+.view-switch-dot {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  background: var(--color-black);
+  border-radius: 50%;
+  transition: left 0.2s ease;
+}
+
+.view-switch-dot.right {
+  left: 16px;
+}
+
+/* Compact Selector Card */
+.constituency-selector-card {
+  padding: 0.75rem;
+}
+
+.constituency-selector-row {
+  margin-bottom: 0;
+}
+
+.constituency-selector-card .autocomplete-input {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+/* State Filter Inline */
+.state-filter-inline {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.state-filter-inline .state-filter-header {
+  margin-bottom: 0.4rem;
+}
+
+.state-filter-inline .state-filter-label {
+  font-size: 0.7rem;
+}
+
+.state-filter-inline .state-chips-container {
+  gap: 0.25rem;
+}
+
+.state-filter-inline .state-chip {
+  padding: 0.2rem 0.45rem;
+  font-size: 0.65rem;
+}
+
+/* Compact Overview Card */
+.constituency-overview-card {
+  padding: 1rem;
+}
+
+.constituency-overview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.constituency-overview-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.constituency-number {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-accent);
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+}
+
+.constituency-overview-title h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+/* Stats Row */
+.constituency-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.constituency-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.1rem;
+}
+
+.constituency-stat-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.constituency-stat-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.constituency-stat-diff {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+}
+
+.constituency-stat-diff.positive {
+  color: #2e7d32;
+  background: rgba(46, 125, 50, 0.1);
+}
+
+.constituency-stat-diff.negative {
+  color: #c62828;
+  background: rgba(198, 40, 40, 0.1);
+}
+
+/* Winner Row */
+.constituency-winner-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.75rem;
+}
+
+.constituency-winner-indicator {
+  width: 4px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.constituency-winner-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.constituency-winner-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.constituency-winner-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.constituency-winner-details {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.constituency-winner-votes {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.seat-badge-inline {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+}
+
+.seat-badge-inline.seat-yes {
+  color: #2e7d32;
+  background: rgba(46, 125, 50, 0.12);
+}
+
+.seat-badge-inline.seat-no {
+  color: #c62828;
+  background: rgba(198, 40, 40, 0.12);
+}
+
+/* Comparison Badge */
+.constituency-comparison-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.comparison-changed {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #f57c00;
+  background: rgba(245, 124, 0, 0.12);
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+}
+
+.comparison-same {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #2e7d32;
+  background: rgba(46, 125, 50, 0.12);
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+}
+
+.comparison-prev {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .constituency-stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .constituency-winner-row {
+    flex-direction: column;
+  }
+
+  .constituency-comparison-badge {
+    align-items: flex-start;
+    margin-left: 0;
+    margin-top: 0.5rem;
+  }
 }

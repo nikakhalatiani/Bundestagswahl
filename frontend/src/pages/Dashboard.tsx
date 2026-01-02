@@ -437,19 +437,16 @@ export function Dashboard({ year }: DashboardProps) {
             <div className="card-subtitle">Total seats: {totalSeats}</div>
           </div>
           <button
-            className="lame-mode-toggle"
-            style={{
-              marginLeft: 'auto',
-              alignSelf: 'flex-start',
-              background: 'transparent',
-              color: 'inherit',
-              boxShadow: 'none',
-            }}
+            className="view-type-switch"
             onClick={() => setLameMode(!lameMode)}
             title={lameMode ? 'Switch to Hemicycle view' : 'Switch to Pie Chart view'}
             type="button"
           >
-            <span>{lameMode ? 'Switch to Hemicycle' : 'Switch to Pie Chart'}</span>
+            <span className={`view-switch-label ${!lameMode ? 'active' : ''}`}>Hemicycle</span>
+            <span className="view-switch-toggle">
+              <span className={`view-switch-dot ${lameMode ? 'right' : ''}`} />
+            </span>
+            <span className={`view-switch-label ${lameMode ? 'active' : ''}`}>Pie</span>
           </button>
 
         </div>

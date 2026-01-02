@@ -46,6 +46,7 @@ interface ConstituencyMapProps {
     selectedConstituencyNumber: number | null;
     onSelectConstituency: (number: number) => void;
     voteType: 'first' | 'second';
+    filteredStates?: Set<string>;
 }
 
 // Create a lookup map from constituency_number to winner
@@ -143,7 +144,7 @@ const LEGEND_PARTIES = [
     { key: 'BSW', label: 'BSW' },
 ];
 
-export function ConstituencyMap({ year, winners, votesBulk, selectedConstituencyNumber, onSelectConstituency, voteType }: ConstituencyMapProps) {
+export function ConstituencyMap({ year, winners, votesBulk, selectedConstituencyNumber, onSelectConstituency, voteType, filteredStates }: ConstituencyMapProps) {
     const [geoData, setGeoData] = useState<GeoFeatureCollection | null>(null);
     const [stateGeoData, setStateGeoData] = useState<StateGeoFeatureCollection | null>(null);
     const [hoveredNumber, setHoveredNumber] = useState<number | null>(null);
@@ -230,12 +231,66 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
         return { bounds: boundsWithSize, paths: pathsData };
     }, [geoData]);
 
+    // Create lookup from constituency number to state name
+    const constituencyToState = useMemo(() => {
+        const map = new Map<number, string>();
+        paths.forEach(p => map.set(p.number, p.stateName));
+        return map;
+    }, [paths]);
+
     // Create a lookup map from constituency_number to vote distribution
     const votesBulkMap = useMemo(() => {
         const map = new Map<number, ConstituencyVotesBulkItem>();
         votesBulk.forEach(v => map.set(v.constituency_number, v));
         return map;
     }, [votesBulk]);
+
+    // Compute aggregated party percentages (filtered by selected states)
+    const partyPercentages = useMemo(() => {
+        const partyTotals = new Map<string, { votes: number; count: number }>();
+        let totalVotes = 0;
+
+        votesBulk.forEach(constituency => {
+            const stateName = constituencyToState.get(constituency.constituency_number);
+            // If states are filtered, skip constituencies not in filtered states
+            if (filteredStates && filteredStates.size > 0 && stateName && !filteredStates.has(stateName)) {
+                return;
+            }
+
+            constituency.parties.forEach(party => {
+                const votes = voteType === 'first' ? party.first_votes : party.second_votes;
+                const displayName = getPartyDisplayName(party.party_name, partyOpts);
+                const existing = partyTotals.get(displayName) || { votes: 0, count: 0 };
+                partyTotals.set(displayName, {
+                    votes: existing.votes + votes,
+                    count: existing.count + 1
+                });
+                totalVotes += votes;
+            });
+        });
+
+        // Convert to percentages and sort
+        const percentages: { party: string; percent: number; votes: number }[] = [];
+        partyTotals.forEach((data, party) => {
+            const percent = totalVotes > 0 ? (data.votes / totalVotes) * 100 : 0;
+            percentages.push({ party, percent, votes: data.votes });
+        });
+
+        // Sort by percentage descending
+        percentages.sort((a, b) => b.percent - a.percent);
+
+        // Take top 7 parties and group rest as "Other"
+        const top7 = percentages.slice(0, 7);
+        const others = percentages.slice(7);
+        const otherPercent = others.reduce((sum, p) => sum + p.percent, 0);
+        const otherVotes = others.reduce((sum, p) => sum + p.votes, 0);
+
+        if (otherPercent > 0) {
+            top7.push({ party: 'Other', percent: otherPercent, votes: otherVotes });
+        }
+
+        return top7;
+    }, [votesBulk, voteType, filteredStates, constituencyToState]);
 
     // City coordinates (lon, lat) and projected positions
     const cities = useMemo(() => {
@@ -324,25 +379,31 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
                     className="constituency-map-svg"
                 >
                     {/* Layer 1: Constituency fills */}
-                    {paths.map(({ number, path }) => {
+                    {paths.map(({ number, path, stateName }) => {
                         const winnerData = getWinnerByVoteType(number);
                         const fillColor = winnerData ? getPartyColor(winnerData.party, partyOpts) : '#ccc';
-                        // Map percentage to discrete opacity segments: 0.2, 0.4, 0.6, 0.8, 1.0
+                        // Map percentage to discrete opacity segments
                         const percent = winnerData?.percent || 0;
                         let baseOpacity = 0.6;
                         if (percent >= 40) baseOpacity = 0.8;
                         else if (percent >= 35) baseOpacity = 0.75;
                         else if (percent >= 30) baseOpacity = 0.7;
                         else if (percent >= 25) baseOpacity = 0.65;
+
                         const isSelected = selectedConstituencyNumber === number;
                         const isHovered = hoveredNumber === number;
+
+                        // Check if constituency should be greyed out
+                        const isFiltered = filteredStates && filteredStates.size > 0;
+                        const isInFilteredState = isFiltered && filteredStates.has(stateName);
+                        const isGreyedOut = isFiltered && !isInFilteredState;
 
                         return (
                             <path
                                 key={number}
                                 d={path}
-                                fill={fillColor}
-                                fillOpacity={isSelected || isHovered ? 0.85 : baseOpacity}
+                                fill={isGreyedOut ? '#d0d0d0' : fillColor}
+                                fillOpacity={isGreyedOut ? 0.4 : (isSelected || isHovered ? 0.85 : baseOpacity)}
                                 stroke="none"
                                 className={`constituency-path${isSelected ? ' selected' : ''}`}
                                 onMouseEnter={() => setHoveredNumber(number)}
@@ -502,19 +563,27 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
                 </div>
             )}
 
-            {/* Legend */}
-            <div className="constituency-map-legend">
-                <div className="constituency-map-legend-title">
-                    {voteType === 'first' ? 'Direct Winner by constituency (1st Vote)' : 'Party vote by constituency (2nd Vote)'}
+            {/* Compact Legend with dynamic percentages */}
+            <div className="constituency-map-legend compact">
+                <div className="constituency-map-legend-header">
+                    <span className="constituency-map-legend-title">
+                        {voteType === 'first' ? 'First Vote Share' : 'Second Vote Share'}
+                    </span>
+                    {filteredStates && filteredStates.size > 0 && (
+                        <span className="constituency-map-legend-filter-note">
+                            {filteredStates.size} state{filteredStates.size > 1 ? 's' : ''}
+                        </span>
+                    )}
                 </div>
-                <div className="constituency-map-legend-items">
-                    {LEGEND_PARTIES.map(({ key, label }) => (
-                        <div key={key} className="constituency-map-legend-item">
+                <div className="constituency-map-legend-grid">
+                    {partyPercentages.map(({ party, percent }) => (
+                        <div key={party} className="constituency-map-legend-item-compact">
                             <div
-                                className="constituency-map-legend-color"
-                                style={{ backgroundColor: getPartyColor(key, partyOpts) }}
+                                className="constituency-map-legend-dot"
+                                style={{ backgroundColor: party === 'Other' ? '#888' : getPartyColor(party, partyOpts) }}
                             />
-                            <span>{label}</span>
+                            <span className="constituency-map-legend-party-abbr">{party}</span>
+                            <span className="constituency-map-legend-pct">{percent.toFixed(1)}%</span>
                         </div>
                     ))}
                 </div>

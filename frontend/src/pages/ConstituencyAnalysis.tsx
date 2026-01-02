@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { MapPin, Vote, Users, TrendingUp, Award, AlertTriangle } from 'lucide-react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import { MapPin, TrendingUp, Award, AlertTriangle, ChevronLeft, ChevronRight, X, UserPlus, Check } from 'lucide-react';
 import { Autocomplete } from '../components/Autocomplete';
 import { ConstituencyMap } from '../components/ConstituencyMap';
 import {
@@ -18,6 +18,9 @@ interface ConstituencyAnalysisProps {
   year: number;
 }
 
+const CLOSEST_WINNERS_LIMIT = 50;
+const CLOSEST_WINNERS_PER_PAGE = 10;
+
 export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
   const [constituencyId, setConstituencyId] = useState(1);
   const [constituencyNumber, setConstituencyNumber] = useState<number | null>(null);
@@ -25,11 +28,17 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
   const [showSingleVotes, setShowSingleVotes] = useState(false);
   const [mapVoteType, setMapVoteType] = useState<'first' | 'second'>('first');
 
+  // State filter
+  const [selectedStates, setSelectedStates] = useState<Set<string>>(new Set());
+
+  // Pagination for closest winners
+  const [closestPage, setClosestPage] = useState(1);
+
   const { data: constituencyList, isLoading: loadingConstituencyList, error: constituencyListError } = useConstituencyList(year);
   const { data: overview, isLoading: loadingOverview } = useConstituencyOverview(constituencyId, year);
   const { data: winners } = useConstituencyWinners(year);
   const { data: votesBulk } = useConstituencyVotesBulk(year);
-  const { data: closest } = useClosestWinners(year, 10);
+  const { data: closest } = useClosestWinners(year, CLOSEST_WINNERS_LIMIT);
   const { data: lostMandates } = useDirectWithoutCoverage(year);
 
   // For Q7: Single votes
@@ -43,12 +52,42 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
   const winnersData = winners?.data ?? [];
   const getConstituencyLabel = (c: ConstituencyListItem) => `${c.number} — ${c.name} (${c.state_name})`;
 
+  // Extract unique states from constituency list
+  const uniqueStates = useMemo(() => {
+    const statesSet = new Set<string>();
+    constituencyItems.forEach(c => statesSet.add(c.state_name));
+    return Array.from(statesSet).sort();
+  }, [constituencyItems]);
+
+  // Toggle state filter
+  const toggleState = useCallback((state: string) => {
+    setSelectedStates(prev => {
+      const next = new Set(prev);
+      if (next.has(state)) next.delete(state);
+      else next.add(state);
+      return next;
+    });
+  }, []);
+
+  // Clear all state filters
+  const clearStateFilters = useCallback(() => {
+    setSelectedStates(new Set());
+  }, []);
+
   // Create lookup from number to item
   const numberToItem = useMemo(() => {
     const map = new Map<number, ConstituencyListItem>();
     constituencyItems.forEach(c => map.set(c.number, c));
     return map;
   }, [constituencyItems]);
+
+  // Closest winners pagination
+  const closestData = closest?.data ?? [];
+  const closestTotalPages = Math.ceil(closestData.length / CLOSEST_WINNERS_PER_PAGE);
+  const paginatedClosest = useMemo(() => {
+    const start = (closestPage - 1) * CLOSEST_WINNERS_PER_PAGE;
+    return closestData.slice(start, start + CLOSEST_WINNERS_PER_PAGE);
+  }, [closestData, closestPage]);
 
   const [didInitQuery, setDidInitQuery] = useState(false);
   useEffect(() => {
@@ -88,21 +127,19 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
               </h2>
               <div className="card-subtitle">Click a constituency to view details</div>
             </div>
-            <div className="map-vote-toggle">
-              <button
-                className={`vote-toggle-btn ${mapVoteType === 'first' ? 'active' : ''}`}
-                onClick={() => setMapVoteType('first')}
-              >
-                First Vote
-              </button>
-              <button
-                className={`vote-toggle-btn ${mapVoteType === 'second' ? 'active' : ''}`}
-                onClick={() => setMapVoteType('second')}
-              >
-                Second Vote
-              </button>
-            </div>
+            <button
+              className="vote-type-switch"
+              onClick={() => setMapVoteType(prev => prev === 'first' ? 'second' : 'first')}
+              title={mapVoteType === 'first' ? 'Switch to Second Vote' : 'Switch to First Vote'}
+            >
+              <span className={`vote-switch-label ${mapVoteType === 'first' ? 'active' : ''}`}>1st</span>
+              <span className="vote-switch-toggle">
+                <span className={`vote-switch-dot ${mapVoteType === 'second' ? 'right' : ''}`} />
+              </span>
+              <span className={`vote-switch-label ${mapVoteType === 'second' ? 'active' : ''}`}>2nd</span>
+            </button>
           </div>
+
           <ConstituencyMap
             year={year}
             winners={winnersData}
@@ -110,20 +147,18 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
             selectedConstituencyNumber={constituencyNumber}
             onSelectConstituency={handleMapSelect}
             voteType={mapVoteType}
+            filteredStates={selectedStates}
           />
         </div>
 
         {/* Details Panel */}
         <div className="constituency-details-panel">
           {/* Selector Card */}
-          <div className="card">
-            <div className="card-header">
-              <h2 className="card-title">Constituency Details</h2>
-            </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
+          <div className="card constituency-selector-card">
+            <div className="constituency-selector-row">
               <Autocomplete
                 id="constituency"
-                label="Search by number or name"
+                label=""
                 items={constituencyItems}
                 value={constituencyQuery}
                 onChange={setConstituencyQuery}
@@ -133,10 +168,35 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                   setConstituencyQuery(getConstituencyLabel(item));
                 }}
                 getItemLabel={getConstituencyLabel}
-                placeholder={loadingConstituencyList ? 'Loading…' : 'e.g. 75 or Berlin'}
+                placeholder={loadingConstituencyList ? 'Loading…' : 'Search constituency...'}
                 disabled={loadingConstituencyList}
               />
             </div>
+
+            {/* State Filter Chips */}
+            {uniqueStates.length > 0 && (
+              <div className="state-filter-inline">
+                <div className="state-filter-header">
+                  <span className="state-filter-label">Filter by Federal State - Click to filter (multi-select)</span>
+                  {selectedStates.size > 0 && (
+                    <button className="state-filter-clear" onClick={clearStateFilters}>
+                      <X size={12} /> Clear
+                    </button>
+                  )}
+                </div>
+                <div className="state-chips-container">
+                  {uniqueStates.map(state => (
+                    <button
+                      key={state}
+                      className={`state-chip ${selectedStates.has(state) ? 'active' : ''} ${selectedStates.size > 0 && !selectedStates.has(state) ? 'greyed' : ''}`}
+                      onClick={() => toggleState(state)}
+                    >
+                      {state}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {constituencyListError && (
               <div className="warning-box" style={{ marginTop: '0.75rem' }}>
                 <div className="warning-box-title">Could not load constituencies</div>
@@ -155,67 +215,81 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
             </div>
           ) : overview ? (
             <>
-              {/* Name and State Header */}
-              <div className="card">
-                <div className="constituency-name-header">
-                  <h3>{overview.constituency.name}</h3>
+              {/* Compact Overview Card */}
+              <div className="card constituency-overview-card">
+                {/* Header row */}
+                <div className="constituency-overview-header">
+                  <div className="constituency-overview-title">
+                    <span className="constituency-number">#{overview.constituency.number}</span>
+                    <h3>{overview.constituency.name}</h3>
+                  </div>
                   <span className="constituency-state-badge">{overview.constituency.state}</span>
                 </div>
 
-                <div className="stats-grid stats-grid-compact">
-                  <div className="stat-card stat-card-compact">
-                    <div className="stat-icon"><Users size={18} /></div>
-                    <div>
-                      <div className="stat-label">Turnout</div>
-                      <div className="stat-value">{overview.election_stats.turnout_percent?.toFixed(1)}%</div>
-                    </div>
+                {/* Stats row */}
+                <div className="constituency-stats-row">
+                  <div className="constituency-stat">
+                    <span className="constituency-stat-value">{overview.election_stats.turnout_percent?.toFixed(1)}%</span>
+                    <span className="constituency-stat-label">Turnout</span>
+                    {overview.comparison_to_2021 && (
+                      <span className={`constituency-stat-diff ${overview.comparison_to_2021.turnout_diff_pts >= 0 ? 'positive' : 'negative'}`}>
+                        {overview.comparison_to_2021.turnout_diff_pts > 0 ? '+' : ''}{overview.comparison_to_2021.turnout_diff_pts.toFixed(1)}pp
+                      </span>
+                    )}
                   </div>
-                  <div className="stat-card stat-card-compact">
-                    <div className="stat-icon"><Vote size={18} /></div>
-                    <div>
-                      <div className="stat-label">Voters</div>
-                      <div className="stat-value">{overview.election_stats.total_voters?.toLocaleString()}</div>
-                    </div>
+                  <div className="constituency-stat">
+                    <span className="constituency-stat-value">{overview.election_stats.total_voters?.toLocaleString()}</span>
+                    <span className="constituency-stat-label">Voters</span>
+                  </div>
+                  <div className="constituency-stat">
+                    <span className="constituency-stat-value">{overview.election_stats.valid_first?.toLocaleString() ?? '—'}</span>
+                    <span className="constituency-stat-label">Valid 1st</span>
+                  </div>
+                  <div className="constituency-stat">
+                    <span className="constituency-stat-value">{overview.election_stats.valid_second?.toLocaleString() ?? '—'}</span>
+                    <span className="constituency-stat-label">Valid 2nd</span>
                   </div>
                 </div>
 
-                {/* Winner */}
+                {/* Winner row */}
                 {overview.winner && (
-                  <div
-                    className="constituency-winner-card"
-                    style={{ borderLeftColor: getPartyColor(overview.winner.party_name, partyOpts) }}
-                  >
-                    <div className="constituency-winner-header">
-                      <span className="party-badge" style={partyBadgeStyle(overview.winner.party_name, partyOpts)}>
-                        {getPartyDisplayName(overview.winner.party_name, partyOpts)}
-                      </span>
-                      <span className={`seat-badge ${overview.winner.got_seat ? 'seat-direct' : 'seat-none'}`}>
-                        {overview.winner.got_seat ? 'Seat awarded' : 'No seat'}
-                      </span>
+                  <div className="constituency-winner-row">
+                    <div
+                      className="constituency-winner-indicator"
+                      style={{ backgroundColor: getPartyColor(overview.winner.party_name, partyOpts) }}
+                    />
+                    <div className="constituency-winner-info">
+                      <div className="constituency-winner-name-row">
+                        <span className="constituency-winner-name">{overview.winner.full_name}</span>
+                        <span className="party-badge party-badge-sm" style={partyBadgeStyle(overview.winner.party_name, partyOpts)}>
+                          {getPartyDisplayName(overview.winner.party_name, partyOpts)}
+                        </span>
+                      </div>
+                      <div className="constituency-winner-details">
+                        <span className="constituency-winner-votes">
+                          <strong>{overview.winner.first_votes?.toLocaleString()}</strong> votes ({overview.winner.percent_of_valid?.toFixed(1)}%)
+                        </span>
+                        <span className={`seat-badge-inline ${overview.winner.got_seat ? 'seat-yes' : 'seat-no'}`}>
+                          {overview.winner.got_seat ? '✓ Seat' : '✗ No seat'}
+                        </span>
+                      </div>
                     </div>
-                    <div className="constituency-winner-name">{overview.winner.full_name}</div>
-                    <div className="constituency-winner-votes">
-                      <strong>{overview.winner.first_votes?.toLocaleString()}</strong> votes
-                      ({overview.winner.percent_of_valid?.toFixed(1)}%)
-                    </div>
-                  </div>
-                )}
-
-                {/* Comparison to 2021 */}
-                {overview.comparison_to_2021 && (
-                  <div className="info-box" style={{ marginTop: '1rem' }}>
-                    <div className="info-box-title">
-                      <TrendingUp size={16} style={{ marginRight: '0.5rem' }} />
-                      vs 2021
-                    </div>
-                    <div className="info-box-text">
-                      Turnout: {overview.comparison_to_2021.turnout_diff_pts > 0 ? '+' : ''}
-                      {overview.comparison_to_2021.turnout_diff_pts.toFixed(1)} pts
-                      <br />
-                      Previous winner: {overview.comparison_to_2021.winner_2021}
-                      <br />
-                      {overview.comparison_to_2021.winner_changed ? '✓ Winner changed' : '○ Same winner'}
-                    </div>
+                    {overview.comparison_to_2021 && (
+                      <div className="constituency-comparison-badge">
+                        {overview.comparison_to_2021.winner_changed ? (
+                          <span className="comparison-changed">
+                            <UserPlus size={14} />
+                            Changed
+                          </span>
+                        ) : (
+                          <span className="comparison-same">
+                            <Check size={14} />
+                            Same
+                          </span>
+                        )}
+                        <span className="comparison-prev">2021: {overview.comparison_to_2021.winner_2021}</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -320,14 +394,16 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
       </div>
 
       {/* Closest Winners (Q6) */}
-      {closest && closest.data.length > 0 && (
+      {closestData.length > 0 && (
         <div className="card">
           <div className="card-header">
             <h2 className="card-title">
               <Award size={20} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
-              Closest Races (Top 10)
+              Closest Races
             </h2>
-            <div className="card-subtitle">Narrowest winning margins across all constituencies</div>
+            <div className="card-subtitle">
+              Showing {(closestPage - 1) * CLOSEST_WINNERS_PER_PAGE + 1}–{Math.min(closestPage * CLOSEST_WINNERS_PER_PAGE, closestData.length)} of {closestData.length} narrowest margins
+            </div>
           </div>
           <div className="table-container">
             <table>
@@ -341,7 +417,7 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                 </tr>
               </thead>
               <tbody>
-                {closest.data.map((race: ClosestWinnerItem) => (
+                {paginatedClosest.map((race: ClosestWinnerItem) => (
                   <tr
                     key={race.rank}
                     className="clickable-row"
@@ -380,6 +456,27 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
               </tbody>
             </table>
           </div>
+          {closestTotalPages > 1 && (
+            <div className="pagination-controls">
+              <button
+                className="pagination-btn"
+                onClick={() => setClosestPage(p => Math.max(1, p - 1))}
+                disabled={closestPage === 1}
+              >
+                <ChevronLeft size={16} /> Previous
+              </button>
+              <span className="pagination-info">
+                Page {closestPage} of {closestTotalPages}
+              </span>
+              <button
+                className="pagination-btn"
+                onClick={() => setClosestPage(p => Math.min(closestTotalPages, p + 1))}
+                disabled={closestPage === closestTotalPages}
+              >
+                Next <ChevronRight size={16} />
+              </button>
+            </div>
+          )}
         </div>
       )}
 
