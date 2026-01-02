@@ -592,7 +592,7 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                             onClick={() => handleMapSelect(item.constituency_number)}
                           >
                             <td>
-                              <span className="text-muted">#{item.constituency_number}</span> {item.constituency_name}
+                              <span className="text-muted">{item.constituency_number}</span> {item.constituency_name}
                             </td>
                             <td>{item.candidate_name}</td>
                             <td className="text-right">
@@ -652,7 +652,7 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                       onClick={() => handleMapSelect(mandate.constituency_number)}
                     >
                       <td>
-                        <span className="text-muted">#{mandate.constituency_number}</span> {mandate.constituency_name}
+                        <span className="text-muted">{mandate.constituency_number}</span> {mandate.constituency_name}
                       </td>
                       <td>{mandate.winner_name}</td>
                       <td>
