@@ -276,21 +276,46 @@ app.get('/api/constituency/:id/overview', ensureCache, async (req, res) => {
       [constituencyId, year]
     );
 
-    // 5. Comparison to 2021 (if available)
+    // 5. Comparison to 2021 (if available) - match by number first, then by name
     let comparison = null;
     if (year === 2025) {
+      const currentConstituency = constRes.rows[0];
+
+      // Try to find matching 2021 constituency by number first, then by name similarity
       const prevRes = await pool.query(
-        `SELECT ce2021.percent as turnout_percent,
+        `WITH matching_2021_constituency AS (
+           -- First try exact number match
+           SELECT c2021.id as constituency_id, 1 as match_priority
+           FROM constituencies c2021
+           JOIN constituency_elections ce2021 ON ce2021.constituency_id = c2021.id AND ce2021.year = 2021
+           WHERE c2021.number = $1
+           UNION ALL
+           -- Then try name match (ignoring minor differences)
+           SELECT c2021.id as constituency_id, 2 as match_priority
+           FROM constituencies c2021
+           JOIN constituency_elections ce2021 ON ce2021.constituency_id = c2021.id AND ce2021.year = 2021
+           WHERE c2021.name = $2
+             AND NOT EXISTS (
+               SELECT 1 FROM constituencies cx
+               JOIN constituency_elections cex ON cex.constituency_id = cx.id AND cex.year = 2021
+               WHERE cx.number = $1
+             )
+           ORDER BY match_priority
+           LIMIT 1
+         )
+         SELECT ce2021.percent as turnout_percent,
                 dc2021.person_id,
-                p2021.first_name || ' ' || p2021.last_name AS winner_2021
-         FROM constituency_elections ce2021
+                p2021.first_name || ' ' || p2021.last_name AS winner_2021,
+                c2021.name AS matched_constituency_name
+         FROM matching_2021_constituency m
+         JOIN constituencies c2021 ON c2021.id = m.constituency_id
+         JOIN constituency_elections ce2021 ON ce2021.constituency_id = c2021.id AND ce2021.year = 2021
          JOIN direct_candidacy dc2021 ON dc2021.constituency_id = ce2021.constituency_id
            AND dc2021.year = 2021
          JOIN persons p2021 ON p2021.id = dc2021.person_id
-         WHERE ce2021.constituency_id = $1 AND ce2021.year = 2021
          ORDER BY dc2021.first_votes DESC
          LIMIT 1`,
-        [constituencyId]
+        [currentConstituency.number, currentConstituency.name]
       );
 
       if (prevRes.rows.length > 0) {
