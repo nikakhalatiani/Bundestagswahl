@@ -1,3 +1,55 @@
+/**
+ * Ballot Generator
+ *
+ * Generates individual ballot records (first_votes and second_votes) from
+ * pre-aggregated election data, ensuring that counts match exactly.
+ *
+ * USAGE:
+ *
+ * 1. Generate all ballots for all years (default):
+ *    npx ts-node src/generateBallots.ts
+ *
+ * 2. Generate ballots for specific year only:
+ *    npx ts-node src/generateBallots.ts --year=2025
+ *
+ * 3. Generate ballots for specific constituency (by NUMBER, not database ID):
+ *    npx ts-node src/generateBallots.ts --year=2025 --constituency=63
+ *
+ * 4. Generate ballots for multiple constituencies (by NUMBER):
+ *    npx ts-node src/generateBallots.ts --year=2025 --constituencies=56,57,58
+ *
+ * 5. Generate ballots for specific state(s):
+ *    npx ts-node src/generateBallots.ts --year=2025 --state=1,5,9
+ *
+ * 6. Append to existing data (don't drop tables):
+ *    npx ts-node src/generateBallots.ts --year=2025 --constituency=9 --no-drop
+ *
+ * 7. Enable verification after generation:
+ *    npx ts-node src/generateBallots.ts --verify
+ *
+ * 8. Use logged tables (slower, but safer):
+ *    npx ts-node src/generateBallots.ts --logged
+ *
+ * OPTIONS:
+ *   --year=YYYY              Filter by election year
+ *   --constituency=N         Single constituency NUMBER (e.g., 63, not database ID)
+ *   --constituencies=N,N,N   Multiple constituency NUMBERS (comma-separated)
+ *   --state=N,N,N            State IDs (comma-separated)
+ *   --no-drop                Don't recreate tables (append mode)
+ *   --verify                 Run verification after generation
+ *   --logged                 Create logged tables (default: unlogged for speed)
+ *
+ * EXAMPLES:
+ *   # Generate only constituency 63 (Frankfurt/Oder) for 2025
+ *   npx ts-node src/generateBallots.ts --year=2025 --constituency=63
+ *
+ *   # Generate all Berlin constituencies (state_id=11)
+ *   npx ts-node src/generateBallots.ts --year=2025 --state=11
+ *
+ *   # Regenerate with verification
+ *   npx ts-node src/generateBallots.ts --year=2025 --verify
+ */
+
 import * as dotenv from "dotenv";
 import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -14,14 +66,44 @@ interface GenerationOptions {
   useUnloggedTables?: boolean;
   dropAndRecreateTables?: boolean;
   skipVerification?: boolean;
+  year?: number; // Filter by election year (default: all years)
+  constituencyNumbers?: number[]; // Filter by constituency NUMBERS (56, 57, 58...) - USER-FACING
+  stateIds?: number[]; // Filter by specific state IDs (default: all)
 }
 
+type ConstituencyMappingRow = { id: number; number: number; name: string };
+
 async function main() {
-  await generateBallots({
+  // Parse command-line arguments
+  const args = process.argv.slice(2);
+  const options: GenerationOptions = {
     useUnloggedTables: true,
     dropAndRecreateTables: true,
     skipVerification: true,
-  });
+  };
+
+  for (const arg of args) {
+    if (arg.startsWith('--year=')) {
+      options.year = parseInt(arg.split('=')[1]);
+    } else if (arg.startsWith('--constituency=')) {
+      const nums = arg.split('=')[1].split(',').map(Number);
+      options.constituencyNumbers = nums;
+    } else if (arg.startsWith('--constituencies=')) {
+      const nums = arg.split('=')[1].split(',').map(Number);
+      options.constituencyNumbers = nums;
+    } else if (arg.startsWith('--state=')) {
+      const ids = arg.split('=')[1].split(',').map(Number);
+      options.stateIds = ids;
+    } else if (arg === '--no-drop') {
+      options.dropAndRecreateTables = false;
+    } else if (arg === '--verify') {
+      options.skipVerification = false;
+    } else if (arg === '--logged') {
+      options.useUnloggedTables = false;
+    }
+  }
+
+  await generateBallots(options);
   await pool.end();
 }
 
@@ -30,12 +112,96 @@ async function generateBallots(options: GenerationOptions) {
     useUnloggedTables = true,
     dropAndRecreateTables = true,
     skipVerification = true,
+    year,
+    constituencyNumbers,
+    stateIds,
   } = options;
 
-  console.log("Starting ballot generation (all years)...");
+  // Validate and map constituency numbers to IDs
+  let constituencyIds: number[] | undefined;
+  if (constituencyNumbers && constituencyNumbers.length > 0) {
+    // If year is specified, filter constituencies by year (via direct_candidacy or constituency_elections)
+    // to handle cases where the same constituency number exists for different election years
+    let mappingQuery: string;
+    let queryParams: Array<number | number[]>;
+
+    if (year !== undefined) {
+      // Filter by year: only return constituencies that have candidates in that election year
+      mappingQuery = `
+        SELECT DISTINCT c.id, c.number, c.name
+        FROM constituencies c
+        JOIN direct_candidacy dc ON dc.constituency_id = c.id
+        WHERE c.number = ANY($1) AND dc.year = $2
+        ORDER BY c.number
+      `;
+      queryParams = [constituencyNumbers, year];
+    } else {
+      // No year filter: return all constituencies with those numbers (may include duplicates across years!)
+      mappingQuery = `
+        SELECT id, number, name
+        FROM constituencies
+        WHERE number = ANY($1)
+        ORDER BY number
+      `;
+      queryParams = [constituencyNumbers];
+    }
+
+    const mappingRes = await pool.query<ConstituencyMappingRow>(mappingQuery, queryParams);
+
+    if (mappingRes.rows.length === 0) {
+      console.error(`❌ Error: No constituencies found with numbers: ${constituencyNumbers.join(', ')}${year ? ` for year ${year}` : ''}`);
+      console.error(`   Valid constituency numbers range from 1-299 (use the "Number" column, not the database ID)`);
+      if (!year) {
+        console.error(`   💡 Tip: Specify --year=YYYY to avoid ambiguity with constituency numbers that changed between elections`);
+      }
+      process.exit(1);
+    }
+
+    if (mappingRes.rows.length < constituencyNumbers.length) {
+      const foundNumbers = mappingRes.rows.map((r) => r.number);
+      const missingNumbers = constituencyNumbers.filter(n => !foundNumbers.includes(n));
+      console.warn(`⚠️  Warning: Some constituency numbers not found: ${missingNumbers.join(', ')}${year ? ` for year ${year}` : ''}`);
+      console.warn(`   Will generate ballots for: ${foundNumbers.join(', ')}`);
+    }
+
+    // Check for duplicate constituency numbers (same number, different IDs)
+    const numberCounts = new Map<number, number>();
+    for (const row of mappingRes.rows) {
+      const count = numberCounts.get(row.number) || 0;
+      numberCounts.set(row.number, count + 1);
+    }
+    const duplicates = Array.from(numberCounts.entries()).filter(([_, count]) => count > 1);
+
+    if (duplicates.length > 0 && !year) {
+      const dupNumbers = duplicates.map(([num, _]) => num);
+      console.warn(`⚠️  Warning: Constituency numbers ${dupNumbers.join(', ')} exist in multiple election years`);
+      console.warn(`   Generating ballots for ALL matching constituencies. Specify --year=YYYY to disambiguate.`);
+      mappingRes.rows.forEach((r) => {
+        console.warn(`     - Constituency ${r.number}: "${r.name}" (id=${r.id})`);
+      });
+    }
+
+    constituencyIds = mappingRes.rows.map((r) => r.id);
+    console.log(`✓ Mapped constituency numbers ${constituencyNumbers.join(',')} → database IDs ${constituencyIds.join(',')}${year ? ` (year ${year})` : ''}`);
+  }
+
+  // Build filter description
+  let filterDesc = '';
+  if (year) filterDesc += ` year=${year}`;
+  if (constituencyNumbers) filterDesc += ` constituencies=${constituencyNumbers.join(',')}`;
+  if (stateIds) filterDesc += ` states=${stateIds.join(',')}`;
+
+  console.log(`Starting ballot generation${filterDesc || ' (all data)'}...`);
   const start = Date.now();
 
-  await db.execute(sql`SET LOCAL synchronous_commit = 'off';`);
+  // Optimize PostgreSQL for bulk loading
+  console.log('Optimizing database for bulk inserts...');
+  await Promise.all([
+    db.execute(sql.raw(`SET LOCAL synchronous_commit = 'off';`)),
+    db.execute(sql.raw(`SET LOCAL maintenance_work_mem = '1GB';`)),
+    db.execute(sql.raw(`SET LOCAL max_parallel_workers = 8;`)),
+    db.execute(sql.raw(`SET LOCAL max_parallel_workers_per_gather = 4;`))
+  ]);
 
   if (dropAndRecreateTables) {
     console.log("Dropping and recreating tables...");
@@ -50,11 +216,17 @@ async function generateBallots(options: GenerationOptions) {
     );
   }
 
-  console.log("\nGenerating first_votes...");
-  await insertFirstVotes();
+  // Generate first and second votes IN PARALLEL for better performance
+  console.log("\nGenerating first_votes and second_votes (parallel)...");
+  const startVotes = Date.now();
 
-  console.log("\nGenerating second_votes...");
-  await insertSecondVotes();
+  await Promise.all([
+    insertFirstVotes(year, constituencyIds, stateIds),
+    insertSecondVotes(year, constituencyIds, stateIds)
+  ]);
+
+  const votesDur = ((Date.now() - startVotes) / 1000).toFixed(1);
+  console.log(`✓ Both vote types generated in ${votesDur}s (parallel execution)`);
 
   console.log("\nRecreating indexes and foreign keys...");
   await recreateIndexesAndFKs();
@@ -106,8 +278,34 @@ async function recreateSecondVotesTable(unlogged: boolean) {
  * Uses correct schema names:
  *   direct_candidacy(person_id, year, first_votes)
  *   first_votes(year, direct_person_id)
+ *
+ * Supports filtering by year, constituency IDs, or state IDs
  */
-async function insertFirstVotes() {
+async function insertFirstVotes(
+  year?: number,
+  constituencyIds?: number[],
+  stateIds?: number[]
+) {
+  // Build WHERE clause filters
+  const filters: string[] = [
+    'dc.first_votes IS NOT NULL',
+    'dc.first_votes::bigint > 0'
+  ];
+
+  if (year !== undefined) {
+    filters.push(`dc.year = ${year}`);
+  }
+
+  if (constituencyIds && constituencyIds.length > 0) {
+    filters.push(`dc.constituency_id IN (${constituencyIds.join(',')})`);
+  }
+
+  if (stateIds && stateIds.length > 0) {
+    filters.push(`dc.constituency_id IN (SELECT id FROM constituencies WHERE state_id IN (${stateIds.join(',')}))`);
+  }
+
+  const whereClause = filters.join('\n        AND ');
+
   const query = `
     WITH src AS (
       SELECT
@@ -115,8 +313,7 @@ async function insertFirstVotes() {
         dc.person_id AS direct_person_id,
         dc.first_votes::bigint AS n
       FROM direct_candidacy dc
-      WHERE dc.first_votes IS NOT NULL
-        AND dc.first_votes::bigint > 0
+      WHERE ${whereClause}
     )
     INSERT INTO first_votes (
       year,
@@ -135,7 +332,11 @@ async function insertFirstVotes() {
   const t0 = Date.now();
   await db.execute(sql.raw(query));
   const dur = ((Date.now() - t0) / 1000).toFixed(1);
-  console.log(` -> first_votes inserted in ${dur}s`);
+
+  // Count inserted rows
+  const countRes = await db.execute(sql.raw(`SELECT COUNT(*) as cnt FROM first_votes WHERE ${year !== undefined ? `year = ${year}` : 'true'}`));
+  const count = countRes.rows[0]?.cnt || 0;
+  console.log(` -> ${Number(count).toLocaleString()} first_votes inserted in ${dur}s`);
 }
 
 /**
@@ -143,16 +344,41 @@ async function insertFirstVotes() {
  * Uses correct schema names:
  *   party_lists(id, vote_count)
  *   second_votes(party_list_id)
+ *
+ * Supports filtering by year, constituency IDs (via state), or state IDs
  */
-async function insertSecondVotes() {
+async function insertSecondVotes(
+  year?: number,
+  constituencyIds?: number[],
+  stateIds?: number[]
+) {
+  // Build WHERE clause filters
+  const filters: string[] = [
+    'pl.vote_count IS NOT NULL',
+    'pl.vote_count::bigint > 0'
+  ];
+
+  if (year !== undefined) {
+    filters.push(`pl.year = ${year}`);
+  }
+
+  // For second votes, filter by state (party lists are state-level)
+  if (stateIds && stateIds.length > 0) {
+    filters.push(`pl.state_id IN (${stateIds.join(',')})`);
+  } else if (constituencyIds && constituencyIds.length > 0) {
+    // If constituencies specified, get their states
+    filters.push(`pl.state_id IN (SELECT DISTINCT state_id FROM constituencies WHERE id IN (${constituencyIds.join(',')}))`);
+  }
+
+  const whereClause = filters.join('\n        AND ');
+
   const query = `
     WITH src AS (
       SELECT
         pl.id AS party_list_id,
         pl.vote_count::bigint AS n
       FROM party_lists pl
-      WHERE pl.vote_count IS NOT NULL
-        AND pl.vote_count::bigint > 0
+      WHERE ${whereClause}
     )
     INSERT INTO second_votes (
       party_list_id,
@@ -169,7 +395,11 @@ async function insertSecondVotes() {
   const t0 = Date.now();
   await db.execute(sql.raw(query));
   const dur = ((Date.now() - t0) / 1000).toFixed(1);
-  console.log(` -> second_votes inserted in ${dur}s`);
+
+  // Count inserted rows
+  const countRes = await db.execute(sql.raw(`SELECT COUNT(*) as cnt FROM second_votes`));
+  const count = countRes.rows[0]?.cnt || 0;
+  console.log(` -> ${Number(count).toLocaleString()} second_votes inserted in ${dur}s`);
 }
 
 /**
@@ -179,56 +409,68 @@ async function insertSecondVotes() {
  *   second_votes(party_list_id)         -> party_lists(id)
  */
 async function recreateIndexesAndFKs() {
-  await db.execute(
-    sql.raw(`
+  // Step 1: Create indexes in parallel (independent operations)
+  console.log('  Creating indexes...');
+  const idxStart = Date.now();
+  await Promise.all([
+    db.execute(sql.raw(`
       CREATE INDEX IF NOT EXISTS idx_first_votes_person_year
         ON first_votes(direct_person_id, year);
-    `)
-  );
-
-  await db.execute(
-    sql.raw(`
+    `)),
+    db.execute(sql.raw(`
       CREATE INDEX IF NOT EXISTS idx_second_votes_party_list
         ON second_votes(party_list_id);
-    `)
-  );
+    `))
+  ]);
+  const idxDur = ((Date.now() - idxStart) / 1000).toFixed(1);
+  console.log(`  ✓ Indexes created in ${idxDur}s`);
 
-  // Add constraints as NOT VALID (faster), then validate
-  await db.execute(
-    sql.raw(`
+  // Step 2: Add constraints as NOT VALID (parallel)
+  console.log('  Adding foreign key constraints...');
+  const fkStart = Date.now();
+  await Promise.all([
+    db.execute(sql.raw(`
+      ALTER TABLE first_votes
+        DROP CONSTRAINT IF EXISTS fk_first_vote_direct_cand;
+    `)),
+    db.execute(sql.raw(`
+      ALTER TABLE second_votes
+        DROP CONSTRAINT IF EXISTS fk_second_vote_party_list;
+    `))
+  ]);
+
+  await Promise.all([
+    db.execute(sql.raw(`
       ALTER TABLE first_votes
         ADD CONSTRAINT fk_first_vote_direct_cand
         FOREIGN KEY (direct_person_id, year)
         REFERENCES direct_candidacy(person_id, year)
         ON DELETE CASCADE
         NOT VALID;
-    `)
-  );
-
-  await db.execute(
-    sql.raw(`
+    `)),
+    db.execute(sql.raw(`
       ALTER TABLE second_votes
         ADD CONSTRAINT fk_second_vote_party_list
         FOREIGN KEY (party_list_id)
         REFERENCES party_lists(id)
         ON DELETE CASCADE
         NOT VALID;
-    `)
-  );
+    `))
+  ]);
 
-  await db.execute(
-    sql.raw(`
+  // Step 3: Validate constraints in parallel
+  await Promise.all([
+    db.execute(sql.raw(`
       ALTER TABLE first_votes
         VALIDATE CONSTRAINT fk_first_vote_direct_cand;
-    `)
-  );
-
-  await db.execute(
-    sql.raw(`
+    `)),
+    db.execute(sql.raw(`
       ALTER TABLE second_votes
         VALIDATE CONSTRAINT fk_second_vote_party_list;
-    `)
-  );
+    `))
+  ]);
+  const fkDur = ((Date.now() - fkStart) / 1000).toFixed(1);
+  console.log(`  ✓ Foreign keys added and validated in ${fkDur}s`);
 }
 
 /**

@@ -168,17 +168,17 @@ export const constituencyPartyVotes = pgTable("constituency_party_votes", {
 );
 
 
-export const firstVotes = pgTable("first_votes",{
-    id: serial("id").primaryKey(),
-    year: integer("year")
-      .notNull(),
-    direct_person_id: integer("direct_person_id")
-      .notNull(),
-    is_valid: boolean("is_valid").default(true).notNull(),
-    created_at: date("created_at").defaultNow(),
-  },
+export const firstVotes = pgTable("first_votes", {
+  id: serial("id").primaryKey(),
+  year: integer("year")
+    .notNull(),
+  direct_person_id: integer("direct_person_id")
+    .notNull(),
+  is_valid: boolean("is_valid").default(true).notNull(),
+  created_at: date("created_at").defaultNow(),
+},
   (table) => [
-  foreignKey({
+    foreignKey({
       columns: [table.direct_person_id, table.year],
       foreignColumns: [
         directCandidacy.person_id,
@@ -187,21 +187,117 @@ export const firstVotes = pgTable("first_votes",{
       name: "fk_first_vote_direct_cand",
     }),
   ]
-  
+
 );
 
-export const secondVotes = pgTable("second_votes",{
-    id: serial("id").primaryKey(),
-    // each Zweitstimme is for a party list in some state
-    party_list_id: integer("party_list_id")
-      .notNull()
-      .references(() => partyLists.id, { onDelete: "cascade" }),
-    is_valid: boolean("is_valid").default(true).notNull(),
-    created_at: date("created_at").defaultNow(),
-  },
+export const secondVotes = pgTable("second_votes", {
+  id: serial("id").primaryKey(),
+  // each second vote is for a party list in some state
+  party_list_id: integer("party_list_id")
+    .notNull()
+    .references(() => partyLists.id, { onDelete: "cascade" }),
+  is_valid: boolean("is_valid").default(true).notNull(),
+  created_at: date("created_at").defaultNow(),
+},
   // (t) => [
   //   index("second_votes_party_idx").on(t.party_list_id),
   // ]
+);
+
+// ---------- Cache Tables for Seat Allocation Results ----------
+
+// Cache for seat allocation results (630 seats per year)
+export const seatAllocationCache = pgTable("seat_allocation_cache", {
+  id: serial("id").primaryKey(),
+  year: integer("year")
+    .notNull()
+    .references(() => elections.year, { onDelete: "cascade" }),
+  person_id: integer("person_id")
+    .notNull()
+    .references(() => persons.id, { onDelete: "cascade" }),
+  party_id: integer("party_id")
+    .notNull()
+    .references(() => parties.id, { onDelete: "cascade" }),
+  state_id: integer("state_id")
+    .notNull()
+    .references(() => states.id, { onDelete: "cascade" }),
+  seat_type: varchar("seat_type", { length: 50 }).notNull(),
+  constituency_name: varchar("constituency_name", { length: 150 }),
+  list_position: doublePrecision("list_position"),
+  percent_first_votes: doublePrecision("percent_first_votes"),
+  created_at: date("created_at").defaultNow(),
+},
+  (table) => [
+    unique().on(table.year, table.person_id),
+    index("idx_seat_cache_year").on(table.year),
+    index("idx_seat_cache_party").on(table.party_id, table.year),
+    index("idx_seat_cache_state").on(table.state_id, table.year),
+    index("idx_seat_cache_type").on(table.seat_type, table.year),
+  ]
+);
+
+// Cache for party summary (10-15 rows per year)
+export const partySummaryCache = pgTable("party_summary_cache", {
+  id: serial("id").primaryKey(),
+  year: integer("year")
+    .notNull()
+    .references(() => elections.year, { onDelete: "cascade" }),
+  party_id: integer("party_id")
+    .notNull()
+    .references(() => parties.id, { onDelete: "cascade" }),
+  second_votes: doublePrecision("second_votes").notNull(),
+  percent_second_votes: doublePrecision("percent_second_votes").notNull(),
+  direct_mandates: integer("direct_mandates").notNull().default(0),
+  minority_party: boolean("minority_party").notNull().default(false),
+  in_bundestag: boolean("in_bundestag").notNull().default(false),
+  created_at: date("created_at").defaultNow(),
+},
+  (table) => [
+    unique().on(table.year, table.party_id),
+    index("idx_party_summary_year").on(table.year),
+    index("idx_party_summary_bundestag").on(table.year, table.in_bundestag),
+  ]
+);
+
+// Cache for federal distribution (10-15 rows per year)
+export const federalDistributionCache = pgTable("federal_distribution_cache", {
+  id: serial("id").primaryKey(),
+  year: integer("year")
+    .notNull()
+    .references(() => elections.year, { onDelete: "cascade" }),
+  party_id: integer("party_id")
+    .notNull()
+    .references(() => parties.id, { onDelete: "cascade" }),
+  seats: integer("seats").notNull(),
+  created_at: date("created_at").defaultNow(),
+},
+  (table) => [
+    unique().on(table.year, table.party_id),
+    index("idx_federal_dist_year").on(table.year),
+  ]
+);
+
+// Cache for state distribution (150-200 rows per year)
+export const stateDistributionCache = pgTable("state_distribution_cache", {
+  id: serial("id").primaryKey(),
+  year: integer("year")
+    .notNull()
+    .references(() => elections.year, { onDelete: "cascade" }),
+  party_id: integer("party_id")
+    .notNull()
+    .references(() => parties.id, { onDelete: "cascade" }),
+  state_id: integer("state_id")
+    .notNull()
+    .references(() => states.id, { onDelete: "cascade" }),
+  seats: integer("seats").notNull(),
+  created_at: date("created_at").defaultNow(),
+},
+  (table) => [
+    unique().on(table.year, table.party_id, table.state_id),
+    index("idx_state_dist_year").on(table.year),
+    index("idx_state_dist_party").on(table.party_id, table.year),
+    index("idx_state_dist_state").on(table.state_id, table.year),
+  ]
 );
 
 // ---------- Index Helpers ---------- Later

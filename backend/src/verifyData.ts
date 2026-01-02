@@ -1,6 +1,18 @@
 import dbModule from "./db"; // must export { pool, disconnect }
 const { pool, disconnect } = dbModule;
 
+type CountRow = { cnt: number };
+type StateRow = { id: number; abbr: string; name: string };
+type PartyRow = { id: number; short_name: string; long_name: string };
+type ElectionRow = { year: number; date: string };
+type ConstituencyRow = { id: number; number: number; name: string; state: string };
+type PersonRow = { id: number; first_name: string; last_name: string; birth_year: number | null; profession: string | null };
+type PartyListRow = { id: number; year: number; state: string; party: string; vote_count: number };
+type DirectCandidacyRow = { person_id: number; first_name: string; last_name: string; party: string; constituency: string; year: number; first_votes: number | null };
+type PartyListCandidacyRow = { person_id: number; first_name: string; last_name: string; party: string; list_position: number | null; year: number };
+type ConstituencyElectionRow = { bridge_id: number; year: number; constituency: string; eligible_voters: number | null; total_voters: number | null };
+type ConstituencyPartyVotesRow = { year: number; state: string; party: string; vote_type: number; votes: number | string };
+
 async function main() {
   console.log("=== DATABASE OVERVIEW (Counts + Samples) ===\n");
 
@@ -19,7 +31,7 @@ async function main() {
 
   // 1️⃣ Row counts for all tables
   for (const table of tables) {
-    const res = await pool.query(`SELECT COUNT(*)::int AS cnt FROM ${table}`);
+    const res = await pool.query<CountRow>(`SELECT COUNT(*)::int AS cnt FROM ${table}`);
     console.log(`✓ ${table.padEnd(28)}: ${res.rows[0].cnt.toLocaleString()}`);
   }
 
@@ -27,26 +39,24 @@ async function main() {
 
   // 2️⃣ States
   console.log("→ States:");
-  const states = await pool.query(`SELECT id, abbr, name FROM states ORDER BY id LIMIT 5`);
+  const states = await pool.query<StateRow>(`SELECT id, abbr, name FROM states ORDER BY id LIMIT 5`);
   if (states.rowCount === 0) console.log("  (No rows)");
-  states.rows.forEach((r: any) => console.log(`  [${r.id}] ${r.abbr} - ${r.name}`));
+  states.rows.forEach((r) => console.log(`  [${r.id}] ${r.abbr} - ${r.name}`));
 
   // 3️⃣ Parties
   console.log("\n→ Parties:");
-  const parties = await pool.query(`SELECT id, short_name, long_name FROM parties ORDER BY id LIMIT 5`);
+  const parties = await pool.query<PartyRow>(`SELECT id, short_name, long_name FROM parties ORDER BY id LIMIT 5`);
   if (parties.rowCount === 0) console.log("  (No rows)");
-  parties.rows.forEach((r: any) => console.log(`  [${r.id}] ${r.short_name}: ${r.long_name}`));
+  parties.rows.forEach((r) => console.log(`  [${r.id}] ${r.short_name}: ${r.long_name}`));
 
   // 4️⃣ Elections
   console.log("\n→ Elections:");
-  const elections = await pool.query(`SELECT year, date FROM elections ORDER BY year`);
-  elections.rows.forEach((r: any) =>
-    console.log(`  🗳 ${r.year} (${r.date})`)
-  );
+  const elections = await pool.query<ElectionRow>(`SELECT year, date FROM elections ORDER BY year`);
+  elections.rows.forEach((r) => console.log(`  🗳 ${r.year} (${r.date})`));
 
   // 5️⃣ Constituencies
   console.log("\n→ Constituencies:");
-  const constituencies = await pool.query(`
+  const constituencies = await pool.query<ConstituencyRow>(`
     SELECT c.id, c.number, c.name, s.abbr AS state
     FROM constituencies c
     JOIN states s ON c.state_id = s.id
@@ -54,26 +64,24 @@ async function main() {
     LIMIT 5
   `);
   if (constituencies.rowCount === 0) console.log("  (No rows)");
-  constituencies.rows.forEach((c: any) =>
-    console.log(`  ${c.number}: ${c.name} [${c.state}]`)
-  );
+  constituencies.rows.forEach((c) => console.log(`  ${c.number}: ${c.name} [${c.state}]`));
 
   // 6️⃣ Persons (candidates)
   console.log("\n→ Persons:");
-  const persons = await pool.query(`
+  const persons = await pool.query<PersonRow>(`
     SELECT id, first_name, last_name, birth_year, profession
     FROM persons
     ORDER BY id
     LIMIT 5
   `);
   if (persons.rowCount === 0) console.log("  (No rows)");
-  persons.rows.forEach((p: any) =>
+  persons.rows.forEach((p) =>
     console.log(`  [${p.id}] ${p.first_name} ${p.last_name} (${p.birth_year}) – ${p.profession}`)
   );
 
   // 7️⃣ Party Lists
   console.log("\n→ Party Lists:");
-  const partyLists = await pool.query(`
+  const partyLists = await pool.query<PartyListRow>(`
     SELECT pl.id, e.year, s.abbr AS state, p.short_name AS party, pl.vote_count
     FROM party_lists pl
     JOIN parties p ON pl.party_id = p.id
@@ -83,13 +91,13 @@ async function main() {
     LIMIT 5
   `);
   if (partyLists.rowCount === 0) console.log("  (No rows)");
-  partyLists.rows.forEach((r: any) =>
+  partyLists.rows.forEach((r) =>
     console.log(`  [${r.id}] ${r.year} – ${r.state}/${r.party} = ${r.vote_count}`)
   );
 
   // 8️⃣ Direct Candidacy
   console.log("\n→ Direct Candidacy:");
-  const direct = await pool.query(`
+  const direct = await pool.query<DirectCandidacyRow>(`
     SELECT 
       dc.person_id, p.first_name, p.last_name,
       pa.short_name AS party,
@@ -104,7 +112,7 @@ async function main() {
     LIMIT 5
   `);
   if (direct.rowCount === 0) console.log("  (No rows)");
-  direct.rows.forEach((r: any) =>
+  direct.rows.forEach((r) =>
     console.log(
       `  ${r.first_name} ${r.last_name} (${r.party}) – ${r.constituency} ${r.year}: ${r.first_votes}`
     )
@@ -112,7 +120,7 @@ async function main() {
 
   // 9️⃣ Party List Candidacy
   console.log("\n→ Party List Candidacy:");
-  const listCand = await pool.query(`
+  const listCand = await pool.query<PartyListCandidacyRow>(`
     SELECT
       plc.person_id, p.first_name, p.last_name,
       pa.short_name AS party,
@@ -126,7 +134,7 @@ async function main() {
     LIMIT 5
   `);
   if (listCand.rowCount === 0) console.log("  (No rows)");
-  listCand.rows.forEach((r: any) =>
+  listCand.rows.forEach((r) =>
     console.log(
       `  ${r.first_name} ${r.last_name} (${r.party}) ${r.year} at position ${r.list_position}`
     )
@@ -134,7 +142,7 @@ async function main() {
 
   // 🔟 Constituency Elections
   console.log("\n→ Constituency Elections:");
-  const constElect = await pool.query(`
+  const constElect = await pool.query<ConstituencyElectionRow>(`
     SELECT ce.bridge_id, e.year, c.name AS constituency, ce.eligible_voters, ce.total_voters
     FROM constituency_elections ce
     JOIN constituencies c ON ce.constituency_id = c.id
@@ -143,7 +151,7 @@ async function main() {
     LIMIT 5
   `);
   if (constElect.rowCount === 0) console.log("  (No rows)");
-  constElect.rows.forEach((r: any) =>
+  constElect.rows.forEach((r) =>
     console.log(
       `  ${r.year} – ${r.constituency}: ${r.total_voters}/${r.eligible_voters} voters`
     )
@@ -151,7 +159,7 @@ async function main() {
 
   // 1️⃣1️⃣ Constituency Party Votes
   console.log("\n→ Constituency Party Votes:");
-  const constVotes = await pool.query(`
+  const constVotes = await pool.query<ConstituencyPartyVotesRow>(`
     SELECT 
       e.year, s.abbr AS state, pa.short_name AS party,
       cpv.vote_type, SUM(cpv.votes) AS votes
@@ -166,7 +174,7 @@ async function main() {
     LIMIT 10
   `);
   if (constVotes.rowCount === 0) console.log("  (No rows)");
-  constVotes.rows.forEach((r: any) =>
+  constVotes.rows.forEach((r) =>
     console.log(
       `  ${r.year} ${r.state} – ${r.party} (vote_type ${r.vote_type}): ${Number(
         r.votes

@@ -67,8 +67,8 @@ npx ts-node src/resetDB.ts
 # 2. Generate Drizzle migration files based on the schema
 npx drizzle-kit generate
 
-# 3. Push the schema to the database (creates tables)
-npx drizzle-kit push
+# 3. Apply migrations to the database
+npx drizzle-kit migrate
 
 # 4. Load all CSV data from data/ into the database
 npx ts-node src/loadCsvData.ts
@@ -87,7 +87,7 @@ npx ts-node src/verifyBallots.ts
 
 - `npx ts-node src/resetDB.ts`: Drops all existing tables in the database to start fresh.
 - `npx drizzle-kit generate`: Generates migration files from the TypeScript schema in `src/db/schema.ts`.
-- `npx drizzle-kit push`: Applies the schema to the PostgreSQL database, creating all necessary tables and constraints.
+- `npx drizzle-kit migrate`: Applies all pending migrations to the PostgreSQL database.
 - `npx ts-node src/loadCsvData.ts`: Imports data from CSV files in the `data/` directory into the database tables.
 - `npx ts-node src/showDB.ts`: Displays statistics about the loaded data, including row counts and sample entries.
 - `npx ts-node src/generateBallots.ts`: Generates individual ballot records (first and second votes) based on the loaded election data.

@@ -8,12 +8,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.90.12",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^7.11.0",
+    "recharts": "^3.6.0"
   },
   "devDependencies": {
-    "vite": "^5.0.0",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.0.0",
-    "typescript": "^5.0.4"
+    "typescript": "^5.0.4",
+    "vite": "^5.0.0"
   }
 }

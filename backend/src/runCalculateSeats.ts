@@ -11,10 +11,10 @@ const calculateSeatsModule = require('./calculateSeats');
     console.log('\n--- Party Summary ---');
     console.table(results.summary);
 
-    console.log('\n--- Federal Distribution (Oberverteilung) ---');
+    console.log('\n--- Federal Distribution ---');
     console.table(results.federalDistribution);
 
-    console.log('\n--- State Distribution (Unterverteilung) ---');
+    console.log('\n--- State Distribution ---');
     console.table(results.stateDistribution);
 
     console.log('\n--- Total Seats Allocated ---');
