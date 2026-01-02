@@ -82,6 +82,8 @@ export interface VoteDistributionItem {
     first_percent: number;
     second_votes: number;
     second_percent: number;
+    first_diff_pts: number | null;
+    second_diff_pts: number | null;
 }
 
 export interface ConstituencyOverviewResponse {
@@ -129,13 +131,15 @@ export interface ConstituencyWinnerItem {
 }
 
 export interface DirectWithoutCoverageItem {
+    constituency_number: number;
     constituency_name: string;
     winner_name: string;
     party_name: string;
     state_name: string;
     first_votes: number;
     percent_first_votes: number;
-    reason: string;
+    party_second_votes: number;
+    party_second_percent: number;
 }
 
 export interface DirectWithoutCoverageResponse {
@@ -193,4 +197,21 @@ export interface ConstituencyPartyVoteItem {
 export interface ConstituencyVotesBulkItem {
     constituency_number: number;
     parties: ConstituencyPartyVoteItem[];
+}
+// Near-misses for parties without constituency wins
+export interface NearMissItem {
+    party_rank: number;
+    constituency_number: number;
+    constituency_name: string;
+    state_name: string;
+    candidate_name: string;
+    party_name: string;
+    candidate_votes: number;
+    winner_votes: number;
+    margin_votes: number;
+    margin_percent: number;
+}
+
+export interface NearMissesResponse {
+    data: Record<string, NearMissItem[]>;
 }

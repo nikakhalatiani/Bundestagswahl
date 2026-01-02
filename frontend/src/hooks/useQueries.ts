@@ -9,6 +9,7 @@ import type {
   ConstituencyVotesBulkItem,
   DirectWithoutCoverageResponse,
   MemberItem,
+  NearMissesResponse,
   SeatDistributionItem,
   ElectionResultsResponse,
 } from '../types/api';
@@ -102,6 +103,15 @@ export function useClosestWinners(year: number, limit: number = 10) {
     queryKey: ['closestWinners', year, limit],
     queryFn: async () => {
       return fetchJson<ApiResponse<ClosestWinnerItem[]>>(`${API_BASE}/api/closest-winners?year=${year}&limit=${limit}`);
+    },
+  });
+}
+
+export function useNearMisses(year: number, limit: number = 5) {
+  return useQuery({
+    queryKey: ['nearMisses', year, limit],
+    queryFn: async () => {
+      return fetchJson<NearMissesResponse>(`${API_BASE}/api/near-misses?year=${year}&limit=${limit}`);
     },
   });
 }

@@ -257,13 +257,15 @@ app.get('/api/constituency/:id/overview', ensureCache, async (req, res) => {
       [constituencyId, year]
     );
 
-    // 4. Vote distribution by party
+    // 4. Vote distribution by party (including diff_percent_pts from 2021)
     const voteDistRes = await pool.query(
       `SELECT p.short_name AS party_name,
               COALESCE(cpv1.votes, 0) AS first_votes,
               COALESCE((cpv1.votes * 100.0 / NULLIF(ce.valid_first, 0)), 0) AS first_percent,
               COALESCE(cpv2.votes, 0) AS second_votes,
-              COALESCE((cpv2.votes * 100.0 / NULLIF(ce.valid_second, 0)), 0) AS second_percent
+              COALESCE((cpv2.votes * 100.0 / NULLIF(ce.valid_second, 0)), 0) AS second_percent,
+              cpv1.diff_percent_pts AS first_diff_pts,
+              cpv2.diff_percent_pts AS second_diff_pts
        FROM constituency_elections ce
        CROSS JOIN parties p
        LEFT JOIN constituency_party_votes cpv1 ON cpv1.bridge_id = ce.bridge_id
@@ -399,6 +401,7 @@ app.get('/api/direct-without-coverage', ensureCache, async (req, res) => {
 
   try {
     // Find constituency winners who did NOT get a seat (second-vote coverage)
+    // Also get their party's second votes in that constituency
     const result = await pool.query(
       `WITH ConstituencyWinners AS (
          SELECT
@@ -411,19 +414,23 @@ app.get('/api/direct-without-coverage', ensureCache, async (req, res) => {
          WHERE dc.year = $1 AND dc.first_votes IS NOT NULL AND dc.first_votes > 0
        )
        SELECT
+         c.number AS constituency_number,
          c.name AS constituency_name,
          p.first_name || ' ' || p.last_name AS winner_name,
          pt.short_name AS party_name,
          s.name AS state_name,
          cw.first_votes,
          (cw.first_votes * 100.0 / ce.valid_first) AS percent_first_votes,
-         'Exceeded party''s state allocation (second-vote coverage)' AS reason
+         COALESCE(cpv2.votes, 0) AS party_second_votes,
+         COALESCE((cpv2.votes * 100.0 / NULLIF(ce.valid_second, 0)), 0) AS party_second_percent
        FROM ConstituencyWinners cw
        JOIN constituencies c ON c.id = cw.constituency_id
        JOIN states s ON s.id = c.state_id
        JOIN persons p ON p.id = cw.person_id
        JOIN parties pt ON pt.id = cw.party_id
        JOIN constituency_elections ce ON ce.constituency_id = cw.constituency_id AND ce.year = $1
+       LEFT JOIN constituency_party_votes cpv2 ON cpv2.bridge_id = ce.bridge_id
+         AND cpv2.party_id = cw.party_id AND cpv2.vote_type = 2
        LEFT JOIN seat_allocation_cache sac ON sac.person_id = cw.person_id
          AND sac.year = $1
          AND sac.seat_type LIKE '%Direct Mandate%'
@@ -436,6 +443,93 @@ app.get('/api/direct-without-coverage', ensureCache, async (req, res) => {
       data: result.rows,
       total_lost_mandates: result.rows.length,
     });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'db_error' });
+  }
+});
+
+// Q6: Near-misses for parties without constituency wins
+app.get('/api/near-misses', async (req, res) => {
+  const year = req.query.year ? Number(req.query.year) : 2025;
+  const limit = req.query.limit ? Number(req.query.limit) : 10;
+
+  try {
+    const result = await pool.query(
+      `WITH RankedCandidates AS (
+         SELECT
+           c.id AS constituency_id,
+           c.number AS constituency_number,
+           c.name AS constituency_name,
+           s.name AS state_name,
+           dc.person_id,
+           dc.party_id,
+           dc.first_votes,
+           ROW_NUMBER() OVER (PARTITION BY dc.constituency_id ORDER BY dc.first_votes DESC, dc.person_id ASC) AS rank
+         FROM direct_candidacy dc
+         JOIN constituencies c ON c.id = dc.constituency_id
+         JOIN states s ON s.id = c.state_id
+         WHERE dc.year = $1 AND dc.first_votes IS NOT NULL AND dc.first_votes > 0
+       ),
+       Winners AS (SELECT * FROM RankedCandidates WHERE rank = 1),
+       -- Parties that have zero constituency wins
+       PartiesWithoutWins AS (
+         SELECT DISTINCT dc.party_id
+         FROM direct_candidacy dc
+         WHERE dc.year = $1 AND dc.first_votes IS NOT NULL
+         EXCEPT
+         SELECT DISTINCT party_id FROM Winners
+       ),
+       -- Get best performances for parties without wins (runner-ups)
+       NearMisses AS (
+         SELECT
+           rc.constituency_id,
+           rc.constituency_number,
+           rc.constituency_name,
+           rc.state_name,
+           rc.person_id,
+           rc.party_id,
+           rc.first_votes,
+           rc.rank,
+           w.first_votes AS winner_votes,
+           (w.first_votes - rc.first_votes) AS margin_votes,
+           ((w.first_votes - rc.first_votes) * 100.0 / ce.valid_first) AS margin_percent
+         FROM RankedCandidates rc
+         JOIN PartiesWithoutWins pww ON pww.party_id = rc.party_id
+         JOIN Winners w ON w.constituency_id = rc.constituency_id
+         JOIN constituency_elections ce ON ce.constituency_id = rc.constituency_id AND ce.year = $1
+         WHERE rc.rank > 1
+       )
+       SELECT
+         ROW_NUMBER() OVER (PARTITION BY nm.party_id ORDER BY nm.margin_votes ASC) AS party_rank,
+         nm.constituency_number,
+         nm.constituency_name,
+         nm.state_name,
+         p.first_name || ' ' || p.last_name AS candidate_name,
+         pt.short_name AS party_name,
+         nm.first_votes AS candidate_votes,
+         nm.winner_votes,
+         nm.margin_votes,
+         nm.margin_percent
+       FROM NearMisses nm
+       JOIN persons p ON p.id = nm.person_id
+       JOIN parties pt ON pt.id = nm.party_id
+       ORDER BY pt.short_name, nm.margin_votes ASC`,
+      [year]
+    );
+
+    // Group by party
+    const grouped: Record<string, typeof result.rows> = {};
+    for (const row of result.rows) {
+      if (!grouped[row.party_name]) {
+        grouped[row.party_name] = [];
+      }
+      if (grouped[row.party_name].length < limit) {
+        grouped[row.party_name].push(row);
+      }
+    }
+
+    res.json({ data: grouped });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'db_error' });

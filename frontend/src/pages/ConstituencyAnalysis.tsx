@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { MapPin, TrendingUp, Award, AlertTriangle, ChevronLeft, ChevronRight, X, UserPlus, Check } from 'lucide-react';
+import { MapPin, TrendingUp, TrendingDown, Award, AlertTriangle, ChevronLeft, ChevronRight, X, UserPlus, Check, Target } from 'lucide-react';
 import { Autocomplete } from '../components/Autocomplete';
 import { ConstituencyMap } from '../components/ConstituencyMap';
 import {
@@ -10,8 +10,9 @@ import {
   useConstituenciesSingle,
   useDirectWithoutCoverage,
   useConstituencyVotesBulk,
+  useNearMisses,
 } from '../hooks/useQueries';
-import type { ClosestWinnerItem, ConstituencyListItem, VoteDistributionItem } from '../types/api';
+import type { ClosestWinnerItem, ConstituencyListItem, VoteDistributionItem, NearMissItem } from '../types/api';
 import { getPartyDisplayName, getPartyColor, partyBadgeStyle } from '../utils/party';
 
 interface ConstituencyAnalysisProps {
@@ -40,6 +41,7 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
   const { data: votesBulk } = useConstituencyVotesBulk(year);
   const { data: closest } = useClosestWinners(year, CLOSEST_WINNERS_LIMIT);
   const { data: lostMandates } = useDirectWithoutCoverage(year);
+  const { data: nearMisses } = useNearMisses(year, 5);
 
   // For Q7: Single votes
   const singleVoteIds = useMemo(() => {
@@ -318,37 +320,79 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                     <div className="spinner"></div>
                   </div>
                 ) : singleConstituency ? (
-                  <div className="members-table-wrapper">
-                    <div className="members-table-scroll">
-                      <table className="table-compact members-table">
-                        <thead>
-                          <tr>
-                            <th>Candidate</th>
-                            <th className="text-right">Votes</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {singleConstituency.candidates.map((c, idx) => (
-                            <tr key={idx} className={c.is_winner ? 'row-highlight' : ''}>
-                              <td>
-                                {c.person_name}
-                                <br />
-                                <span
-                                  className="party-badge party-badge-sm"
-                                  style={partyBadgeStyle(c.party_name, partyOpts)}
-                                >
-                                  {getPartyDisplayName(c.party_name, partyOpts)}
-                                </span>
-                              </td>
-                              <td className="text-right">{c.vote_count?.toLocaleString()}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                  <div className="single-votes-container">
+                    {/* First Votes (Candidates) */}
+                    <div className="single-votes-section">
+                      <h4 className="single-votes-title">First Votes (Candidates)</h4>
+                      <div className="members-table-wrapper">
+                        <div className="members-table-scroll">
+                          <table className="table-compact members-table">
+                            <thead>
+                              <tr>
+                                <th>Candidate</th>
+                                <th className="text-right">Votes</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {singleConstituency.candidates.map((c, idx) => (
+                                <tr key={idx} className={c.is_winner ? 'row-highlight' : ''}>
+                                  <td>
+                                    {c.person_name}
+                                    <br />
+                                    <span
+                                      className="party-badge party-badge-sm"
+                                      style={partyBadgeStyle(c.party_name, partyOpts)}
+                                    >
+                                      {getPartyDisplayName(c.party_name, partyOpts)}
+                                    </span>
+                                  </td>
+                                  <td className="text-right">{c.vote_count?.toLocaleString()}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                        <div style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border-color)' }}>
+                          Total: {singleConstituency.total_first_votes?.toLocaleString()}
+                        </div>
+                      </div>
                     </div>
-                    <div style={{ padding: '1rem', fontSize: '0.8rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border-color)' }}>
-                      Total first votes: {singleConstituency.total_first_votes?.toLocaleString()}
-                    </div>
+                    {/* Second Votes (Parties) */}
+                    {singleConstituency.party_second_votes && singleConstituency.party_second_votes.length > 0 && (
+                      <div className="single-votes-section">
+                        <h4 className="single-votes-title">Second Votes (Party Lists)</h4>
+                        <div className="members-table-wrapper">
+                          <div className="members-table-scroll">
+                            <table className="table-compact members-table">
+                              <thead>
+                                <tr>
+                                  <th>Party</th>
+                                  <th className="text-right">Votes</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {singleConstituency.party_second_votes.map((p, idx) => (
+                                  <tr key={idx}>
+                                    <td>
+                                      <span
+                                        className="party-badge party-badge-sm"
+                                        style={partyBadgeStyle(p.party_name, partyOpts)}
+                                      >
+                                        {getPartyDisplayName(p.party_name, partyOpts)}
+                                      </span>
+                                    </td>
+                                    <td className="text-right">{p.vote_count?.toLocaleString()}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                          <div style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border-color)' }}>
+                            Total: {singleConstituency.total_second_votes?.toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="error">No single vote data available</div>
@@ -362,6 +406,7 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                           <th>Party</th>
                           <th className="text-right">First</th>
                           <th className="text-right">Second</th>
+                          {year === 2025 && <th className="text-right">vs 2021</th>}
                         </tr>
                       </thead>
                       <tbody>
@@ -387,6 +432,23 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                                 <br />
                                 <span className="text-muted">{party.second_percent?.toFixed(1)}%</span>
                               </td>
+                              {year === 2025 && (
+                                <td className="text-right">
+                                  {party.second_diff_pts != null ? (
+                                    <span className={`diff-indicator ${party.second_diff_pts > 0 ? 'positive' : party.second_diff_pts < 0 ? 'negative' : ''}`}>
+                                      {party.second_diff_pts > 0 ? (
+                                        <><TrendingUp size={12} /> +{party.second_diff_pts.toFixed(1)}pp</>
+                                      ) : party.second_diff_pts < 0 ? (
+                                        <><TrendingDown size={12} /> {party.second_diff_pts.toFixed(1)}pp</>
+                                      ) : (
+                                        <span className="text-muted">—</span>
+                                      )}
+                                    </span>
+                                  ) : (
+                                    <span className="text-muted">—</span>
+                                  )}
+                                </td>
+                              )}
                             </tr>
                           ))}
                       </tbody>
@@ -488,6 +550,68 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
         </div>
       )}
 
+      {/* Near Misses - Parties Without Constituency Wins (Q6 Extension)
+      {nearMisses && Object.keys(nearMisses.data || {}).length > 0 && (
+        <div className="card">
+          <div className="card-header">
+            <h2 className="card-title">
+              <Target size={20} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
+              Near Misses — Parties Without Constituency Wins
+            </h2>
+            <div className="card-subtitle">
+              Closest losses for parties that did not win any direct mandates
+            </div>
+          </div>
+          <div className="near-misses-grid">
+            {Object.entries(nearMisses.data).map(([partyName, items]) => (
+              <div key={partyName} className="near-miss-party-card">
+                <div className="near-miss-party-header">
+                  <span
+                    className="party-badge"
+                    style={partyBadgeStyle(partyName, partyOpts)}
+                  >
+                    {getPartyDisplayName(partyName, partyOpts)}
+                  </span>
+                  <span className="text-muted">{items.length} closest</span>
+                </div>
+                <div className="members-table-wrapper" style={{ marginTop: '0.5rem' }}>
+                  <div className="members-table-scroll">
+                    <table className="table-compact members-table">
+                      <thead>
+                        <tr>
+                          <th>Constituency</th>
+                          <th>Candidate</th>
+                          <th className="text-right">Margin</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {items.map((item: NearMissItem, idx: number) => (
+                          <tr
+                            key={idx}
+                            className="clickable-row"
+                            onClick={() => handleMapSelect(item.constituency_number)}
+                          >
+                            <td>
+                              <span className="text-muted">#{item.constituency_number}</span> {item.constituency_name}
+                            </td>
+                            <td>{item.candidate_name}</td>
+                            <td className="text-right">
+                              <strong>{item.margin_votes?.toLocaleString()}</strong>
+                              <br />
+                              <span className="text-muted">({item.margin_percent?.toFixed(2)}%)</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )} */}
+
       {/* Direct Winners Without Coverage (Q5) */}
       {lostMandates && lostMandates.total_lost_mandates > 0 && (
         <div className="card">
@@ -517,12 +641,19 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                     <th>Party</th>
                     <th>State</th>
                     <th className="text-right">First Votes</th>
+                    <th className="text-right">Party 2nd Votes</th>
                   </tr>
                 </thead>
                 <tbody>
                   {lostMandates.data.map((mandate, idx: number) => (
-                    <tr key={idx}>
-                      <td>{mandate.constituency_name}</td>
+                    <tr
+                      key={idx}
+                      className="clickable-row"
+                      onClick={() => handleMapSelect(mandate.constituency_number)}
+                    >
+                      <td>
+                        <span className="text-muted">#{mandate.constituency_number}</span> {mandate.constituency_name}
+                      </td>
                       <td>{mandate.winner_name}</td>
                       <td>
                         <span className="party-badge party-badge-sm" style={partyBadgeStyle(mandate.party_name, partyOpts)}>
@@ -534,6 +665,11 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                         {mandate.first_votes?.toLocaleString()}
                         <br />
                         <span className="text-muted">({mandate.percent_first_votes?.toFixed(1)}%)</span>
+                      </td>
+                      <td className="text-right">
+                        {mandate.party_second_votes?.toLocaleString()}
+                        <br />
+                        <span className="text-muted">({mandate.party_second_percent?.toFixed(1)}%)</span>
                       </td>
                     </tr>
                   ))}

@@ -3398,6 +3398,74 @@ tr:hover {
   white-space: nowrap;
 }
 
+/* Diff Indicator */
+.diff-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.diff-indicator.positive {
+  color: #16a34a;
+}
+
+.diff-indicator.negative {
+  color: #dc2626;
+}
+
+/* Near Misses Grid */
+.near-misses-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.near-miss-party-card {
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.near-miss-party-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+/* Single Votes Container */
+.single-votes-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.single-votes-section {
+  min-width: 0;
+}
+
+.single-votes-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+  padding-left: 0.25rem;
+}
+
+@media (max-width: 768px) {
+  .single-votes-container {
+    grid-template-columns: 1fr;
+  }
+
+  .near-misses-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Responsive adjustments */
 @media (max-width: 480px) {
   .constituency-stats-row {
