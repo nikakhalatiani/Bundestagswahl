@@ -1157,5 +1157,38 @@ app.get('/api/constituency-votes-bulk', async (req, res) => {
   }
 });
 
+// Bonus Analysis 1: Disposable Income Data
+app.get('/api/disposable-income', async (req, res) => {
+  const year = 2025;
+  try {
+    const result = await pool.query(
+      `WITH direct_candidate_rankings AS (
+         SELECT
+           dc.constituency_id,
+           dc.party_id,
+           ROW_NUMBER() OVER (PARTITION BY dc.constituency_id ORDER BY dc.first_votes DESC) as rn
+         FROM direct_candidacy dc
+         WHERE dc.year = $1
+       )
+       SELECT
+         c.id as constituency_id,
+         c.number as constituency_number,
+         c.name as constituency_name,
+         COALESCE(p.short_name, '') as party_name,
+         CAST(c.disposable_income AS FLOAT) as disposable_income
+       FROM constituencies c
+       JOIN constituency_elections ce ON ce.constituency_id = c.id AND ce.year = $1
+       LEFT JOIN direct_candidate_rankings r ON r.constituency_id = c.id AND r.rn = 1
+       LEFT JOIN parties p ON p.id = r.party_id
+       ORDER BY c.number`,
+      [year]
+    );
+    res.json({ data: result.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'db_error' });
+  }
+});
+
 const port = process.env.PORT ? Number(process.env.PORT) : 4000;
 app.listen(port, () => console.log(`Backend running at http://localhost:${port}`));
