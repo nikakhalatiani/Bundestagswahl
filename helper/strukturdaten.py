@@ -53,7 +53,7 @@ def main():
         print(f"Found columns:\n - Foreigners: '{col_foreigners}'\n - Income: '{col_income}'")
 
         # Prepare output
-        fieldnames = ['ConstituencyID', 'ForeignerPct', 'DisposableIncome']
+        fieldnames = ['ConstituencyNumber', 'ForeignerPct', 'DisposableIncome']
         writer = csv.DictWriter(f_out, fieldnames=fieldnames, delimiter=';')
         writer.writeheader()
 
@@ -72,7 +72,7 @@ def main():
                 continue
 
             writer.writerow({
-                'ConstituencyID': wk_id,
+                'ConstituencyNumber': wk_id,
                 'ForeignerPct': clean_decimal(row[col_foreigners]),
                 'DisposableIncome': clean_decimal(row[col_income])
             })

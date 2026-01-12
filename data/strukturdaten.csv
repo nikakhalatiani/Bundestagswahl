@@ -1,4 +1,4 @@
-ConstituencyID;ForeignerPct;DisposableIncome
+ConstituencyNumber;ForeignerPct;DisposableIncome
 1;9.8;23052
 2;9.4;26700
 3;8;24456
