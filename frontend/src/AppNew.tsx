@@ -6,6 +6,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Members } from './pages/Members';
 import { ConstituencyAnalysis } from './pages/ConstituencyAnalysis';
 import { IncomeMapPage } from './pages/IncomeMapPage';
+import { ForeignerAfdScatterPage } from './pages/ForeignerAfdScatterPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -57,6 +58,11 @@ function Navigation({ year, setYear }: { year: number; setYear: (y: number) => v
                 Income Analysis
               </Link>
             </li>
+            <li>
+              <Link to="/foreigner-afd" className={`nav-link ${location.pathname === '/foreigner-afd' ? 'active' : ''}`}>
+                Foreigner/AfD Analysis
+              </Link>
+            </li>
           </ul>
         </nav>
       </header>
@@ -76,6 +82,7 @@ function AppContent() {
           <Route path="/members" element={<Members year={year} />} />
           <Route path="/analysis" element={<ConstituencyAnalysis year={year} />} />
           <Route path="/income" element={<IncomeMapPage year={year} />} />
+          <Route path="/foreigner-afd" element={<ForeignerAfdScatterPage />} />
         </Routes>
       </main>
     </>
