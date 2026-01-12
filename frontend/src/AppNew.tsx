@@ -5,6 +5,7 @@ import logo from './assets/Bundesarchiv-Logo.svg';
 import { Dashboard } from './pages/Dashboard';
 import { Members } from './pages/Members';
 import { ConstituencyAnalysis } from './pages/ConstituencyAnalysis';
+import { IncomeMapPage } from './pages/IncomeMapPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -51,6 +52,11 @@ function Navigation({ year, setYear }: { year: number; setYear: (y: number) => v
                 Constituency analysis
               </Link>
             </li>
+            <li>
+              <Link to="/income" className={`nav-link ${location.pathname === '/income' ? 'active' : ''}`}>
+                Income Analysis
+              </Link>
+            </li>
           </ul>
         </nav>
       </header>
@@ -69,6 +75,7 @@ function AppContent() {
           <Route path="/" element={<Dashboard year={year} />} />
           <Route path="/members" element={<Members year={year} />} />
           <Route path="/analysis" element={<ConstituencyAnalysis year={year} />} />
+          <Route path="/income" element={<IncomeMapPage year={year} />} />
         </Routes>
       </main>
     </>
