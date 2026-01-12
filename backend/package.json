@@ -7,7 +7,7 @@
     "build": "tsc -p .",
     "start": "node dist/index.js",
     "drizzle:generate": "drizzle-kit generate",
-    "drizzle:migrate": "drizzle-kit migrate dev",
+    "drizzle:migrate": "drizzle-kit migrate",
     "load-csv": "ts-node src/loadCsvData.ts",
     "verify": "ts-node src/verifyData.ts",
     "generate-ballots": "ts-node src/generateBallots.ts",

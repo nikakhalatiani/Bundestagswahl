@@ -594,10 +594,12 @@ app.get('/api/closest-winners', async (req, res) => {
 app.get('/api/constituencies-single', async (req, res) => {
   const year = req.query.year ? Number(req.query.year) : 2025;
   const idsParam = req.query.ids as string;
+  // The frontend passes constituency "number" values (public numbers), not internal DB ids
   const ids = idsParam ? idsParam.split(',').map(Number) : null;
 
   try {
-    const idsFilter = ids ? 'AND dc.constituency_id = ANY($2)' : '';
+    // Filter by constituency number (c.number), not internal constituency id
+    const idsFilter = ids ? 'AND c.number = ANY($2)' : '';
     const params = ids ? [year, ids] : [year];
 
     // Query first votes (individual ballot counts)
@@ -624,7 +626,8 @@ app.get('/api/constituencies-single', async (req, res) => {
     );
 
     // Query second votes by state (party lists)
-    const stateIdsFilter = ids ? `AND c.id = ANY($2)` : '';
+    // Use constituency numbers in the EXISTS subquery to match states for second votes
+    const stateIdsFilter = ids ? `AND c.number = ANY($2)` : '';
     const secondVotesRes = await pool.query(
       `SELECT
          pl.state_id,
