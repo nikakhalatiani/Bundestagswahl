@@ -290,19 +290,15 @@ async function loadStructuralData() {
   const rows = readCsv<CsvRow>(path.join(DATA_DIR, "strukturdaten.csv"));
   await transactionalInsert("Structural Data", async (c) => {
     for (const r of rows) {
-      const cId = num(r["ConstituencyID"]);
-      if (cId === null) continue;
-
       await c.query(
-        `INSERT INTO structural_data (constituency_id, foreigner_pct, disposable_income)
-         VALUES ($1, $2, $3)
-         ON CONFLICT (constituency_id) DO UPDATE SET 
-            foreigner_pct=EXCLUDED.foreigner_pct,
-            disposable_income=EXCLUDED.disposable_income`,
+        `UPDATE constituencies
+         SET foreigner_pct = $1,
+             disposable_income = $2
+         WHERE number = $3`,
         [
-          cId,
           num(r["ForeignerPct"]),
-          num(r["DisposableIncome"])
+          num(r["DisposableIncome"]),
+          num(r["ConstituencyNumber"])
         ]
       );
     }

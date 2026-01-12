@@ -42,6 +42,8 @@ export const constituencies = pgTable("constituencies", {
   state_id: integer("state_id")
     .notNull()
     .references(() => states.id, { onDelete: "restrict", onUpdate: "cascade" }),
+  foreigner_pct: doublePrecision("foreigner_pct"),
+  disposable_income: doublePrecision("disposable_income"),
 },
   (table) => [
     unique().on(table.number, table.name),
@@ -299,15 +301,6 @@ export const stateDistributionCache = pgTable("state_distribution_cache", {
     index("idx_state_dist_state").on(table.state_id, table.year),
   ]
 );
-
-// ---------- Structural Data ----------
-export const structuralData = pgTable("structural_data", {
-  constituency_id: integer("constituency_id")
-    .primaryKey()
-    .references(() => constituencies.id, { onDelete: "cascade" }),
-  foreigner_pct: doublePrecision("foreigner_pct"),
-  disposable_income: doublePrecision("disposable_income"),
-});
 
 // ---------- Index Helpers ---------- Later
 // export const idx_constituency_state = index("constituencies_state_idx").on(

@@ -43,6 +43,13 @@
       "when": 1768222362047,
       "tag": "0005_flowery_dragon_man",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1768227218242,
+      "tag": "0006_tough_tenebrous",
+      "breakpoints": true
     }
   ]
 }
