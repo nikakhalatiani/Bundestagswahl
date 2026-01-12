@@ -1190,5 +1190,33 @@ app.get('/api/disposable-income', async (req, res) => {
   }
 });
 
+// Bonus Analysis 2: Foreigner % vs AfD Votes
+app.get('/api/foreigner-afd', async (req, res) => {
+  const year = 2025;
+  try {
+    const result = await pool.query(
+      `SELECT
+         c.number AS constituency_number,
+         c.name AS constituency_name,
+         CAST(c.foreigner_pct AS FLOAT) AS foreigner_pct,
+         CAST(cpv.percent AS FLOAT) AS afd_percent,
+         CAST(ce.total_voters AS INTEGER) AS total_voters
+       FROM constituencies c
+       JOIN constituency_elections ce ON ce.constituency_id = c.id
+       JOIN constituency_party_votes cpv ON cpv.bridge_id = ce.bridge_id
+       JOIN parties p ON p.id = cpv.party_id
+       WHERE ce.year = $1
+         AND cpv.vote_type = 2
+         AND p.short_name = 'AfD'
+       ORDER BY c.foreigner_pct ASC`,
+      [year]
+    );
+    res.json({ data: result.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'db_error' });
+  }
+});
+
 const port = process.env.PORT ? Number(process.env.PORT) : 4000;
 app.listen(port, () => console.log(`Backend running at http://localhost:${port}`));
