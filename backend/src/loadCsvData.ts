@@ -286,6 +286,29 @@ async function loadConstituencyPartyVotes() {
   });
 }
 
+async function loadStructuralData() {
+  const rows = readCsv<CsvRow>(path.join(DATA_DIR, "strukturdaten.csv"));
+  await transactionalInsert("Structural Data", async (c) => {
+    for (const r of rows) {
+      const cId = num(r["ConstituencyID"]);
+      if (cId === null) continue;
+
+      await c.query(
+        `INSERT INTO structural_data (constituency_id, foreigner_pct, disposable_income)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (constituency_id) DO UPDATE SET 
+            foreigner_pct=EXCLUDED.foreigner_pct,
+            disposable_income=EXCLUDED.disposable_income`,
+        [
+          cId,
+          num(r["ForeignerPct"]),
+          num(r["DisposableIncome"])
+        ]
+      );
+    }
+  });
+}
+
 // ---------------------------------------------------------------------
 //  Main pipeline
 // ---------------------------------------------------------------------
@@ -301,6 +324,7 @@ async function main() {
     await loadPartyListCandidacy();
     await loadConstituencyElections();
     await loadConstituencyPartyVotes();
+    await loadStructuralData();
     console.log("\n✅ All CSVs from data folder loaded successfully!");
   } finally {
     await disconnect();

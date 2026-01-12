@@ -300,6 +300,15 @@ export const stateDistributionCache = pgTable("state_distribution_cache", {
   ]
 );
 
+// ---------- Structural Data ----------
+export const structuralData = pgTable("structural_data", {
+  constituency_id: integer("constituency_id")
+    .primaryKey()
+    .references(() => constituencies.id, { onDelete: "cascade" }),
+  foreigner_pct: doublePrecision("foreigner_pct"),
+  disposable_income: doublePrecision("disposable_income"),
+});
+
 // ---------- Index Helpers ---------- Later
 // export const idx_constituency_state = index("constituencies_state_idx").on(
 //   constituencies.state_id
