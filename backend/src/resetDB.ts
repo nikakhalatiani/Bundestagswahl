@@ -13,8 +13,12 @@ async function dropAllTables() {
           -- drop all tables in the public schema
           FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public')
           LOOP
-              EXECUTE 'DROP TABLE IF EXISTS "' || r.tablename || '" CASCADE;';
+              EXECUTE 'DROP TABLE IF EXISTS "public"."' || r.tablename || '" CASCADE;';
           END LOOP;
+
+          -- drop drizzle schema if exists
+          EXECUTE 'DROP SCHEMA IF EXISTS "drizzle" CASCADE;';
+
       END $$;
     `);
     console.log("✅ All public tables dropped.");
