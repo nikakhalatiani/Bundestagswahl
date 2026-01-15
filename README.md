@@ -225,4 +225,3 @@ The seat allocation implements the German electoral system with the 2023 reform:
 4. **Unterverteilung**: Each party's federal seats distributed to states using Sainte-Laguë method
 5. **Zweitstimmendeckung** (2023 Reform): Direct mandates limited by Unterverteilung per state to prevent overhang mandates
 6. **List Seats**: Remaining seats filled from party lists, excluding direct mandate winners
-
