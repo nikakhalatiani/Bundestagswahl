@@ -7,6 +7,7 @@ import { Members } from './pages/Members';
 import { ConstituencyAnalysis } from './pages/ConstituencyAnalysis';
 import { IncomeMapPage } from './pages/IncomeMapPage';
 import { ForeignerAfdScatterPage } from './pages/ForeignerAfdScatterPage';
+import { PartyStrengthPage } from './pages/PartyStrengthPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -53,6 +54,11 @@ function Navigation({ year, setYear }: { year: number; setYear: (y: number) => v
                 Constituency analysis
               </Link>
             </li>
+            <li>
+              <Link to="/party-strength" className={`nav-link ${location.pathname === '/party-strength' ? 'active' : ''}`}>
+                Party strongholds
+              </Link>
+            </li>
             {year === 2025 && (
               <>
                 <li>
@@ -85,6 +91,7 @@ function AppContent() {
           <Route path="/" element={<Dashboard year={year} />} />
           <Route path="/members" element={<Members year={year} />} />
           <Route path="/analysis" element={<ConstituencyAnalysis year={year} />} />
+          <Route path="/party-strength" element={<PartyStrengthPage year={year} />} />
           <Route path="/income" element={<IncomeMapPage year={year} />} />
           <Route path="/foreigner-afd" element={<ForeignerAfdScatterPage />} />
         </Routes>
