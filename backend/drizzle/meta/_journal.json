@@ -50,6 +50,20 @@
       "when": 1768227218242,
       "tag": "0006_tough_tenebrous",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1768908894095,
+      "tag": "0007_parched_shatterstar",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1768910211846,
+      "tag": "0008_wandering_mister_sinister",
+      "breakpoints": true
     }
   ]
 }
