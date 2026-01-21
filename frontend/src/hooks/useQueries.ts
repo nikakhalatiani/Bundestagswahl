@@ -151,15 +151,16 @@ export function useConstituencyVotesBulk(year: number) {
 
 export function usePartyConstituencyStrength(
   year: number,
-  party: string,
+  party?: string,
   voteType: 1 | 2 = 2
 ) {
   return useQuery({
     queryKey: ['partyStrength', year, party, voteType],
     queryFn: async () => {
+      const partyValue = party ?? '';
       const params = new URLSearchParams({
         year: String(year),
-        party,
+        party: partyValue,
         vote_type: String(voteType),
       });
       return fetchJson<ApiResponse<PartyStrengthItem[]>>(`${API_BASE}/api/party-constituency-strength?${params.toString()}`);

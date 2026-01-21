@@ -10,6 +10,7 @@ import {
   useConstituenciesSingle,
   useDirectWithoutCoverage,
   useConstituencyVotesBulk,
+  usePartyConstituencyStrength,
 } from '../hooks/useQueries';
 import type { ClosestWinnerItem, ConstituencyListItem, VoteDistributionItem } from '../types/api';
 import { getPartyDisplayName, getPartyColor } from '../utils/party';
@@ -17,6 +18,7 @@ import { cn } from '../utils/cn';
 import { Card, CardHeader, CardSubtitle, CardTitle } from '../components/ui/Card';
 import { PartyBadge } from '../components/ui/PartyBadge';
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from '../components/ui/Table';
+import { ToggleSwitch } from '../components/ui/ToggleSwitch';
 
 interface ConstituencyAnalysisProps {
   year: number;
@@ -25,12 +27,40 @@ interface ConstituencyAnalysisProps {
 const CLOSEST_WINNERS_LIMIT = 50;
 const CLOSEST_WINNERS_PER_PAGE = 10;
 
+const STRONGHOLD_PARTIES = new Set(['CDU/CSU', 'SPD', 'AfD', 'GRÜNE', 'FDP', 'DIE LINKE', 'BSW']);
+
+function normalizePartyKey(raw: string): string {
+  return raw
+    .trim()
+    .toUpperCase()
+    .replace(/\./g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/Ü/g, 'U')
+    .replace(/Ö/g, 'O')
+    .replace(/Ä/g, 'A');
+}
+
+function toStrongholdParty(raw: string): string | null {
+  const normalized = normalizePartyKey(raw);
+  if (normalized === 'CDU/CSU' || normalized === 'CDU' || normalized === 'CSU') return 'CDU/CSU';
+  if (normalized === 'SPD') return 'SPD';
+  if (normalized === 'AFD') return 'AfD';
+  if (normalized === 'FDP') return 'FDP';
+  if (normalized === 'BSW' || normalized.includes('WAGENKNECHT')) return 'BSW';
+  if (normalized === 'DIE LINKE' || normalized === 'LINKE') return 'DIE LINKE';
+  if (normalized.includes('BUNDNIS 90') || normalized === 'GRUNE' || normalized === 'GRUENE' || normalized === 'GRUNEN') return 'GRÜNE';
+  return STRONGHOLD_PARTIES.has(raw) ? raw : null;
+}
+
 export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
   const [constituencyId, setConstituencyId] = useState(1);
   const [constituencyNumber, setConstituencyNumber] = useState<number | null>(null);
   const [constituencyQuery, setConstituencyQuery] = useState('');
   const [showSingleVotes, setShowSingleVotes] = useState(false);
   const [mapVoteType, setMapVoteType] = useState<'first' | 'second'>('first');
+  const [mapMode, setMapMode] = useState<'constituency' | 'strongholds'>('constituency');
+  const [strongholdView, setStrongholdView] = useState<'strength' | 'change'>('strength');
+  const [strongholdParty, setStrongholdParty] = useState<string | null>(null);
 
   // State filter
   const [selectedStates, setSelectedStates] = useState<Set<string>>(new Set());
@@ -44,6 +74,11 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
   const { data: votesBulk } = useConstituencyVotesBulk(year);
   const { data: closest } = useClosestWinners(year, CLOSEST_WINNERS_LIMIT);
   const { data: lostMandates } = useDirectWithoutCoverage(year);
+  const { data: strongholdData, isLoading: loadingStronghold, error: strongholdError } = usePartyConstituencyStrength(
+    year,
+    strongholdParty ?? undefined,
+    mapVoteType === 'first' ? 1 : 2
+  );
 
   // For Q7: Single votes
   const singleVoteIds = useMemo(() => {
@@ -104,6 +139,22 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
     setDidInitQuery(true);
   }, [constituencyId, constituencyItems, didInitQuery]);
 
+  useEffect(() => {
+    if (year !== 2025 && strongholdView === 'change') {
+      setStrongholdView('strength');
+    }
+  }, [year, strongholdView]);
+
+  useEffect(() => {
+    if (strongholdParty || !overview?.vote_distribution?.length) return;
+    const firstParty = overview.vote_distribution
+      .map((party) => toStrongholdParty(party.party_name))
+      .find((party): party is string => Boolean(party));
+    if (firstParty) {
+      setStrongholdParty(firstParty);
+    }
+  }, [overview, strongholdParty]);
+
   // Handle map click - find constituency by number
   const handleMapSelect = (number: number) => {
     const item = numberToItem.get(number);
@@ -116,6 +167,10 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
 
   const partyOpts = { combineCduCsu: true };
   const singleConstituency = singleVotesData?.data?.[0];
+  const strongholdItems = strongholdData?.data ?? [];
+  const mapVoteLabel = mapVoteType === 'first' ? 'First vote' : 'Second vote';
+  const changeDisabled = year !== 2025;
+  const showSingle = mapMode === 'constituency' && showSingleVotes;
 
   return (
     <div className="flex flex-col gap-6">
@@ -123,42 +178,80 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
       <div className="grid items-start gap-6 xl:grid-cols-2">
         {/* Map Card */}
         <Card className="overflow-hidden xl:sticky xl:top-[167px] xl:max-h-[110vh] xl:self-start xl:z-10">
-          <CardHeader className="flex items-start justify-between gap-4">
-            <div>
-              <CardTitle>
-                Constituency Map
-              </CardTitle>
-              <CardSubtitle>Click a constituency to view details</CardSubtitle>
+          <CardHeader className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <CardTitle>
+                  {mapMode === 'strongholds' ? 'Party Strongholds' : 'Constituency Map'}
+                </CardTitle>
+                <CardSubtitle>
+                  {mapMode === 'strongholds'
+                    ? strongholdView === 'change'
+                      ? `Change in ${mapVoteLabel.toLowerCase()} share since 2021`
+                      : `${mapVoteLabel} share by constituency`
+                    : 'Click a constituency to view details'}
+                </CardSubtitle>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <ToggleSwitch
+                  leftLabel="Constituency"
+                  rightLabel="Strongholds"
+                  value={mapMode === 'constituency' ? 'left' : 'right'}
+                  onChange={(value) => setMapMode(value === 'left' ? 'constituency' : 'strongholds')}
+                />
+                <ToggleSwitch
+                  leftLabel="1st"
+                  rightLabel="2nd"
+                  value={mapVoteType === 'first' ? 'left' : 'right'}
+                  onChange={(value) => setMapVoteType(value === 'left' ? 'first' : 'second')}
+                  leftTitle="Switch to First Vote"
+                  rightTitle="Switch to Second Vote"
+                />
+              </div>
             </div>
-            <button
-              className="flex items-center gap-2 rounded-full border border-line bg-surface-muted px-2 py-1.5 transition hover:border-ink-muted"
-              onClick={() => setMapVoteType(prev => prev === 'first' ? 'second' : 'first')}
-              title={mapVoteType === 'first' ? 'Switch to Second Vote' : 'Switch to First Vote'}
-              type="button"
-            >
-              <span className={cn('text-[0.75rem] font-semibold text-ink-faint', mapVoteType === 'first' && 'text-ink')}>1st</span>
-              <span className="relative h-[18px] w-8 rounded-full bg-surface-accent transition">
-                <span className={cn('absolute left-0.5 top-0.5 h-3.5 w-3.5 rounded-full bg-brand-black transition-[left]', mapVoteType === 'second' && 'left-4')} />
-              </span>
-              <span className={cn('text-[0.75rem] font-semibold text-ink-faint', mapVoteType === 'second' && 'text-ink')}>2nd</span>
-            </button>
+
           </CardHeader>
 
-          <ConstituencyMap
-            year={year}
-            winners={winnersData}
-            votesBulk={votesBulk?.data ?? []}
-            selectedConstituencyNumber={constituencyNumber}
-            onSelectConstituency={handleMapSelect}
-            voteType={mapVoteType}
-            filteredStates={selectedStates}
-          />
+          <div className="relative">
+            <ConstituencyMap
+              year={year}
+              winners={winnersData}
+              votesBulk={votesBulk?.data ?? []}
+              selectedConstituencyNumber={constituencyNumber}
+              onSelectConstituency={handleMapSelect}
+              voteType={mapVoteType}
+              filteredStates={mapMode === 'constituency' ? selectedStates : undefined}
+              mode={mapMode}
+              strongholdParty={strongholdParty ?? undefined}
+              strongholdData={strongholdItems}
+              strongholdView={strongholdView}
+            />
+            {mapMode === 'strongholds' && !strongholdParty && (
+              <div className="absolute inset-0 flex min-h-[420px] flex-col items-center justify-center gap-3 bg-white/90 px-8 py-10 text-center text-ink-muted">
+                <div className="text-base font-semibold text-ink">Select a party to view strongholds</div>
+                <div className="text-[0.85rem] text-ink-faint">
+                  Click a party in Vote Distribution to load the strongholds map.
+                </div>
+              </div>
+            )}
+            {mapMode === 'strongholds' && strongholdParty && strongholdError && (
+              <div className="absolute inset-0 m-4 flex items-center justify-center rounded border-l-4 border-[#ff9800] bg-[#fff3e0] p-4 text-sm text-[#f57c00]">
+                Unable to load party strongholds. Please try again.
+              </div>
+            )}
+            {mapMode === 'strongholds' && strongholdParty && loadingStronghold && strongholdItems.length === 0 && (
+              <div className="absolute inset-0 flex min-h-[420px] flex-col items-center justify-center gap-4 bg-white/90 px-8 py-10 text-ink-muted">
+                <div className="h-[50px] w-[50px] animate-[spin_0.8s_linear_infinite] rounded-full border-4 border-surface-accent border-t-brand-black"></div>
+                <div>Loading party map...</div>
+              </div>
+            )}
+          </div>
         </Card>
 
         {/* Details Panel */}
         <div className="flex flex-col gap-4">
           {/* Combined Selector + Overview Card */}
-          <Card className="p-3">
+          <Card className={cn('p-3', mapMode === 'strongholds' ? 'order-2' : 'order-1')}>
             <div>
               <Autocomplete
                 id="constituency"
@@ -323,24 +416,45 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
 
           {/* Vote Distribution with Toggle */}
           {overview && (
-            <Card>
-              <CardHeader className="flex items-center justify-between">
-                <CardTitle className="text-base">Vote Distribution</CardTitle>
-                <button
-                  className="flex items-center gap-2 rounded-full border border-line bg-surface-muted px-2 py-1.5 transition hover:border-ink-muted"
-                  onClick={() => setShowSingleVotes(!showSingleVotes)}
-                  title={showSingleVotes ? 'Show aggregated votes' : 'Show single ballot votes (Q7)'}
-                  type="button"
-                >
-                  <span className={cn('text-[0.75rem] font-semibold text-ink-faint', !showSingleVotes && 'text-ink')}>Aggregated</span>
-                  <span className="relative h-[18px] w-8 rounded-full bg-surface-accent transition">
-                    <span className={cn('absolute left-0.5 top-0.5 h-3.5 w-3.5 rounded-full bg-brand-black transition-[left]', showSingleVotes && 'left-4')}></span>
-                  </span>
-                  <span className={cn('text-[0.75rem] font-semibold text-ink-faint', showSingleVotes && 'text-ink')}>Single</span>
-                </button>
+            <Card className={mapMode === 'strongholds' ? 'order-1' : 'order-2'}>
+              <CardHeader className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">Vote Distribution</CardTitle>
+                  {mapMode === 'strongholds' ? (
+                    <ToggleSwitch
+                      leftLabel="Strength"
+                      rightLabel="Change"
+                      value={strongholdView === 'strength' ? 'left' : 'right'}
+                      onChange={(value) => {
+                        if (value === 'right' && changeDisabled) return;
+                        setStrongholdView(value === 'left' ? 'strength' : 'change');
+                      }}
+                      rightTitle={changeDisabled ? 'Change view is only available for 2025' : 'Show change since 2021'}
+                      disabledRight={changeDisabled}
+                    />
+                  ) : (
+                    <button
+                      className="flex items-center gap-2 rounded-full border border-line bg-surface-muted px-2 py-1.5 transition hover:border-ink-muted"
+                      onClick={() => setShowSingleVotes(!showSingleVotes)}
+                      title={showSingleVotes ? 'Show aggregated votes' : 'Show single ballot votes (Q7)'}
+                      type="button"
+                    >
+                      <span className={cn('text-[0.75rem] font-semibold text-ink-faint', !showSingleVotes && 'text-ink')}>Aggregated</span>
+                      <span className="relative h-[18px] w-8 rounded-full bg-surface-accent transition">
+                        <span className={cn('absolute left-0.5 top-0.5 h-3.5 w-3.5 rounded-full bg-brand-black transition-[left]', showSingleVotes && 'left-4')}></span>
+                      </span>
+                      <span className={cn('text-[0.75rem] font-semibold text-ink-faint', showSingleVotes && 'text-ink')}>Single</span>
+                    </button>
+                  )}
+                </div>
+                {mapMode === 'strongholds' && (
+                  <div className="text-[0.75rem] text-ink-faint">
+                    Tip: click a party row to update the strongholds map.
+                  </div>
+                )}
               </CardHeader>
 
-              {showSingleVotes ? (
+              {showSingle ? (
                 loadingSingleVotes ? (
                   <div className="flex flex-col items-center justify-center px-8 py-10">
                     <div className="h-[50px] w-[50px] animate-[spin_0.8s_linear_infinite] rounded-full border-4 border-surface-accent border-t-brand-black"></div>
@@ -432,8 +546,24 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                       <TableBody>
                         {overview.vote_distribution
                           .filter((party: VoteDistributionItem) => (party.first_votes || 0) > 0 || (party.second_votes || 0) > 0)
-                          .map((party: VoteDistributionItem, idx: number) => (
-                            <TableRow key={idx}>
+                          .map((party: VoteDistributionItem, idx: number) => {
+                            const strongholdValue = toStrongholdParty(party.party_name);
+                            const isSelectable = Boolean(strongholdValue);
+                            const isStrongholdSelected = strongholdValue === strongholdParty;
+
+                            return (
+                              <TableRow
+                                key={idx}
+                                className={cn(
+                                  isSelectable && 'cursor-pointer transition-colors hover:bg-surface-muted',
+                                  isStrongholdSelected && 'bg-surface-muted'
+                                )}
+                                onClick={() => {
+                                  if (!strongholdValue) return;
+                                  setStrongholdParty(strongholdValue);
+                                  setMapMode('strongholds');
+                                }}
+                              >
                               <TableCell>
                                 <PartyBadge party={party.party_name} combineCduCsu size="sm">
                                   {getPartyDisplayName(party.party_name, partyOpts)}
@@ -469,8 +599,9 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                                   )}
                                 </TableCell>
                               )}
-                            </TableRow>
-                          ))}
+                              </TableRow>
+                            );
+                          })}
                       </TableBody>
                     </Table>
                   </div>

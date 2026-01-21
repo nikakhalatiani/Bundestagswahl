@@ -7,7 +7,6 @@ import { Members } from './pages/Members';
 import { ConstituencyAnalysis } from './pages/ConstituencyAnalysis';
 import { IncomeMapPage } from './pages/IncomeMapPage';
 import { ForeignerAfdScatterPage } from './pages/ForeignerAfdScatterPage';
-import { PartyStrengthPage } from './pages/PartyStrengthPage';
 import { cn } from './utils/cn';
 import { Select } from './components/ui/Select';
 
@@ -78,17 +77,6 @@ function Navigation({ year, setYear }: { year: number; setYear: (y: number) => v
                   Constituency analysis
                 </Link>
             </li>
-            <li>
-                <Link
-                  to="/party-strength"
-                  className={cn(
-                    'block whitespace-nowrap border-b-[3px] border-transparent px-6 py-4 font-medium text-ink-muted transition hover:bg-surface-muted hover:text-ink',
-                    location.pathname === '/party-strength' && 'border-brand-gold bg-surface-muted font-semibold text-ink'
-                  )}
-                >
-                  Party strongholds
-                </Link>
-            </li>
             {year === 2025 && (
               <>
                 <li>
@@ -133,7 +121,6 @@ function AppContent() {
           <Route path="/" element={<Dashboard year={year} />} />
           <Route path="/members" element={<Members year={year} />} />
           <Route path="/analysis" element={<ConstituencyAnalysis year={year} />} />
-          <Route path="/party-strength" element={<PartyStrengthPage year={year} />} />
           <Route path="/income" element={<IncomeMapPage year={year} />} />
           <Route path="/foreigner-afd" element={<ForeignerAfdScatterPage />} />
         </Routes>

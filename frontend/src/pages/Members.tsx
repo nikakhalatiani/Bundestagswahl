@@ -594,9 +594,6 @@ export function Members({ year }: MembersProps) {
                                 {member.title ? `${member.title} ` : ''}
                                 <strong className="font-semibold">{member.last_name}</strong>, {member.first_name}
                               </div>
-                              {member.profession && (
-                                <div className="mt-0.5 max-w-[200px] truncate text-[0.8rem] text-ink-faint">{member.profession}</div>
-                              )}
                             </TableCell>
                             <TableCell>
                               <PartyBadge party={member.party_name} combineCduCsu>
@@ -668,8 +665,9 @@ export function Members({ year }: MembersProps) {
                                         <MapPin size={18} />
                                       </div>
                                       <div>
-                                        <div className="text-xs uppercase tracking-[0.5px] text-ink-muted">Region / Constituency</div>
-                                        <div className="font-medium text-ink">{member.constituency_name || member.state_name}</div>
+                                        <div className="text-xs uppercase tracking-[0.5px] text-ink-muted">Constituency / State</div>
+                                        <div className="font-medium text-ink">{member.constituency_name || '—'}</div>
+                                        <div className="text-[0.8rem] text-ink-faint">{member.state_name}</div>
                                       </div>
                                     </div>
 
@@ -693,9 +691,8 @@ export function Members({ year }: MembersProps) {
                                         <div>
                                           <div className="text-xs uppercase tracking-[0.5px] text-ink-muted">Personal Details</div>
                                           <div className="font-medium text-ink">
-                                            {member.gender ? `${member.gender.toLowerCase() === 'm' ? 'Male' : member.gender.toLowerCase() === 'w' ? 'Female' : member.gender}` : ''}
-                                            {member.gender && member.birth_year ? ', ' : ''}
-                                            {member.birth_year ? `${year - member.birth_year} years old` : ''}
+                                            {member.gender ? `${member.gender.toLowerCase() === 'm' ? 'Male' : member.gender.toLowerCase() === 'w' ? 'Female' : member.gender}` : '—'}
+                                            {member.birth_year ? ` · Born ${member.birth_year} (${year - member.birth_year})` : ''}
                                           </div>
                                         </div>
                                       </div>
