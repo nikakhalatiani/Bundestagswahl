@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 
 # ---------------------------------------------------------------------
-# Configuration (adjust filenames if yours differ)
+# Configuration (adjust filenames if differ)
 # ---------------------------------------------------------------------
 DATA_DIR = Path("data")
 RAW_DIR = DATA_DIR / "rawData"
@@ -417,7 +417,7 @@ def main():
 
     persons_new["PersonID"] = persons_new["PersonID"].astype(int)
 
-    # Final persons columns (no key in final unless you want it)
+    # Final persons columns
     persons_out_cols = [
         "PersonID",
         "Titel",

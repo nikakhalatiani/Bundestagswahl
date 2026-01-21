@@ -27,8 +27,6 @@ interface ConstituencyAnalysisProps {
 const CLOSEST_WINNERS_LIMIT = 50;
 const CLOSEST_WINNERS_PER_PAGE = 10;
 
-const STRONGHOLD_PARTIES = new Set(['CDU/CSU', 'SPD', 'AfD', 'GRÜNE', 'FDP', 'DIE LINKE', 'BSW']);
-
 function normalizePartyKey(raw: string): string {
   return raw
     .trim()
@@ -40,7 +38,7 @@ function normalizePartyKey(raw: string): string {
     .replace(/Ä/g, 'A');
 }
 
-function toStrongholdParty(raw: string): string | null {
+function toStrongholdParty(raw: string): string {
   const normalized = normalizePartyKey(raw);
   if (normalized === 'CDU/CSU' || normalized === 'CDU' || normalized === 'CSU') return 'CDU/CSU';
   if (normalized === 'SPD') return 'SPD';
@@ -49,7 +47,7 @@ function toStrongholdParty(raw: string): string | null {
   if (normalized === 'BSW' || normalized.includes('WAGENKNECHT')) return 'BSW';
   if (normalized === 'DIE LINKE' || normalized === 'LINKE') return 'DIE LINKE';
   if (normalized.includes('BUNDNIS 90') || normalized === 'GRUNE' || normalized === 'GRUENE' || normalized === 'GRUNEN') return 'GRÜNE';
-  return STRONGHOLD_PARTIES.has(raw) ? raw : null;
+  return raw.trim();
 }
 
 export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
@@ -548,18 +546,16 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                           .filter((party: VoteDistributionItem) => (party.first_votes || 0) > 0 || (party.second_votes || 0) > 0)
                           .map((party: VoteDistributionItem, idx: number) => {
                             const strongholdValue = toStrongholdParty(party.party_name);
-                            const isSelectable = Boolean(strongholdValue);
                             const isStrongholdSelected = strongholdValue === strongholdParty;
 
                             return (
                               <TableRow
                                 key={idx}
                                 className={cn(
-                                  isSelectable && 'cursor-pointer transition-colors hover:bg-surface-muted',
+                                  'cursor-pointer transition-colors hover:bg-surface-muted',
                                   isStrongholdSelected && 'bg-surface-muted'
                                 )}
                                 onClick={() => {
-                                  if (!strongholdValue) return;
                                   setStrongholdParty(strongholdValue);
                                   setMapMode('strongholds');
                                 }}

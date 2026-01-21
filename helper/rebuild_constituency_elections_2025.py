@@ -186,7 +186,7 @@ def main():
 
     enriched = base_for_merge.merge(sys_df, on=["Year", "Number"], how="left")
 
-    # Keep a temp copy if you want to inspect the full enrichment
+    # Keep a temp copy
     enriched.to_csv(ENRICHED_TMP, sep=";", index=False, encoding="utf-8-sig")
     print(f"💾 Saved temporary enriched file → {ENRICHED_TMP.name}")
 

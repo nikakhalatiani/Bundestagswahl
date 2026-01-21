@@ -13,7 +13,7 @@ candidate_files = [
     DATA_DIR / "candidates2025.csv",
 ]
 
-# Inputs from your other scripts
+# Inputs from  other scripts
 PERSON_MAPPING_CSV = OUTPUT_DIR / "person_mapping.csv"
 PARTY_ID_MAPPING_CSV = OUTPUT_DIR / "party_id_mapping.csv"
 PARTIES_MASTER_CSV = OUTPUT_DIR / "parties.csv"  # not strictly needed
@@ -50,7 +50,7 @@ def normalize_party(s: str) -> str:
     return s.lower()
 
 
-# Must match ALIASES from your party script
+# Must match ALIASES in party mapping script
 ALIASES = {
     "gesundheitsforschung": "verjüngungsforschung",
     "team todenhöfer": "die gerechtigkeitspartei - team todenhöfer",
@@ -218,7 +218,7 @@ try:
     party_list = pd.read_csv(PARTY_LIST, sep=";", encoding="utf-8-sig")
     party_list.columns = [c.strip() for c in party_list.columns]
 
-    # Load party_id_mapping (from your party script)
+    # Load party_id_mapping
     party_id_map = pd.read_csv(PARTY_ID_MAPPING_CSV, sep=";", encoding="utf-8-sig")
     party_id_map.columns = [c.strip() for c in party_id_map.columns]
 

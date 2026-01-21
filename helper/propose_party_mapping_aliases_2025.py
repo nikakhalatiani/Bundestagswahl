@@ -103,7 +103,7 @@ def main():
             continue
 
         # Create an alias row: use the exact encountered name as ShortName,
-        # and keep the same string as LongName (or you can keep canonical long name)
+        # and keep the same string as LongName
         alias_rows.append(
             {
                 "Year": YEAR,
