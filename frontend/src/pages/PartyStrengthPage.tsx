@@ -3,6 +3,7 @@ import { PartyStrengthMap } from '../components/PartyStrengthMap';
 import { usePartyConstituencyStrength } from '../hooks/useQueries';
 import { getPartyColor } from '../utils/party';
 import { Card, CardHeader, CardSubtitle, CardTitle } from '../components/ui/Card';
+import { Select } from '../components/ui/Select';
 import { cn } from '../utils/cn';
 
 interface PartyStrengthPageProps {
@@ -18,8 +19,6 @@ const PARTY_OPTIONS = [
   { value: 'DIE LINKE', label: 'Linke' },
   { value: 'BSW', label: 'BSW' },
 ];
-
-const selectBaseClass = `appearance-none rounded-md border border-line bg-surface-muted px-3 py-2 pr-8 text-[0.9rem] font-semibold text-ink transition hover:border-ink-faint hover:bg-surface-accent focus:outline-none focus:ring-2 focus:ring-black/10 bg-[url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e")] bg-no-repeat bg-[right_0.5rem_center] bg-[length:0.9em]`;
 
 export function PartyStrengthPage({ year }: PartyStrengthPageProps) {
   const [selectedParty, setSelectedParty] = useState('SPD');
@@ -56,8 +55,7 @@ export function PartyStrengthPage({ year }: PartyStrengthPageProps) {
           </button>
           <div className="flex flex-col gap-1">
             <label className="text-[0.85rem] font-semibold uppercase tracking-[0.03em] text-ink-muted">Party</label>
-            <select
-              className={selectBaseClass}
+            <Select
               value={selectedParty}
               onChange={(e) => setSelectedParty(e.target.value)}
               style={{ borderColor: partyColor }}
@@ -67,7 +65,7 @@ export function PartyStrengthPage({ year }: PartyStrengthPageProps) {
                   {option.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
       </Card>

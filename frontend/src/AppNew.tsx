@@ -9,6 +9,7 @@ import { IncomeMapPage } from './pages/IncomeMapPage';
 import { ForeignerAfdScatterPage } from './pages/ForeignerAfdScatterPage';
 import { PartyStrengthPage } from './pages/PartyStrengthPage';
 import { cn } from './utils/cn';
+import { Select } from './components/ui/Select';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,8 +19,6 @@ const queryClient = new QueryClient({
     },
   },
 });
-
-const selectBaseClass = `appearance-none rounded-md border border-line bg-surface-muted px-3 py-2 pr-8 text-[0.9rem] font-semibold text-ink transition hover:border-ink-faint hover:bg-surface-accent focus:border-brand-black focus:outline-none focus:ring-2 focus:ring-black/5 bg-[url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e")] bg-no-repeat bg-[right_0.5rem_center] bg-[length:0.9em]`;
 
 function Navigation({ year, setYear }: { year: number; setYear: (y: number) => void }) {
   const location = useLocation();
@@ -34,61 +33,61 @@ function Navigation({ year, setYear }: { year: number; setYear: (y: number) => v
           </div>
           <div className="flex items-center gap-2 px-4 py-3 text-[0.9rem] text-ink-muted">
             <label>Election year:</label>
-            <select
-              className={selectBaseClass}
+            <Select
+              className="font-semibold"
               value={year}
               onChange={(e) => setYear(Number(e.target.value))}
             >
               <option value={2021}>2021</option>
               <option value={2025}>2025</option>
-            </select>
+            </Select>
           </div>
         </div>
         <nav className="ml-[6px] border-b border-line bg-surface px-8">
           <ul className="flex list-none gap-2 overflow-x-auto">
             <li>
-              <Link
-                to="/"
-                className={cn(
-                  'block whitespace-nowrap border-b-[3px] border-transparent px-6 py-4 font-medium text-ink-muted transition hover:bg-surface-muted hover:text-ink',
-                  location.pathname === '/' && 'border-brand-gold font-semibold text-brand-black'
-                )}
-              >
-                Seat distribution
-              </Link>
+                <Link
+                  to="/"
+                  className={cn(
+                    'block whitespace-nowrap border-b-[3px] border-transparent px-6 py-4 font-medium text-ink-muted transition hover:bg-surface-muted hover:text-ink',
+                    location.pathname === '/' && 'border-brand-gold bg-surface-muted font-semibold text-ink'
+                  )}
+                >
+                  Seat distribution
+                </Link>
             </li>
             <li>
-              <Link
-                to="/members"
-                className={cn(
-                  'block whitespace-nowrap border-b-[3px] border-transparent px-6 py-4 font-medium text-ink-muted transition hover:bg-surface-muted hover:text-ink',
-                  location.pathname === '/members' && 'border-brand-gold font-semibold text-brand-black'
-                )}
-              >
-                Members
-              </Link>
+                <Link
+                  to="/members"
+                  className={cn(
+                    'block whitespace-nowrap border-b-[3px] border-transparent px-6 py-4 font-medium text-ink-muted transition hover:bg-surface-muted hover:text-ink',
+                    location.pathname === '/members' && 'border-brand-gold bg-surface-muted font-semibold text-ink'
+                  )}
+                >
+                  Members
+                </Link>
             </li>
             <li>
-              <Link
-                to="/analysis"
-                className={cn(
-                  'block whitespace-nowrap border-b-[3px] border-transparent px-6 py-4 font-medium text-ink-muted transition hover:bg-surface-muted hover:text-ink',
-                  location.pathname === '/analysis' && 'border-brand-gold font-semibold text-brand-black'
-                )}
-              >
-                Constituency analysis
-              </Link>
+                <Link
+                  to="/analysis"
+                  className={cn(
+                    'block whitespace-nowrap border-b-[3px] border-transparent px-6 py-4 font-medium text-ink-muted transition hover:bg-surface-muted hover:text-ink',
+                    location.pathname === '/analysis' && 'border-brand-gold bg-surface-muted font-semibold text-ink'
+                  )}
+                >
+                  Constituency analysis
+                </Link>
             </li>
             <li>
-              <Link
-                to="/party-strength"
-                className={cn(
-                  'block whitespace-nowrap border-b-[3px] border-transparent px-6 py-4 font-medium text-ink-muted transition hover:bg-surface-muted hover:text-ink',
-                  location.pathname === '/party-strength' && 'border-brand-gold font-semibold text-brand-black'
-                )}
-              >
-                Party strongholds
-              </Link>
+                <Link
+                  to="/party-strength"
+                  className={cn(
+                    'block whitespace-nowrap border-b-[3px] border-transparent px-6 py-4 font-medium text-ink-muted transition hover:bg-surface-muted hover:text-ink',
+                    location.pathname === '/party-strength' && 'border-brand-gold bg-surface-muted font-semibold text-ink'
+                  )}
+                >
+                  Party strongholds
+                </Link>
             </li>
             {year === 2025 && (
               <>
@@ -97,7 +96,7 @@ function Navigation({ year, setYear }: { year: number; setYear: (y: number) => v
                     to="/income"
                     className={cn(
                       'block whitespace-nowrap border-b-[3px] border-transparent px-6 py-4 font-medium text-ink-muted transition hover:bg-surface-muted hover:text-ink',
-                      location.pathname === '/income' && 'border-brand-gold font-semibold text-brand-black'
+                      location.pathname === '/income' && 'border-brand-gold bg-surface-muted font-semibold text-ink'
                     )}
                   >
                     Income Analysis
@@ -108,7 +107,7 @@ function Navigation({ year, setYear }: { year: number; setYear: (y: number) => v
                     to="/foreigner-afd"
                     className={cn(
                       'block whitespace-nowrap border-b-[3px] border-transparent px-6 py-4 font-medium text-ink-muted transition hover:bg-surface-muted hover:text-ink',
-                      location.pathname === '/foreigner-afd' && 'border-brand-gold font-semibold text-brand-black'
+                      location.pathname === '/foreigner-afd' && 'border-brand-gold bg-surface-muted font-semibold text-ink'
                     )}
                   >
                     Foreigner/AfD Analysis

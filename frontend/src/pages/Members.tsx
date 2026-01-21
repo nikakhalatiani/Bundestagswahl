@@ -7,6 +7,7 @@ import { cn } from '../utils/cn';
 import { Button } from '../components/ui/Button';
 import { Card, CardHeader, CardSubtitle, CardTitle } from '../components/ui/Card';
 import { PartyBadge } from '../components/ui/PartyBadge';
+import { Select } from '../components/ui/Select';
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from '../components/ui/Table';
 
 interface MembersProps {
@@ -295,8 +296,6 @@ export function Members({ year }: MembersProps) {
   }
 
   const hasActiveFilters = selectedParties.size > 0 || selectedStates.size > 0 || filterSeatType !== 'all' || filterGender !== 'all' || filterStatus !== 'all' || searchTerm;
-  const filterSelectClass = `appearance-none rounded-md border border-line bg-surface-muted px-3 py-2 pr-8 text-[0.9rem] text-ink transition hover:border-ink-faint hover:bg-surface-accent focus:border-ink focus:outline-none focus:ring-2 focus:ring-black/5 bg-[url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e")] bg-no-repeat bg-[right_0.5rem_center] bg-[length:0.9em]`;
-
   return (
     <div className="flex flex-col gap-6">
       {/* State Distribution - above main card */}
@@ -405,6 +404,53 @@ export function Members({ year }: MembersProps) {
       </div>
 
       <Card>
+        <CardHeader className="mb-4 pb-3">
+          <CardTitle className="text-xl">Party Distribution</CardTitle>
+          <CardSubtitle>Share of all members by party</CardSubtitle>
+        </CardHeader>
+        <div className="grid gap-2 md:grid-cols-2">
+          {Object.entries(allPartyStats)
+            .sort((a, b) => b[1] - a[1])
+            .map(([party, count]) => {
+              const pct = items.length > 0 ? (count / items.length) * 100 : 0;
+              const isSelected = selectedParties.has(party);
+              const isDimmed = selectedParties.size > 0 && !isSelected;
+              return (
+                <div
+                  key={party}
+                  className={cn(
+                    'cursor-pointer rounded-md border border-line bg-surface-muted px-3 py-2 transition hover:border-ink-faint',
+                    isSelected && 'border-ink shadow-[0_0_0_2px_rgba(0,0,0,0.08)]',
+                    isDimmed && 'opacity-[0.45]'
+                  )}
+                  onClick={() => toggleParty(party)}
+                >
+                  <div className="flex items-center gap-3 text-[0.85rem]">
+                    <span
+                      className="h-2.5 w-2.5 rounded-sm"
+                      style={{ backgroundColor: getPartyColor(party, partyOpts) }}
+                    />
+                    <span className="min-w-[70px] font-semibold text-ink">{party}</span>
+                    <div className="flex h-2 flex-1 overflow-hidden rounded-full bg-surface-accent">
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${pct}%`,
+                          backgroundColor: getPartyColor(party, partyOpts),
+                        }}
+                      />
+                    </div>
+                    <span className="text-[0.8rem] font-medium text-ink-muted">
+                      {count} ({pct.toFixed(1)}%)
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+        </div>
+      </Card>
+
+      <Card>
         <CardHeader className="flex items-start justify-between gap-4">
           <div className="flex flex-col gap-1">
             <CardTitle>Members of the Bundestag {year}</CardTitle>
@@ -432,38 +478,35 @@ export function Members({ year }: MembersProps) {
                   />
                 </div>
 
-                <select
+                <Select
                   value={filterSeatType}
                   onChange={(e) => { setFilterSeatType(e.target.value as 'all' | 'direct' | 'list'); setCurrentPage(1); }}
-                  className={filterSelectClass}
                   title="Filter by seat type"
                 >
                   <option value="all">All Mandates</option>
                   <option value="direct">Direct Only</option>
                   <option value="list">List Only</option>
-                </select>
+                </Select>
 
-                <select
+                <Select
                   value={filterGender}
                   onChange={(e) => { setFilterGender(e.target.value as 'all' | 'm' | 'w'); setCurrentPage(1); }}
-                  className={filterSelectClass}
                   title="Filter by gender"
                 >
                   <option value="all">All Genders</option>
                   <option value="m">Male</option>
                   <option value="w">Female</option>
-                </select>
+                </Select>
 
-                <select
+                <Select
                   value={filterStatus}
                   onChange={(e) => { setFilterStatus(e.target.value as 'all' | 'new' | 'reelected'); setCurrentPage(1); }}
-                  className={filterSelectClass}
                   title="Filter by member status"
                 >
                   <option value="all">All Members</option>
                   <option value="new">New Members</option>
                   <option value="reelected">Re-elected</option>
-                </select>
+                </Select>
               </div>
             </div>
 
@@ -722,49 +765,6 @@ export function Members({ year }: MembersProps) {
               </div>
             )}
           </div>
-        </div>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Party Distribution</CardTitle>
-          <CardSubtitle>Share of all members by party</CardSubtitle>
-        </CardHeader>
-        <div className="flex flex-col gap-3">
-          {Object.entries(allPartyStats)
-            .sort((a, b) => b[1] - a[1])
-            .map(([party, count]) => {
-              const pct = items.length > 0 ? (count / items.length) * 100 : 0;
-              const isSelected = selectedParties.has(party);
-              const isDimmed = selectedParties.size > 0 && !isSelected;
-              return (
-                <div
-                  key={party}
-                  className={cn(
-                    'cursor-pointer rounded-lg border border-line bg-surface-muted p-4 transition hover:border-ink-faint hover:shadow-sm',
-                    isSelected && 'border-ink shadow-[0_0_0_2px_rgba(0,0,0,0.1)]',
-                    isDimmed && 'opacity-[0.45]'
-                  )}
-                  onClick={() => toggleParty(party)}
-                >
-                  <div className="mb-3 h-2 overflow-hidden rounded bg-surface-accent">
-                    <div
-                      className="h-full rounded transition-[width] duration-300"
-                      style={{
-                        width: `${pct}%`,
-                        backgroundColor: getPartyColor(party, partyOpts)
-                      }}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <PartyBadge party={party} combineCduCsu>
-                      {party}
-                    </PartyBadge>
-                    <span className="text-[0.85rem] font-medium text-ink-muted">{count} ({pct.toFixed(1)}%)</span>
-                  </div>
-                </div>
-              );
-            })}
         </div>
       </Card>
     </div>

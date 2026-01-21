@@ -9,6 +9,7 @@ import { cn } from '../utils/cn';
 import { Card, CardHeader, CardSubtitle, CardTitle } from '../components/ui/Card';
 import { PartyBadge } from '../components/ui/PartyBadge';
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from '../components/ui/Table';
+import { Select } from '../components/ui/Select';
 
 const COALITION_DESCRIPTIONS: Record<string, string> = {
   'Grand Coalition': 'A coalition of the two largest parties, typically CDU/CSU and SPD. Historically the most common coalition in Germany.',
@@ -398,8 +399,6 @@ export function Dashboard({ year }: DashboardProps) {
     );
   }
 
-  const filterSelectClass = `appearance-none rounded-md border border-line bg-surface-muted px-3 py-2 pr-8 text-[0.9rem] text-ink transition hover:border-ink-faint hover:bg-surface-accent focus:border-ink focus:outline-none focus:ring-2 focus:ring-black/5 bg-[url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e")] bg-no-repeat bg-[right_0.5rem_center] bg-[length:0.9em]`;
-
   return (
     <div className="flex flex-col gap-6">
       {/* State Distribution - above main card */}
@@ -480,47 +479,44 @@ export function Dashboard({ year }: DashboardProps) {
                 </div>
 
                 {/* Filter dropdowns */}
-                <select
+                <Select
                   value={mandateFilter}
                   onChange={(e) => {
                     const val = e.target.value;
                     if (val === 'all' || val === 'direct' || val === 'list') setMandateFilter(val);
                   }}
-                  className={filterSelectClass}
                   title="Filter by mandate type"
                 >
                   <option value="all">All Mandates</option>
                   <option value="direct">Direct Only</option>
                   <option value="list">List Only</option>
-                </select>
+                </Select>
 
-                <select
+                <Select
                   value={genderFilter}
                   onChange={(e) => {
                     const val = e.target.value;
                     if (val === 'all' || val === 'm' || val === 'w') setGenderFilter(val);
                   }}
-                  className={filterSelectClass}
                   title="Filter by gender"
                 >
                   <option value="all">All Genders</option>
                   <option value="m">Male</option>
                   <option value="w">Female</option>
-                </select>
+                </Select>
 
-                <select
+                <Select
                   value={statusFilter}
                   onChange={(e) => {
                     const val = e.target.value;
                     if (val === 'all' || val === 'new' || val === 'reelected') setStatusFilter(val);
                   }}
-                  className={filterSelectClass}
                   title="Filter by member status"
                 >
                   <option value="all">All Members</option>
                   <option value="new">New Members</option>
                   <option value="reelected">Re-elected</option>
-                </select>
+                </Select>
               </div>
 
               {/* Filter summary */}
@@ -975,7 +971,7 @@ export function Dashboard({ year }: DashboardProps) {
               </CardSubtitle>
             </div>
             <div>
-              <select
+              <Select
                 value={comparisonMode}
                 onChange={(e) => {
                   const next = e.target.value;
@@ -983,12 +979,12 @@ export function Dashboard({ year }: DashboardProps) {
                     setComparisonMode(next);
                   }
                 }}
-                className={cn(filterSelectClass, 'min-w-[160px]')}
+                className="min-w-[160px] font-medium"
               >
                 <option value="seats">Seats</option>
                 <option value="first">First Votes</option>
                 <option value="second">Second Votes</option>
-              </select>
+              </Select>
             </div>
           </CardHeader>
 

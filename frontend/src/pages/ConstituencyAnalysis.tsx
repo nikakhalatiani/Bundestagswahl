@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import {TrendingUp, TrendingDown, Award, AlertTriangle, ChevronLeft, ChevronRight, X, UserPlus, Check } from 'lucide-react';
+import { TrendingUp, TrendingDown, Award, AlertTriangle, ChevronLeft, ChevronRight, X, UserPlus, Check } from 'lucide-react';
 import { Autocomplete } from '../components/Autocomplete';
 import { ConstituencyMap } from '../components/ConstituencyMap';
 import {
@@ -304,8 +304,8 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                       <button
                         key={state}
                         className={cn(
-                          'whitespace-nowrap rounded border border-line bg-surface-muted px-2 py-1 text-[0.65rem] font-medium text-ink-muted transition hover:border-ink-muted hover:bg-surface-accent',
-                          isSelected && 'border-brand-black bg-brand-black text-white',
+                          'whitespace-nowrap rounded border border-line px-2 py-1 text-[0.65rem] transition',
+                          isSelected && 'border-2 border-ink bg-surface-accent',
                           isGreyed && 'opacity-[0.4] hover:opacity-[0.7]'
                         )}
                         onClick={() => toggleState(state)}
