@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ZAxis } from 'recharts';
+import { Card, CardHeader, CardSubtitle, CardTitle } from '../components/ui/Card';
 
 type DataPoint = {
   constituency_number: number;
@@ -27,25 +28,24 @@ export const ForeignerAfdScatterPage: React.FC = () => {
   }, []);
 
   if (loading) return (
-    <div className="loading" style={{marginTop: '2rem'}}>
-        <div className="spinner"></div>
-        <div className="loading-text">Loading analysis data...</div>
+    <div className="mt-8 flex flex-col items-center justify-center px-8 py-16">
+        <div className="h-[50px] w-[50px] animate-[spin_0.8s_linear_infinite] rounded-full border-4 border-surface-accent border-t-brand-black"></div>
+        <div className="mt-4 font-medium text-ink-muted">Loading analysis data...</div>
     </div>
   );
 
   return (
-    <div style={{ padding: '1rem', maxWidth: '1200px', margin: '0 auto' }}>
-      <div className="card">
-        <div className="card-header">
+    <div className="mx-auto w-full max-w-[1200px]">
+      <Card>
+        <CardHeader>
            <div>
-              <h2 className="card-title">Foreigner % vs. AfD Votes</h2>
-              <div className="card-subtitle">
+              <CardTitle>Foreigner % vs. AfD Votes</CardTitle>
+              <CardSubtitle>
                  Each bubble represents a constituency. Bubble size represents total voters.
-              </div>
+              </CardSubtitle>
            </div>
-        </div>
-      
-        <div style={{ height: '600px', padding: '1rem' }}>
+        </CardHeader>
+        <div className="h-[600px] p-4">
             <ResponsiveContainer width="100%" height="100%">
             <ScatterChart margin={{ top: 20, right: 20, bottom: 40, left: 40 }}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -70,11 +70,11 @@ export const ForeignerAfdScatterPage: React.FC = () => {
                 if (active && payload && payload.length) {
                     const d = payload[0].payload;
                     return (
-                    <div style={{ backgroundColor: 'white', padding: '10px', border: '1px solid #ccc', borderRadius: '4px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
-                        <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{d.constituency_name} (WK {d.constituency_number})</div>
+                    <div className="rounded border border-[#ccc] bg-white p-2.5 shadow-[0_2px_5px_rgba(0,0,0,0.1)]">
+                        <div className="mb-1 font-bold">{d.constituency_name} (WK {d.constituency_number})</div>
                         <div>Foreigners: {d.foreigner_pct.toFixed(1)}%</div>
                         <div>AfD Votes: {d.afd_percent.toFixed(1)}%</div>
-                        <div style={{ fontSize: '0.85em', color: '#666', marginTop: '4px' }}>Voters: {d.total_voters.toLocaleString()}</div>
+                        <div className="mt-1 text-[0.85em] text-ink-muted">Voters: {d.total_voters.toLocaleString()}</div>
                     </div>
                     );
                 }
@@ -84,7 +84,7 @@ export const ForeignerAfdScatterPage: React.FC = () => {
             </ScatterChart>
             </ResponsiveContainer>
         </div>
-      </div>
+      </Card>
     </div>
   );
 };

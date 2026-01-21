@@ -206,12 +206,11 @@ export function PieChart({
     };
 
     return (
-        <div className="pie-chart-wrapper">
+        <div className="flex flex-col items-center gap-6 p-4">
             <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-                {slicesToRender.map((slice, i) => {
+                {slicesToRender.map((slice) => {
                     const isDimmed = hasActiveFilter && !slice.passesFilter;
                     const isHovered = hoveredParty === slice.displayName;
-                    const isSelected = selectedParties?.has(slice.displayName);
                     const sliceAngle = slice.endAngle - slice.startAngle;
                     const isFullCircle = slicesToRender.length === 1 && sliceAngle >= 359.99;
 
@@ -222,7 +221,7 @@ export function PieChart({
                         <g
                             key={slice.displayName}
                             style={{
-                                opacity: entering ? 0 : isDimmed ? 0.25 : 1,
+                                opacity: entering ? 0 : isDimmed ? 0.25 : isHovered ? 0.85 : 1,
                                 transform: (() => {
                                     let scale = entering ? 0.9 : 1;
                                     if (isHovered && !isDimmed) scale *= 1.03;
@@ -240,7 +239,6 @@ export function PieChart({
                                     fill={slice.color}
                                     stroke="#fff"
                                     strokeWidth={2}
-                                    className={`pie-slice ${isDimmed ? 'is-dimmed' : ''} ${isHovered ? 'is-hovered' : ''} ${isSelected ? 'is-selected' : ''}`}
                                     style={{ cursor: onToggleParty ? 'pointer' : 'default' }}
                                     onClick={() => handleSliceClick(slice.displayName)}
                                     onMouseEnter={() => setHoveredParty(slice.displayName)}
@@ -254,7 +252,6 @@ export function PieChart({
                                     fill={slice.color}
                                     stroke="#fff"
                                     strokeWidth={2}
-                                    className={`pie-slice ${isDimmed ? 'is-dimmed' : ''} ${isHovered ? 'is-hovered' : ''} ${isSelected ? 'is-selected' : ''}`}
                                     style={{
                                         cursor: onToggleParty ? 'pointer' : 'default',
                                     }}
@@ -275,12 +272,12 @@ export function PieChart({
                     r={size / 4}
                     fill="#fff"
                 />
-                <g className="pie-center-group">
+                <g>
                     <text
                         x={size / 2}
                         y={size / 2 - 10}
                         textAnchor="middle"
-                        className="pie-center-text"
+                        className="fill-ink"
                         fontSize={32}
                         fontWeight={700}
                     >
@@ -290,9 +287,8 @@ export function PieChart({
                         x={size / 2}
                         y={size / 2 + 20}
                         textAnchor="middle"
-                        className="pie-center-label"
+                        className="fill-ink-muted"
                         fontSize={14}
-                        fill="#666"
                     >
                         Total Seats
                     </text>

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getPartyColor, getPartyDisplayName } from '../utils/party';
+import { cn } from '../utils/cn';
 
 interface GeoFeature {
     type: 'Feature';
@@ -251,20 +252,20 @@ export function IncomeConstituencyMap({ year, data, selectedConstituencyNumber, 
 
     if (!geoData || !bounds) {
         return (
-            <div className="constituency-map-loading">
-                <div className="spinner"></div>
+            <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 px-8 py-8 text-ink-muted">
+                <div className="h-[50px] w-[50px] animate-[spin_0.8s_linear_infinite] rounded-full border-4 border-surface-accent border-t-brand-black"></div>
                 <div>Loading map...</div>
             </div>
         );
     }
 
     return (
-        <div className="constituency-map-container">
-            <div className="constituency-map-wrapper" onMouseMove={handleMouseMove}>
+        <div className="relative min-h-[480px]">
+            <div className="flex min-h-[480px] w-full justify-center py-1" onMouseMove={handleMouseMove}>
                 <svg
                     viewBox={`0 0 ${bounds.width} ${bounds.height}`}
                     preserveAspectRatio="xMidYMid meet"
-                    className="constituency-map-svg"
+                    className="h-auto w-full max-w-[415px]"
                 >
                     {paths.map(({ number, path }) => {
                         const item = dataMap.get(number);
@@ -292,7 +293,10 @@ export function IncomeConstituencyMap({ year, data, selectedConstituencyNumber, 
                                 fill={fillColor}
                                 fillOpacity={isSelected || isHovered ? 1.0 : opacity}
                                 stroke="none"
-                                className={`constituency-path${isSelected ? ' selected' : ''}`}
+                                className={cn(
+                                    'cursor-pointer transition-[filter] duration-150',
+                                    isSelected && 'drop-shadow-[0_0_3px_rgba(0,0,0,0.4)]'
+                                )}
                                 onMouseEnter={() => setHoveredNumber(number)}
                                 onMouseLeave={() => setHoveredNumber(null)}
                                 onClick={() => onSelectConstituency(number)}
@@ -300,7 +304,7 @@ export function IncomeConstituencyMap({ year, data, selectedConstituencyNumber, 
                         );
                     })}
 
-                    <g className="constituency-borders-layer" pointerEvents="none">
+                    <g pointerEvents="none">
                         {paths.map(({ number, path }) => {
                             const isSelected = selectedConstituencyNumber === number;
                             return (
@@ -316,7 +320,7 @@ export function IncomeConstituencyMap({ year, data, selectedConstituencyNumber, 
                         })}
                     </g>
                     
-                    <g className="state-borders-layer" pointerEvents="none">
+                    <g pointerEvents="none">
                         {stateBorderPaths.map((state, idx) => (
                             <path
                                 key={`state-${idx}`}
@@ -329,7 +333,7 @@ export function IncomeConstituencyMap({ year, data, selectedConstituencyNumber, 
                         ))}
                     </g>
 
-                    <g className="city-markers-layer" pointerEvents="none">
+                    <g pointerEvents="none">
                         {cities.map(city => (
                             <g key={city.name} transform={`translate(${city.x}, ${city.y})`}>
                                 <circle r={3} fill="#333" stroke="#fff" strokeWidth={1.5} />
@@ -341,10 +345,10 @@ export function IncomeConstituencyMap({ year, data, selectedConstituencyNumber, 
             </div>
 
             {hoveredNumber && tooltipPos && (
-                <div className="constituency-tooltip" style={{ left: tooltipPos.x, top: tooltipPos.y }}>
-                    <div className="constituency-tooltip-title">
+                <div className="fixed z-[1000] min-w-[220px] max-w-[300px] rounded bg-white p-3 shadow-[0_4px_20px_rgba(0,0,0,0.25)] pointer-events-none" style={{ left: tooltipPos.x, top: tooltipPos.y }}>
+                    <div className="mb-3 border-b border-[#eee] pb-2 text-base font-bold text-ink">
                         {paths.find(p => p.number === hoveredNumber)?.name}
-                         <span className="constituency-tooltip-state">
+                         <span className="mt-1 block text-[0.75rem] font-normal text-ink-faint">
                             {paths.find(p => p.number === hoveredNumber)?.stateName}
                         </span>
                     </div>
@@ -352,25 +356,25 @@ export function IncomeConstituencyMap({ year, data, selectedConstituencyNumber, 
                         const item = dataMap.get(hoveredNumber);
                         if (item) {
                             return (
-                                <div>
+                                <div className="text-[0.85rem] text-ink">
                                     <div>Winner Party: {getPartyDisplayName(item.party_name, partyOpts)}</div>
                                     <div>Disposable Income: {item.disposable_income?.toLocaleString()} &euro;</div>
                                 </div>
                             );
                         }
-                        return <div>No data</div>;
+                        return <div className="text-[0.85rem] text-ink-muted">No data</div>;
                     })()}
                 </div>
             )}
             
-            <div className="constituency-map-legend">
-                <div style={{fontWeight: 'bold', marginBottom: '4px'}}>Income per Capita</div>
-                <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem'}}>
+            <div className="border-t border-line px-3 py-2">
+                <div className="mb-1 text-[0.85rem] font-bold text-ink">Income per Capita</div>
+                <div className="flex items-center justify-between text-[0.8rem] text-ink-muted">
                     <span>{minIncome.toLocaleString()} &euro;</span>
-                    <span style={{background: 'linear-gradient(to right, rgba(0,0,0,0.2), rgba(0,0,0,1))', height: '10px', width: '100px', display: 'inline-block', margin: '0 8px'}}></span>
+                    <span className="mx-2 inline-block h-2.5 w-[100px]" style={{ background: 'linear-gradient(to right, rgba(0,0,0,0.2), rgba(0,0,0,1))' }}></span>
                     <span>{maxIncome.toLocaleString()} &euro;</span>
                 </div>
-                 <div style={{marginTop: '8px', fontSize: '0.8em', color: '#666'}}>Opacity indicates income. Color indicates winning party.</div>
+                 <div className="mt-2 text-[0.8rem] text-ink-muted">Opacity indicates income. Color indicates winning party.</div>
             </div>
         </div>
     );

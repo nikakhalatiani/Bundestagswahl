@@ -3,6 +3,8 @@ import { MapPin, TrendingUp } from 'lucide-react';
 import { PartyStrengthMap } from '../components/PartyStrengthMap';
 import { usePartyConstituencyStrength } from '../hooks/useQueries';
 import { getPartyColor } from '../utils/party';
+import { Card, CardHeader, CardSubtitle, CardTitle } from '../components/ui/Card';
+import { cn } from '../utils/cn';
 
 interface PartyStrengthPageProps {
   year: number;
@@ -31,30 +33,30 @@ export function PartyStrengthPage({ year }: PartyStrengthPageProps) {
   const strengthData = data?.data ?? [];
 
   return (
-    <div className="party-strength-page">
-      <div className="card party-strength-header">
+    <div className="flex flex-col gap-6">
+      <Card className="flex flex-wrap items-end justify-between gap-6">
         <div>
-          <h2 className="card-title">Party Strongholds & Shifts</h2>
-          <div className="card-subtitle">
+          <CardTitle>Party Strongholds & Shifts</CardTitle>
+          <CardSubtitle>
             Explore where a party performs best and how its vote share has moved across constituencies.
-          </div>
+          </CardSubtitle>
         </div>
-        <div className="party-strength-controls">
+        <div className="flex items-center gap-3">
           <button
-            className="vote-type-switch"
+            className="flex items-center gap-2 rounded-full border border-line bg-surface-muted px-2 py-1.5 transition hover:border-ink-muted"
             onClick={() => setVoteType(prev => prev === 'first' ? 'second' : 'first')}
             title={voteType === 'first' ? 'Switch to Second Vote' : 'Switch to First Vote'}
           >
-            <span className={`vote-switch-label ${voteType === 'first' ? 'active' : ''}`}>1st</span>
-            <span className="vote-switch-toggle">
-              <span className={`vote-switch-dot ${voteType === 'second' ? 'right' : ''}`} />
+            <span className={cn('text-[0.75rem] font-semibold text-ink-faint', voteType === 'first' && 'text-ink')}>1st</span>
+            <span className="relative h-[18px] w-8 rounded-full bg-surface-accent transition">
+              <span className={cn('absolute left-0.5 top-0.5 h-3.5 w-3.5 rounded-full bg-brand-black transition-[left]', voteType === 'second' && 'left-4')} />
             </span>
-            <span className={`vote-switch-label ${voteType === 'second' ? 'active' : ''}`}>2nd</span>
+            <span className={cn('text-[0.75rem] font-semibold text-ink-faint', voteType === 'second' && 'text-ink')}>2nd</span>
           </button>
-          <div className="party-strength-select-wrap">
-            <label className="party-strength-label">Party</label>
+          <div className="flex flex-col gap-1">
+            <label className="text-[0.85rem] font-semibold uppercase tracking-[0.03em] text-ink-muted">Party</label>
             <select
-              className="party-strength-select"
+              className="rounded-lg border border-line bg-surface-muted px-3.5 py-2 text-[0.95rem] font-semibold text-ink focus:outline-none focus:ring-2 focus:ring-black/10"
               value={selectedParty}
               onChange={(e) => setSelectedParty(e.target.value)}
               style={{ borderColor: partyColor }}
@@ -67,55 +69,55 @@ export function PartyStrengthPage({ year }: PartyStrengthPageProps) {
             </select>
           </div>
         </div>
-      </div>
+      </Card>
 
       {isLoading && (
-        <div className="loading" style={{ marginTop: '1rem' }}>
-          <div className="spinner"></div>
-          <div className="loading-text">Loading party maps...</div>
+        <div className="mt-4 flex flex-col items-center justify-center px-8 py-16">
+          <div className="h-[50px] w-[50px] animate-[spin_0.8s_linear_infinite] rounded-full border-4 border-surface-accent border-t-brand-black"></div>
+          <div className="mt-4 font-medium text-ink-muted">Loading party maps...</div>
         </div>
       )}
 
       {error && (
-        <div className="warning-box">
-          <div className="warning-box-title">Unable to load party data</div>
+        <div className="rounded border-l-4 border-[#ff9800] bg-[#fff3e0] p-4">
+          <div className="mb-2 font-semibold text-[#f57c00]">Unable to load party data</div>
           <div>{String(error)}</div>
         </div>
       )}
 
       {!isLoading && !error && (
-        <div className="party-strength-grid">
-          <div className="card">
-            <div className="card-header">
-              <h2 className="card-title">
-                <MapPin size={20} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
+        <div className="grid gap-6 xl:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">
+                <MapPin size={20} className="mr-2 inline-block align-middle" />
                 Where they were strongest
-              </h2>
-              <div className="card-subtitle">
+              </CardTitle>
+              <CardSubtitle>
                 {voteType === 'first' ? 'First vote share by constituency' : 'Second vote share by constituency'}
-              </div>
-            </div>
+              </CardSubtitle>
+            </CardHeader>
             <PartyStrengthMap
               year={year}
               partyName={selectedParty}
               data={strengthData}
               mode="strength"
             />
-          </div>
+          </Card>
 
-          <div className="card">
-            <div className="card-header">
-              <h2 className="card-title">
-                <TrendingUp size={20} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">
+                <TrendingUp size={20} className="mr-2 inline-block align-middle" />
                 Where they gained/lost
-              </h2>
-              <div className="card-subtitle">
+              </CardTitle>
+              <CardSubtitle>
                 {voteType === 'first' ? 'Change in first vote share since 2021' : 'Change in second vote share since 2021'}
-              </div>
-            </div>
+              </CardSubtitle>
+            </CardHeader>
             {year !== 2025 ? (
-              <div className="warning-box">
-                <div className="warning-box-title">Change data only available for 2025</div>
+              <div className="rounded border-l-4 border-[#ff9800] bg-[#fff3e0] p-4">
+                <div className="mb-2 font-semibold text-[#f57c00]">Change data only available for 2025</div>
                 <div>Switch to 2025 to view gains and losses by constituency.</div>
               </div>
             ) : (
@@ -126,7 +128,7 @@ export function PartyStrengthPage({ year }: PartyStrengthPageProps) {
                 mode="change"
               />
             )}
-          </div>
+          </Card>
         </div>
       )}
     </div>

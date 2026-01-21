@@ -262,20 +262,20 @@ export function PartyStrengthMap({ year, partyName, data, mode }: PartyStrengthM
 
     if (!geoData || !bounds) {
         return (
-            <div className="constituency-map-loading">
-                <div className="spinner"></div>
+            <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 px-8 py-8 text-ink-muted">
+                <div className="h-[50px] w-[50px] animate-[spin_0.8s_linear_infinite] rounded-full border-4 border-surface-accent border-t-brand-black"></div>
                 <div>Loading map...</div>
             </div>
         );
     }
 
     return (
-        <div className="constituency-map-container">
-            <div className="constituency-map-wrapper" onMouseMove={handleMouseMove}>
+        <div className="relative min-h-[480px]">
+            <div className="flex min-h-[480px] w-full justify-center py-1" onMouseMove={handleMouseMove}>
                 <svg
                     viewBox={`0 0 ${bounds.width} ${bounds.height}`}
                     preserveAspectRatio="xMidYMid meet"
-                    className="constituency-map-svg"
+                    className="h-auto w-full max-w-[415px]"
                 >
                     {paths.map(({ number, path }) => {
                         const item = dataMap.get(number);
@@ -291,14 +291,14 @@ export function PartyStrengthMap({ year, partyName, data, mode }: PartyStrengthM
                                 fill={mode === 'strength' ? fillColor : '#f1f1f1'}
                                 fillOpacity={mode === 'strength' ? opacity : 1}
                                 stroke="none"
-                                className="constituency-path"
+                                className="cursor-pointer"
                                 onMouseEnter={() => setHoveredNumber(number)}
                                 onMouseLeave={() => setHoveredNumber(null)}
                             />
                         );
                     })}
 
-                    <g className="constituency-borders-layer" pointerEvents="none">
+                    <g pointerEvents="none">
                         {paths.map(({ number, path }) => (
                             <path
                                 key={`border-${number}`}
@@ -311,7 +311,7 @@ export function PartyStrengthMap({ year, partyName, data, mode }: PartyStrengthM
                         ))}
                     </g>
 
-                    <g className="state-borders-layer" pointerEvents="none">
+                    <g pointerEvents="none">
                         {stateBorderPaths.map((state, idx) => (
                             <path
                                 key={`state-${idx}`}
@@ -325,7 +325,7 @@ export function PartyStrengthMap({ year, partyName, data, mode }: PartyStrengthM
                     </g>
 
                     {mode === 'change' && (
-                        <g className="party-change-layer" pointerEvents="none">
+                        <g pointerEvents="none">
                             {paths.map(({ number, cx, cy }) => {
                                 const item = dataMap.get(number);
                                 const diff = item?.diff_percent_pts;
@@ -360,10 +360,10 @@ export function PartyStrengthMap({ year, partyName, data, mode }: PartyStrengthM
             </div>
 
             {hoveredNumber && tooltipPos && (
-                <div className="constituency-tooltip" style={{ left: tooltipPos.x, top: tooltipPos.y }}>
-                    <div className="constituency-tooltip-title">
+                <div className="fixed z-[1000] min-w-[220px] max-w-[300px] rounded bg-white p-3 shadow-[0_4px_20px_rgba(0,0,0,0.25)] pointer-events-none" style={{ left: tooltipPos.x, top: tooltipPos.y }}>
+                    <div className="mb-3 border-b border-[#eee] pb-2 text-base font-bold text-ink">
                         {paths.find(p => p.number === hoveredNumber)?.name}
-                        <span className="constituency-tooltip-state">
+                        <span className="mt-1 block text-[0.75rem] font-normal text-ink-faint">
                             {paths.find(p => p.number === hoveredNumber)?.stateName}
                         </span>
                     </div>
@@ -395,18 +395,18 @@ export function PartyStrengthMap({ year, partyName, data, mode }: PartyStrengthM
             )}
 
             {mode === 'strength' && (
-                <div className="party-strength-legend">
+                <div className="flex items-center justify-center gap-4 border-t border-line px-3 py-2 text-base text-ink-muted">
                     <span>0%</span>
-                    <span className="party-strength-gradient" style={{ background: `linear-gradient(to right, rgba(0,0,0,0.15), ${partyColor})` }} />
+                    <span className="h-2 flex-1 rounded-full" style={{ background: `linear-gradient(to right, rgba(0,0,0,0.15), ${partyColor})` }} />
                     <span>{maxPercent.toFixed(1)}%</span>
                 </div>
             )}
 
             {mode === 'change' && (
-                <div className="party-change-legend">
-                    <span className="party-change-legend-label">{maxAbsDiff ? `-${maxAbsDiff.toFixed(0)} pt.` : '-0 pt.'}</span>
-                    <span className="party-change-legend-track">
-                        <svg className="party-change-legend-svg" viewBox="0 0 170 100" aria-hidden="true">
+                <div className="flex items-center justify-center gap-0 border-t border-line px-3 py-2 text-base text-ink-muted">
+                    <span className="min-w-[56px] text-center">{maxAbsDiff ? `-${maxAbsDiff.toFixed(0)} pt.` : '-0 pt.'}</span>
+                    <span className="flex h-[70px] w-[160px] items-center justify-center">
+                        <svg className="h-[75px] w-[160px]" viewBox="0 0 170 100" aria-hidden="true">
                             <g fill="none" strokeWidth="1.5">
                                 <path
                                     vectorEffect="non-scaling-stroke"
@@ -421,7 +421,7 @@ export function PartyStrengthMap({ year, partyName, data, mode }: PartyStrengthM
                             </g>
                         </svg>
                     </span>
-                    <span className="party-change-legend-label">{maxAbsDiff ? `+${maxAbsDiff.toFixed(0)} pt.` : '+0 pt.'}</span>
+                    <span className="min-w-[56px] text-center">{maxAbsDiff ? `+${maxAbsDiff.toFixed(0)} pt.` : '+0 pt.'}</span>
                 </div>
             )}
         </div>

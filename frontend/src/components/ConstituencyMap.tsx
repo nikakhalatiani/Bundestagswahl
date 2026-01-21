@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ConstituencyWinnerItem, ConstituencyVotesBulkItem } from '../types/api';
 import { getPartyColor, getPartyDisplayName } from '../utils/party';
+import { cn } from '../utils/cn';
 
 // GeoJSON types for constituencies
 interface GeoFeature {
@@ -363,20 +364,20 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
 
     if (!geoData || !bounds) {
         return (
-            <div className="constituency-map-loading">
-                <div className="spinner"></div>
+            <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 px-8 py-8 text-ink-muted">
+                <div className="h-[50px] w-[50px] animate-[spin_0.8s_linear_infinite] rounded-full border-4 border-surface-accent border-t-brand-black"></div>
                 <div>Loading map...</div>
             </div>
         );
     }
 
     return (
-        <div className="constituency-map-container">
-            <div className="constituency-map-wrapper" onMouseMove={handleMouseMove}>
+        <div className="relative min-h-[480px]">
+            <div className="flex min-h-[480px] w-full justify-center py-1" onMouseMove={handleMouseMove}>
                 <svg
                     viewBox={`0 0 ${bounds.width} ${bounds.height}`}
                     preserveAspectRatio="xMidYMid meet"
-                    className="constituency-map-svg"
+                    className="h-auto w-full max-w-[415px]"
                 >
                     {/* Layer 1: Constituency fills */}
                     {paths.map(({ number, path, stateName }) => {
@@ -405,7 +406,10 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
                                 fill={isGreyedOut ? '#d0d0d0' : fillColor}
                                 fillOpacity={isGreyedOut ? 0.4 : (isSelected || isHovered ? 0.85 : baseOpacity)}
                                 stroke="none"
-                                className={`constituency-path${isSelected ? ' selected' : ''}`}
+                                className={cn(
+                                    'cursor-pointer transition-[filter] duration-150',
+                                    isSelected && 'drop-shadow-[0_0_3px_rgba(0,0,0,0.4)]'
+                                )}
                                 onMouseEnter={() => setHoveredNumber(number)}
                                 onMouseLeave={() => setHoveredNumber(null)}
                                 onClick={() => onSelectConstituency(number)}
@@ -414,7 +418,7 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
                     })}
 
                     {/* Layer 2: Thin constituency borders */}
-                    <g className="constituency-borders-layer" pointerEvents="none">
+                    <g pointerEvents="none">
                         {paths.map(({ number, path }) => {
                             const isSelected = selectedConstituencyNumber === number;
                             return (
@@ -431,7 +435,7 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
                     </g>
 
                     {/* Layer 3: State borders (thick white lines) */}
-                    <g className="state-borders-layer" pointerEvents="none">
+                    <g pointerEvents="none">
                         {stateBorderPaths.map((state, idx) => (
                             <path
                                 key={`state-${idx}`}
@@ -445,7 +449,7 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
                     </g>
 
                     {/* Layer 4: City markers */}
-                    <g className="city-markers-layer" pointerEvents="none">
+                    <g pointerEvents="none">
                         {cities.map(city => (
                             <g key={city.name} transform={`translate(${city.x}, ${city.y})`}>
                                 <circle
@@ -475,16 +479,16 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
             {/* Tooltip with top 5 parties */}
             {hoveredNumber && tooltipPos && (
                 <div
-                    className="constituency-tooltip"
+                    className="fixed z-[1000] min-w-[220px] max-w-[300px] rounded bg-white p-3 shadow-[0_4px_20px_rgba(0,0,0,0.25)] pointer-events-none"
                     style={{ left: tooltipPos.x, top: tooltipPos.y }}
                 >
-                    <div className="constituency-tooltip-title">
+                    <div className="mb-3 border-b border-[#eee] pb-2 text-base font-bold text-ink">
                         {paths.find(p => p.number === hoveredNumber)?.name}
-                        <span className="constituency-tooltip-state">
+                        <span className="mt-1 block text-[0.75rem] font-normal text-ink-faint">
                             {paths.find(p => p.number === hoveredNumber)?.stateName}
                         </span>
                     </div>
-                    <div className="constituency-tooltip-vote-type">
+                    <div className="mb-2 pb-1 text-[0.7rem] uppercase tracking-[0.05em] text-ink-faint">
                         {voteType === 'first' ? 'First Votes (Erststimmen)' : 'Second Votes (Zweitstimmen)'}
                     </div>
                     {(() => {
@@ -493,24 +497,24 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
                             // Fallback to winner data
                             if (hoveredWinner) {
                                 return (
-                                    <div className="constituency-tooltip-row">
+                                    <div className="relative mb-1 grid grid-cols-[auto_1fr_auto_auto] items-center gap-2 text-[0.85rem]">
                                         <div
-                                            className="constituency-tooltip-bar"
+                                            className="absolute inset-y-0 left-0 z-0 rounded opacity-25 transition-[width] duration-200 ease-out"
                                             style={{
                                                 backgroundColor: getPartyColor(hoveredWinner.party_name, partyOpts),
                                                 width: `${Math.min(hoveredWinner.percent_of_valid || 0, 100)}%`
                                             }}
                                         />
-                                        <span className="constituency-tooltip-party">
+                                        <span className="z-10 rounded bg-white/85 px-1.5 py-0.5 font-semibold text-ink">
                                             {getPartyDisplayName(hoveredWinner.party_name, partyOpts)}
                                         </span>
-                                        <span className="constituency-tooltip-pct">
+                                        <span className="z-10 text-right font-semibold text-ink">
                                             {hoveredWinner.percent_of_valid?.toFixed(1)}%
                                         </span>
                                     </div>
                                 );
                             }
-                            return <div className="constituency-tooltip-no-data">No data available</div>;
+                            return <div className="text-[0.8rem] italic text-ink-faint">No data available</div>;
                         }
 
                         // Sort by the current vote type and take top 5
@@ -525,28 +529,28 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
                         );
 
                         return (
-                            <div className="constituency-tooltip-parties">
+                            <div className="flex flex-col gap-1">
                                 {top5.map((party, idx) => {
                                     const percent = voteType === 'first' ? party.first_percent : party.second_percent;
                                     const votes = voteType === 'first' ? party.first_votes : party.second_votes;
                                     const barWidth = maxPercent > 0 ? (percent / maxPercent) * 100 : 0;
 
                                     return (
-                                        <div key={idx} className="constituency-tooltip-row">
+                                        <div key={idx} className="relative mb-1 grid grid-cols-[auto_1fr_auto_auto] items-center gap-2 text-[0.85rem]">
                                             <div
-                                                className="constituency-tooltip-bar"
+                                                className="absolute inset-y-0 left-0 z-0 rounded opacity-25 transition-[width] duration-200 ease-out"
                                                 style={{
                                                     backgroundColor: getPartyColor(party.party_name, partyOpts),
                                                     width: `${barWidth}%`
                                                 }}
                                             />
-                                            <span className="constituency-tooltip-party">
+                                            <span className="z-10 rounded bg-white/85 px-1.5 py-0.5 font-semibold text-ink">
                                                 {getPartyDisplayName(party.party_name, partyOpts)}
                                             </span>
-                                            <span className="constituency-tooltip-pct">
+                                            <span className="z-10 text-right font-semibold text-ink">
                                                 {percent.toFixed(1)}%
                                             </span>
-                                            <span className="constituency-tooltip-votes">
+                                            <span className="z-10 min-w-[50px] text-right text-ink-faint">
                                                 {votes.toLocaleString()}
                                             </span>
                                         </div>
@@ -556,7 +560,7 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
                         );
                     })()}
                     {hoveredWinner && voteType === 'first' && (
-                        <div className="constituency-tooltip-candidate">
+                        <div className="mt-2 border-t border-[#eee] pt-2 text-[0.8rem] text-ink-muted">
                             Winner: {hoveredWinner.winner_name}
                         </div>
                     )}
@@ -564,26 +568,26 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
             )}
 
             {/* Compact Legend with dynamic percentages */}
-            <div className="constituency-map-legend compact">
-                <div className="constituency-map-legend-header">
-                    <span className="constituency-map-legend-title">
+            <div className="border-t border-line px-3 py-2">
+                <div className="mb-1 flex items-center justify-between">
+                    <span className="text-[0.7rem] font-semibold uppercase tracking-[0.03em] text-ink-muted">
                         {voteType === 'first' ? 'First Vote Share' : 'Second Vote Share'}
                     </span>
                     {filteredStates && filteredStates.size > 0 && (
-                        <span className="constituency-map-legend-filter-note">
+                        <span className="rounded bg-surface-muted px-1.5 py-[0.1rem] text-[0.65rem] font-medium text-ink-faint">
                             {filteredStates.size} state{filteredStates.size > 1 ? 's' : ''}
                         </span>
                     )}
                 </div>
-                <div className="constituency-map-legend-grid">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] gap-x-3 gap-y-1">
                     {partyPercentages.map(({ party, percent }) => (
-                        <div key={party} className="constituency-map-legend-item-compact">
+                        <div key={party} className="flex items-center gap-2 py-0.5 text-[0.9rem]">
                             <div
-                                className="constituency-map-legend-dot"
+                                className="h-[9px] w-[9px] flex-shrink-0 rounded-sm"
                                 style={{ backgroundColor: party === 'Other' ? '#888' : getPartyColor(party, partyOpts) }}
                             />
-                            <span className="constituency-map-legend-party-abbr">{party}</span>
-                            <span className="constituency-map-legend-pct">{percent.toFixed(1)}%</span>
+                            <span className="truncate font-semibold text-ink">{party}</span>
+                            <span className="ml-auto text-ink-faint">{percent.toFixed(1)}%</span>
                         </div>
                     ))}
                 </div>

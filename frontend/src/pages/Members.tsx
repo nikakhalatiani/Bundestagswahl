@@ -1,8 +1,13 @@
 import { useMemo, useState } from 'react';
-import { Users, MapPin, Briefcase, User, Search, Calendar, ListOrdered, Percent, Download, ChevronLeft, ChevronRight, Star, UserPlus } from 'lucide-react';
+import { Users, MapPin, Briefcase, User, Search, Calendar, ListOrdered, Percent, Download, ChevronLeft, ChevronRight, UserPlus } from 'lucide-react';
 import { useMembers } from '../hooks/useQueries';
 import type { MemberItem } from '../types/api';
-import { getPartyDisplayName, getPartyColor, partyBadgeStyle } from '../utils/party';
+import { getPartyDisplayName, getPartyColor } from '../utils/party';
+import { cn } from '../utils/cn';
+import { Button } from '../components/ui/Button';
+import { Card, CardHeader, CardSubtitle, CardTitle } from '../components/ui/Card';
+import { PartyBadge } from '../components/ui/PartyBadge';
+import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from '../components/ui/Table';
 
 interface MembersProps {
   year: number;
@@ -266,34 +271,43 @@ export function Members({ year }: MembersProps) {
 
   if (isLoading) {
     return (
-      <div className="loading">
-        <div className="spinner"></div>
-        <div className="loading-text">Loading members...</div>
+      <div className="flex flex-col items-center justify-center px-8 py-16">
+        <div className="h-[50px] w-[50px] animate-[spin_0.8s_linear_infinite] rounded-full border-4 border-surface-accent border-t-brand-black"></div>
+        <div className="mt-4 font-medium text-ink-muted">Loading members...</div>
       </div>
     );
   }
 
   if (error) {
-    return <div className="error">Failed to load data: {String(error)}</div>;
+    return (
+      <div className="rounded-lg border-2 border-[#d00] bg-[#fee] p-6 font-medium text-[#d00]">
+        Failed to load data: {String(error)}
+      </div>
+    );
   }
 
   if (!data) {
-    return <div className="error">No data returned.</div>;
+    return (
+      <div className="rounded-lg border-2 border-[#d00] bg-[#fee] p-6 font-medium text-[#d00]">
+        No data returned.
+      </div>
+    );
   }
 
   const hasActiveFilters = selectedParties.size > 0 || selectedStates.size > 0 || filterSeatType !== 'all' || filterGender !== 'all' || filterStatus !== 'all' || searchTerm;
+  const filterSelectClass = 'rounded-md border border-line bg-surface-muted px-3 py-2 text-[0.9rem] text-ink transition hover:border-ink-faint focus:border-ink focus:outline-none';
 
   return (
-    <div>
+    <div className="flex flex-col gap-6">
       {/* State Distribution - above main card */}
       {allStateDistribution.length > 0 && (
-        <div className="card mb-1">
-          <div className="state-card-header">
-            <div className="card-title">Seats by Federal State</div>
-            <div className="card-subtitle">Click to filter (multi-select)</div>
+        <Card className="p-0">
+          <div className="border-b border-line px-4 py-3">
+            <div className="text-xl font-bold text-ink">Seats by Federal State</div>
+            <div className="text-sm text-ink-muted">Click to filter (multi-select)</div>
           </div>
-          <div className="state-card-content">
-            <div className="state-grid">
+          <div className="px-4 py-3">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-2">
               {allStateDistribution.map(state => {
                 const isSelected = selectedStates.has(state.name);
                 const isGreyedOut = selectedStates.size > 0 && !isSelected;
@@ -305,121 +319,123 @@ export function Members({ year }: MembersProps) {
                   <div
                     key={state.name}
                     onClick={() => toggleState(state.name)}
-                    className={`state-item ${isSelected ? 'is-selected' : ''} ${isGreyedOut ? 'is-greyed' : ''}`}
+                    className={cn(
+                      'cursor-pointer rounded border border-line px-2.5 py-1.5 transition',
+                      isSelected && 'border-2 border-ink bg-surface-accent',
+                      isGreyedOut && 'opacity-[0.4] hover:opacity-[0.7]'
+                    )}
                   >
-                    <div className="state-item-header">
-                      <span className="state-item-name">{state.name}</span>
-                      <span className="state-item-count">{state.total}</span>
+                    <div className="mb-1 flex items-center justify-between">
+                      <span className="text-xs font-medium">{state.name}</span>
+                      <span className="text-[0.8rem] font-semibold">{state.total}</span>
                     </div>
-                    <div className="state-bar-track" title={`${state.direct} direct, ${state.list} list`}>
-                      <div className="state-bar-direct" style={{ width: `${directPct}%` }} />
-                      <div className="state-bar-list" style={{ width: `${listPct}%` }} />
+                    <div className="flex h-1 overflow-hidden rounded-full bg-surface" title={`${state.direct} direct, ${state.list} list`}>
+                      <div className="rounded-full rounded-r-none bg-[#4caf50]" style={{ width: `${directPct}%` }} />
+                      <div className="rounded-full rounded-l-none bg-[#2196f3]" style={{ width: `${listPct}%` }} />
                     </div>
                   </div>
                 );
               })}
             </div>
           </div>
-        </div>
+        </Card>
       )}
 
-      <div className="quickstats-strip mb-1">
-        <div className="quick-stats-grid">
-          <div className="quick-stat-card">
-            <div className="quick-stat-icon">
+      <div className="w-full">
+        <div className="grid w-full grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3">
+          <div className="flex w-full min-w-0 items-center gap-3 rounded-lg border border-line bg-surface p-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-accent text-ink-muted">
               <MapPin size={20} />
             </div>
-            <div className="quick-stat-content">
-              <div className="quick-stat-value">{stats.seatTypeCounts.direct}</div>
-              <div className="quick-stat-label">Direct Mandates</div>
+            <div className="flex flex-col">
+              <div className="text-[1.1rem] font-bold leading-tight text-ink">{stats.seatTypeCounts.direct}</div>
+              <div className="text-[0.75rem] uppercase tracking-[0.5px] text-ink-faint">Direct Mandates</div>
             </div>
           </div>
-          <div className="quick-stat-card">
-            <div className="quick-stat-icon">
+          <div className="flex w-full min-w-0 items-center gap-3 rounded-lg border border-line bg-surface p-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-accent text-ink-muted">
               <ListOrdered size={20} />
             </div>
-            <div className="quick-stat-content">
-              <div className="quick-stat-value">{stats.seatTypeCounts.list}</div>
-              <div className="quick-stat-label">List Mandates</div>
+            <div className="flex flex-col">
+              <div className="text-[1.1rem] font-bold leading-tight text-ink">{stats.seatTypeCounts.list}</div>
+              <div className="text-[0.75rem] uppercase tracking-[0.5px] text-ink-faint">List Mandates</div>
             </div>
           </div>
-          <div className="quick-stat-card">
-            <div className="quick-stat-icon">
+          <div className="flex w-full min-w-0 items-center gap-3 rounded-lg border border-line bg-surface p-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-accent text-ink-muted">
               <UserPlus size={20} />
             </div>
-            <div className="quick-stat-content">
-              <div className="quick-stat-value">{stats.statusCounts.new}</div>
-              <div className="quick-stat-label">New Members</div>
+            <div className="flex flex-col">
+              <div className="text-[1.1rem] font-bold leading-tight text-ink">{stats.statusCounts.new}</div>
+              <div className="text-[0.75rem] uppercase tracking-[0.5px] text-ink-faint">New Members</div>
             </div>
           </div>
-          <div className="quick-stat-card">
-            <div className="quick-stat-icon">
+          <div className="flex w-full min-w-0 items-center gap-3 rounded-lg border border-line bg-surface p-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-accent text-ink-muted">
               <Users size={20} />
             </div>
-            <div className="quick-stat-content">
-              <div className="quick-stat-value">{stats.statusCounts.reelected}</div>
-              <div className="quick-stat-label">Re-elected</div>
+            <div className="flex flex-col">
+              <div className="text-[1.1rem] font-bold leading-tight text-ink">{stats.statusCounts.reelected}</div>
+              <div className="text-[0.75rem] uppercase tracking-[0.5px] text-ink-faint">Re-elected</div>
             </div>
           </div>
-          <div className="quick-stat-card">
-            <div className="quick-stat-icon">
+          <div className="flex w-full min-w-0 items-center gap-3 rounded-lg border border-line bg-surface p-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-accent text-ink-muted">
               <Calendar size={20} />
             </div>
-            <div className="quick-stat-content">
-              <div className="quick-stat-value">{stats.avgAge}</div>
-              <div className="quick-stat-label">Avg. Age</div>
+            <div className="flex flex-col">
+              <div className="text-[1.1rem] font-bold leading-tight text-ink">{stats.avgAge}</div>
+              <div className="text-[0.75rem] uppercase tracking-[0.5px] text-ink-faint">Avg. Age</div>
             </div>
           </div>
-          <div className="quick-stat-card gender-stat-card">
-            <div className="quick-stat-content gender-stat-content">
-              <div className="quick-stat-label">Gender</div>
-              <div className="gender-bar-container">
-                <div className="gender-bar-track">
-                  <div className="gender-bar-female" style={{ width: `${stats.femalePercent}%` }} title="Female" />
-                  <div className="gender-bar-male" title="Male" />
-                </div>
+          <div className="flex w-full min-w-0 flex-col items-stretch gap-2 rounded-lg border border-line bg-surface p-4">
+            <div className="text-[0.75rem] uppercase tracking-[0.5px] text-ink-faint">Gender</div>
+            <div className="flex items-center gap-2">
+              <div className="flex h-2 flex-1 overflow-hidden rounded bg-[#eeeeee]">
+                <div className="bg-[#e91e63]" style={{ width: `${stats.femalePercent}%` }} title="Female" />
+                <div className="flex-1 bg-[#2196f3]" title="Male" />
               </div>
-              <div className="gender-labels">
-                <span>{stats.femalePercent}% F</span>
-                <span>{(100 - Number(stats.femalePercent)).toFixed(1)}% M</span>
-              </div>
+            </div>
+            <div className="flex justify-between text-xs text-ink-muted">
+              <span>{stats.femalePercent}% F</span>
+              <span>{(100 - Number(stats.femalePercent)).toFixed(1)}% M</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="card">
-        <div className="card-header members-card-header">
-          <div className="members-header-left">
-            <h2 className="card-title">Members of the Bundestag {year}</h2>
-            <div className="card-subtitle">
+      <Card>
+        <CardHeader className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-1">
+            <CardTitle>Members of the Bundestag {year}</CardTitle>
+            <CardSubtitle>
               {filteredData.length} of {items.length} members shown
-            </div>
+            </CardSubtitle>
           </div>
-          <button className="btn btn-secondary export-btn" onClick={exportToCSV} title="Export to CSV">
+          <Button variant="secondary" className="ml-auto self-start" onClick={exportToCSV} title="Export to CSV">
             <Download size={16} />
             <span>Export CSV</span>
-          </button>
-        </div>
-        <div className="dashboard-grid">
+          </Button>
+        </CardHeader>
+        <div className="grid gap-6 lg:grid-cols-2">
           <div>
-            <div className="filter-bar">
-              <div className="filter-row">
-                <div className="search-wrapper">
-                  <Search size={18} className="search-icon" />
+            <div className="mb-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" />
                   <input
                     type="text"
                     placeholder="Search by name..."
                     value={searchTerm}
                     onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                    className="search-input"
+                    className="w-full rounded-lg border border-line bg-surface-muted px-4 py-3 pl-10 text-[0.95rem] transition focus:border-ink-faint focus:bg-surface focus:outline-none focus:ring-2 focus:ring-black/5"
                   />
                 </div>
 
                 <select
                   value={filterSeatType}
                   onChange={(e) => { setFilterSeatType(e.target.value as 'all' | 'direct' | 'list'); setCurrentPage(1); }}
-                  className="filter-select"
+                  className={filterSelectClass}
                   title="Filter by seat type"
                 >
                   <option value="all">All Mandates</option>
@@ -430,7 +446,7 @@ export function Members({ year }: MembersProps) {
                 <select
                   value={filterGender}
                   onChange={(e) => { setFilterGender(e.target.value as 'all' | 'm' | 'w'); setCurrentPage(1); }}
-                  className="filter-select"
+                  className={filterSelectClass}
                   title="Filter by gender"
                 >
                   <option value="all">All Genders</option>
@@ -441,7 +457,7 @@ export function Members({ year }: MembersProps) {
                 <select
                   value={filterStatus}
                   onChange={(e) => { setFilterStatus(e.target.value as 'all' | 'new' | 'reelected'); setCurrentPage(1); }}
-                  className="filter-select"
+                  className={filterSelectClass}
                   title="Filter by member status"
                 >
                   <option value="all">All Members</option>
@@ -452,10 +468,10 @@ export function Members({ year }: MembersProps) {
             </div>
 
             {hasActiveFilters && (
-              <div className="filter-summary">
+              <div className="mt-2 flex items-center justify-between gap-2 rounded-md bg-surface-accent px-3 py-2 text-[0.85rem] text-ink-muted">
                 <span>{filteredData.length} of {items.length} members match filters</span>
                 <button
-                  className="filter-clear-btn"
+                  className="inline-flex items-center gap-1 rounded px-2 py-1 text-[0.8rem] font-semibold text-ink-muted transition hover:bg-black/5 hover:text-ink"
                   onClick={() => {
                     setSelectedParties(new Set());
                     setSelectedStates(new Set());
@@ -471,116 +487,119 @@ export function Members({ year }: MembersProps) {
               </div>
             )}
 
-            <div className="members-table-wrapper">
-              <div className="members-table-scroll">
-                <table className="party-table members-table">
-                  <thead>
-                    <tr>
-                      <th>
-                        <button className="sortable-header" onClick={() => toggleSort('name')}>
-                          <span className="sortable-label">Name</span>
-                          <span className="sort-caret">{sortKey === 'name' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
+            <div className="overflow-hidden rounded-[14px] border border-line bg-surface shadow-sm">
+              <div className="overflow-x-auto">
+                <Table variant="members">
+                  <TableHead>
+                    <TableRow>
+                      <TableHeaderCell>
+                        <button className="inline-flex items-center gap-1.5 text-left font-bold tracking-[0.2px] text-ink hover:text-ink-muted" onClick={() => toggleSort('name')}>
+                          <span>Name</span>
+                          <span className="text-[0.85rem] leading-none">{sortKey === 'name' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
                         </button>
-                      </th>
-                      <th>
-                        <button className="sortable-header" onClick={() => toggleSort('party')}>
-                          <span className="sortable-label">Party</span>
-                          <span className="sort-caret">{sortKey === 'party' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
+                      </TableHeaderCell>
+                      <TableHeaderCell>
+                        <button className="inline-flex items-center gap-1.5 text-left font-bold tracking-[0.2px] text-ink hover:text-ink-muted" onClick={() => toggleSort('party')}>
+                          <span>Party</span>
+                          <span className="text-[0.85rem] leading-none">{sortKey === 'party' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
                         </button>
-                      </th>
-                      <th>
-                        <button className="sortable-header" onClick={() => toggleSort('state')}>
-                          <span className="sortable-label">State</span>
-                          <span className="sort-caret">{sortKey === 'state' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
+                      </TableHeaderCell>
+                      <TableHeaderCell>
+                        <button className="inline-flex items-center gap-1.5 text-left font-bold tracking-[0.2px] text-ink hover:text-ink-muted" onClick={() => toggleSort('state')}>
+                          <span>State</span>
+                          <span className="text-[0.85rem] leading-none">{sortKey === 'state' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
                         </button>
-                      </th>
-                      <th>
-                        <button className="sortable-header" onClick={() => toggleSort('mandate')}>
-                          <span className="sortable-label">Mandate</span>
-                          <span className="sort-caret">{sortKey === 'mandate' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
+                      </TableHeaderCell>
+                      <TableHeaderCell>
+                        <button className="inline-flex items-center gap-1.5 text-left font-bold tracking-[0.2px] text-ink hover:text-ink-muted" onClick={() => toggleSort('mandate')}>
+                          <span>Mandate</span>
+                          <span className="text-[0.85rem] leading-none">{sortKey === 'mandate' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
                         </button>
-                      </th>
-                      <th>
-                        <button className="sortable-header" onClick={() => toggleSort('constituency')}>
-                          <span className="sortable-label">Constituency</span>
-                          <span className="sort-caret">{sortKey === 'constituency' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
+                      </TableHeaderCell>
+                      <TableHeaderCell>
+                        <button className="inline-flex items-center gap-1.5 text-left font-bold tracking-[0.2px] text-ink hover:text-ink-muted" onClick={() => toggleSort('constituency')}>
+                          <span>Constituency</span>
+                          <span className="text-[0.85rem] leading-none">{sortKey === 'constituency' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
                         </button>
-                      </th>
-                      <th className="text-center">
-                        <button className="sortable-header" onClick={() => toggleSort('age')}>
-                          <span className="sortable-label">Age</span>
-                          <span className="sort-caret">{sortKey === 'age' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
+                      </TableHeaderCell>
+                      <TableHeaderCell className="text-center">
+                        <button className="inline-flex items-center gap-1.5 text-left font-bold tracking-[0.2px] text-ink hover:text-ink-muted" onClick={() => toggleSort('age')}>
+                          <span>Age</span>
+                          <span className="text-[0.85rem] leading-none">{sortKey === 'age' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
                         </button>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                      </TableHeaderCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
                     {paginatedData.map((member) => {
                       const isSelected = selectedMember?.person_id === member.person_id;
                       const selectedColor = isSelected ? getPartyColor(member.party_name, partyOpts) : undefined;
                       return (
-                        <tr
+                        <TableRow
                           key={member.person_id}
-                          className={`table-row-interactive ${isSelected ? 'is-selected' : ''}`}
+                          className={cn(
+                            'cursor-pointer transition-colors hover:bg-surface-accent',
+                            isSelected && 'bg-surface-accent'
+                          )}
                           onClick={() => setSelectedMember(isSelected ? null : member)}
                           style={isSelected ? { boxShadow: `inset 4px 0 0 ${selectedColor}` } : undefined}
                         >
-                          <td>
-                            <div className="member-name-display">
+                          <TableCell>
+                            <div className="text-ink">
                               {member.title ? `${member.title} ` : ''}
-                              <strong>{member.last_name}</strong>, {member.first_name}
+                              <strong className="font-semibold">{member.last_name}</strong>, {member.first_name}
                             </div>
                             {member.profession && (
-                              <div className="member-profession-text">{member.profession}</div>
+                              <div className="mt-0.5 max-w-[200px] truncate text-[0.8rem] text-ink-faint">{member.profession}</div>
                             )}
-                          </td>
-                          <td>
-                            <span
-                              className="party-badge"
-                              style={partyBadgeStyle(member.party_name, partyOpts)}
-                            >
+                          </TableCell>
+                          <TableCell>
+                            <PartyBadge party={member.party_name} combineCduCsu>
                               {displayParty(member.party_name)}
-                            </span>
-                          </td>
-                          <td>{member.state_name}</td>
-                          <td>
+                            </PartyBadge>
+                          </TableCell>
+                          <TableCell>{member.state_name}</TableCell>
+                          <TableCell>
                             <span
-                              className={`seat-badge ${member.seat_type.toLowerCase().includes('direct') ? 'seat-direct' : 'seat-list'}`}
+                              className={cn(
+                                'inline-block rounded px-2 py-1 text-[0.75rem] font-semibold uppercase tracking-[0.5px] text-white',
+                                member.seat_type.toLowerCase().includes('direct') ? 'bg-[#4caf50]' : 'bg-[#2196f3]'
+                              )}
                             >
                               {member.seat_type.toLowerCase().includes('direct') ? 'Direct' : 'List'}
                             </span>
-                          </td>
-                          <td>{member.constituency_name || '—'}</td>
-                          <td className="text-center">
+                          </TableCell>
+                          <TableCell>{member.constituency_name || '—'}</TableCell>
+                          <TableCell className="text-center">
                             {member.birth_year ? year - member.birth_year : '—'}
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       );
                     })}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             </div>
 
             {/* Pagination Controls */}
             {totalPages > 1 && (
-              <div className="pagination-controls">
+              <div className="mt-4 flex items-center justify-center gap-3 px-4 py-3">
                 <button
-                  className="pagination-btn"
+                  className="flex items-center gap-1.5 rounded-md border border-line bg-surface px-3.5 py-2 text-[0.85rem] font-medium text-ink transition hover:border-ink-muted hover:bg-surface-accent disabled:cursor-not-allowed disabled:bg-surface-muted disabled:opacity-50"
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
                 >
                   <ChevronLeft size={16} />
                   Prev
                 </button>
-                <div className="pagination-info">
+                <div className="text-[0.85rem] font-medium text-ink-muted">
                   Page {currentPage} of {totalPages}
-                  <span className="pagination-range">
+                  <span className="ml-2 text-[0.8rem] text-ink-faint">
                     ({(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, sortedData.length)} of {sortedData.length})
                   </span>
                 </div>
                 <button
-                  className="pagination-btn"
+                  className="flex items-center gap-1.5 rounded-md border border-line bg-surface px-3.5 py-2 text-[0.85rem] font-medium text-ink transition hover:border-ink-muted hover:bg-surface-accent disabled:cursor-not-allowed disabled:bg-surface-muted disabled:opacity-50"
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
                 >
@@ -591,81 +610,83 @@ export function Members({ year }: MembersProps) {
             )}
           </div>
 
-          <div className="info-panel">
-            <div className="info-panel-header">
-              <h3>Analytics</h3>
+          <div className="flex min-h-[420px] flex-col overflow-hidden rounded-[10px] border border-line bg-surface shadow-md">
+            <div className="flex items-center justify-between border-b border-line bg-surface-muted p-4">
+              <h3 className="text-base font-semibold text-ink">Analytics</h3>
             </div>
-            <div className="info-panel-content">
+            <div className="flex-1 overflow-y-auto p-4">
               {selectedMember && (
-                <div className="info-grid mb-1">
-                  <div className="panel-title">Member Details</div>
-                  <div className="member-panel-header">
+                <div className="mb-4 flex flex-col gap-4">
+                  <div className="text-[1.1rem] font-bold text-ink">Member Details</div>
+                  <div className="mb-4 flex items-center gap-4 border-b border-line pb-4">
                     <div
-                      className="member-avatar-large"
+                      className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full text-xl font-bold text-white"
                       style={{ backgroundColor: getPartyColor(selectedMember.party_name, partyOpts) }}
                     >
                       {selectedMember.first_name[0]}{selectedMember.last_name[0]}
                     </div>
-                    <div className="member-panel-name">
-                      <h4>
+                    <div className="flex flex-col gap-2">
+                      <h4 className="text-base font-semibold text-ink">
                         {selectedMember.title ? `${selectedMember.title} ` : ''}
                         {selectedMember.first_name} {selectedMember.last_name}
                       </h4>
-                      <span
-                        className="party-badge party-badge-fixed"
-                        style={partyBadgeStyle(selectedMember.party_name, partyOpts)}
-                      >
+                      <PartyBadge party={selectedMember.party_name} combineCduCsu size="fixed">
                         {displayParty(selectedMember.party_name)}
-                      </span>
+                      </PartyBadge>
                     </div>
                   </div>
 
-                  <div className="member-badges">
-                    <span className={`seat-badge ${selectedMember.seat_type.toLowerCase().includes('direct') ? 'seat-direct' : 'seat-list'}`}>
+                  <div className="mb-6 flex flex-wrap gap-2">
+                    <span
+                      className={cn(
+                        'inline-block rounded px-2 py-1 text-[0.75rem] font-semibold uppercase tracking-[0.5px] text-white',
+                        selectedMember.seat_type.toLowerCase().includes('direct') ? 'bg-[#4caf50]' : 'bg-[#2196f3]'
+                      )}
+                    >
                       {selectedMember.seat_type.toLowerCase().includes('direct') ? 'Direct Mandate' : 'List Mandate'}
                     </span>
                     {selectedMember.previously_elected ? (
-                      <span className="seat-badge" style={{ backgroundColor: '#9613a2ff', color: 'white' }}>
+                      <span className="inline-block rounded px-2 py-1 text-[0.75rem] font-semibold uppercase tracking-[0.5px] text-white bg-[#9613a2]">
                         Re-elected
                       </span>
                     ) : (
-                      <span className="seat-badge" style={{ backgroundColor: '#FF9800', color: 'white' }}>
+                      <span className="inline-block rounded px-2 py-1 text-[0.75rem] font-semibold uppercase tracking-[0.5px] text-white bg-[#ff9800]">
                         New Member
                       </span>
                     )}
                   </div>
 
-                  <div className="info-grid">
-                    <div className="info-item">
-                      <div className="info-icon">
+                  <div className="flex flex-col gap-5">
+                    <div className="flex items-start gap-3 text-ink-muted">
+                      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-surface-accent text-ink-muted">
                         <MapPin size={18} />
                       </div>
-                      <div className="info-content">
-                        <div className="info-label">Region / Constituency</div>
-                        <div className="info-value">{selectedMember.constituency_name || selectedMember.state_name}</div>
+                      <div>
+                        <div className="text-xs uppercase tracking-[0.5px] text-ink-muted">Region / Constituency</div>
+                        <div className="font-medium text-ink">{selectedMember.constituency_name || selectedMember.state_name}</div>
                       </div>
                     </div>
 
                     {selectedMember.profession && (
-                      <div className="info-item">
-                        <div className="info-icon">
+                      <div className="flex items-start gap-3 text-ink-muted">
+                        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-surface-accent text-ink-muted">
                           <Briefcase size={18} />
                         </div>
-                        <div className="info-content">
-                          <div className="info-label">Profession</div>
-                          <div className="info-value">{selectedMember.profession}</div>
+                        <div>
+                          <div className="text-xs uppercase tracking-[0.5px] text-ink-muted">Profession</div>
+                          <div className="font-medium text-ink">{selectedMember.profession}</div>
                         </div>
                       </div>
                     )}
 
                     {(selectedMember.birth_year || selectedMember.gender) && (
-                      <div className="info-item">
-                        <div className="info-icon">
+                      <div className="flex items-start gap-3 text-ink-muted">
+                        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-surface-accent text-ink-muted">
                           <User size={18} />
                         </div>
-                        <div className="info-content">
-                          <div className="info-label">Personal Details</div>
-                          <div className="info-value">
+                        <div>
+                          <div className="text-xs uppercase tracking-[0.5px] text-ink-muted">Personal Details</div>
+                          <div className="font-medium text-ink">
                             {selectedMember.gender ? `${selectedMember.gender.toLowerCase() === 'm' ? 'Male' : selectedMember.gender.toLowerCase() === 'w' ? 'Female' : selectedMember.gender}` : ''}
                             {selectedMember.gender && selectedMember.birth_year ? ', ' : ''}
                             {selectedMember.birth_year ? `${year - selectedMember.birth_year} years old` : ''}
@@ -675,25 +696,25 @@ export function Members({ year }: MembersProps) {
                     )}
 
                     {selectedMember.percent_first_votes != null && selectedMember.seat_type.toLowerCase().includes('direct') && (
-                      <div className="info-item">
-                        <div className="info-icon">
+                      <div className="flex items-start gap-3 text-ink-muted">
+                        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-surface-accent text-ink-muted">
                           <Percent size={18} />
                         </div>
-                        <div className="info-content">
-                          <div className="info-label">First Vote Share</div>
-                          <div className="info-value">{selectedMember.percent_first_votes.toFixed(1)}%</div>
+                        <div>
+                          <div className="text-xs uppercase tracking-[0.5px] text-ink-muted">First Vote Share</div>
+                          <div className="font-medium text-ink">{selectedMember.percent_first_votes.toFixed(1)}%</div>
                         </div>
                       </div>
                     )}
 
                     {selectedMember.list_position != null && (
-                      <div className="info-item">
-                        <div className="info-icon">
+                      <div className="flex items-start gap-3 text-ink-muted">
+                        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-surface-accent text-ink-muted">
                           <ListOrdered size={18} />
                         </div>
-                        <div className="info-content">
-                          <div className="info-label">List Position</div>
-                          <div className="info-value">{selectedMember.list_position}</div>
+                        <div>
+                          <div className="text-xs uppercase tracking-[0.5px] text-ink-muted">List Position</div>
+                          <div className="font-medium text-ink">{selectedMember.list_position}</div>
                         </div>
                       </div>
                     )}
@@ -702,9 +723,9 @@ export function Members({ year }: MembersProps) {
               )}
 
               {/* Party Distribution */}
-              <div className="sidebar-section">
-                <div className="panel-title">Party Distribution</div>
-                <div className="party-dist-vertical">
+              <div className="mb-6 last:mb-0">
+                <div className="text-[1.1rem] font-bold text-ink">Party Distribution</div>
+                <div className="mt-3 flex flex-col gap-3">
                   {Object.entries(allPartyStats)
                     .sort((a, b) => b[1] - a[1])
                     .map(([party, count]) => {
@@ -714,26 +735,27 @@ export function Members({ year }: MembersProps) {
                       return (
                         <div
                           key={party}
-                          className={`party-dist-card ${isSelected ? 'is-selected' : ''} ${isDimmed ? 'is-greyed' : ''}`}
+                          className={cn(
+                            'cursor-pointer rounded-lg border border-line bg-surface-muted p-4 transition hover:border-ink-faint hover:shadow-sm',
+                            isSelected && 'border-ink shadow-[0_0_0_2px_rgba(0,0,0,0.1)]',
+                            isDimmed && 'opacity-[0.45]'
+                          )}
                           onClick={() => toggleParty(party)}
                         >
-                          <div className="party-dist-bar-bg">
+                          <div className="mb-3 h-2 overflow-hidden rounded bg-surface-accent">
                             <div
-                              className="party-dist-bar-fill"
+                              className="h-full rounded transition-[width] duration-300"
                               style={{
                                 width: `${pct}%`,
                                 backgroundColor: getPartyColor(party, partyOpts)
                               }}
                             />
                           </div>
-                          <div className="party-dist-info">
-                            <span
-                              className="party-badge"
-                              style={partyBadgeStyle(party, partyOpts)}
-                            >
+                          <div className="flex items-center justify-between">
+                            <PartyBadge party={party} combineCduCsu>
                               {party}
-                            </span>
-                            <span className="party-dist-count-text">{count} ({pct.toFixed(1)}%)</span>
+                            </PartyBadge>
+                            <span className="text-[0.85rem] font-medium text-ink-muted">{count} ({pct.toFixed(1)}%)</span>
                           </div>
                         </div>
                       );
@@ -743,7 +765,7 @@ export function Members({ year }: MembersProps) {
             </div>
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
