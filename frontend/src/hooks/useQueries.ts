@@ -47,6 +47,7 @@ export function useElectionResults(
       if (filters?.status) params.set('status', filters.status);
       return fetchJson<ElectionResultsResponse>(`${API_BASE}/api/election-results?${params.toString()}`);
     },
+    placeholderData: (previous) => previous,
   });
 }
 

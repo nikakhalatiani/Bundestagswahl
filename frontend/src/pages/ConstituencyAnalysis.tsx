@@ -134,6 +134,7 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
               className="flex items-center gap-2 rounded-full border border-line bg-surface-muted px-2 py-1.5 transition hover:border-ink-muted"
               onClick={() => setMapVoteType(prev => prev === 'first' ? 'second' : 'first')}
               title={mapVoteType === 'first' ? 'Switch to Second Vote' : 'Switch to First Vote'}
+              type="button"
             >
               <span className={cn('text-[0.75rem] font-semibold text-ink-faint', mapVoteType === 'first' && 'text-ink')}>1st</span>
               <span className="relative h-[18px] w-8 rounded-full bg-surface-accent transition">
@@ -291,7 +292,7 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                 <div className="mb-2 flex items-center justify-between">
                   <span className="text-[0.7rem] font-semibold uppercase tracking-[0.05em] text-ink-muted">Filter by Federal State - Click to filter (multi-select)</span>
                   {selectedStates.size > 0 && (
-                    <button className="flex items-center gap-1 rounded px-2 py-1 text-[0.75rem] font-medium text-brand-red transition hover:bg-[#d000001a]" onClick={clearStateFilters}>
+                    <button className="flex items-center gap-1 rounded px-2 py-1 text-[0.75rem] font-medium text-brand-red transition hover:bg-[#d000001a]" onClick={clearStateFilters} type="button">
                       <X size={12} /> Clear
                     </button>
                   )}
@@ -309,6 +310,7 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                           isGreyed && 'opacity-[0.4] hover:opacity-[0.7]'
                         )}
                         onClick={() => toggleState(state)}
+                        type="button"
                       >
                         {state}
                       </button>
@@ -328,6 +330,7 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                   className="flex items-center gap-2 rounded-full border border-line bg-surface-muted px-2 py-1.5 transition hover:border-ink-muted"
                   onClick={() => setShowSingleVotes(!showSingleVotes)}
                   title={showSingleVotes ? 'Show aggregated votes' : 'Show single ballot votes (Q7)'}
+                  type="button"
                 >
                   <span className={cn('text-[0.75rem] font-semibold text-ink-faint', !showSingleVotes && 'text-ink')}>Aggregated</span>
                   <span className="relative h-[18px] w-8 rounded-full bg-surface-accent transition">

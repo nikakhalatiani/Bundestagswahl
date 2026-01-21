@@ -46,6 +46,7 @@ export function PartyStrengthPage({ year }: PartyStrengthPageProps) {
             className="flex items-center gap-2 rounded-full border border-line bg-surface-muted px-2 py-1.5 transition hover:border-ink-muted"
             onClick={() => setVoteType(prev => prev === 'first' ? 'second' : 'first')}
             title={voteType === 'first' ? 'Switch to Second Vote' : 'Switch to First Vote'}
+            type="button"
           >
             <span className={cn('text-[0.75rem] font-semibold text-ink-faint', voteType === 'first' && 'text-ink')}>1st</span>
             <span className="relative h-[18px] w-8 rounded-full bg-surface-accent transition">
