@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { IncomeConstituencyMap, IncomeData } from '../components/IncomeConstituencyMap';
+import { Card, CardHeader, CardSubtitle, CardTitle } from '../components/ui/Card';
 
 interface IncomeMapPageProps {
   year: number;
@@ -19,34 +20,38 @@ export function IncomeMapPage({ year }: IncomeMapPageProps) {
   });
 
   if (isLoading) return (
-      <div className="loading" style={{marginTop: '2rem'}}>
-          <div className="spinner"></div>
-          <div className="loading-text">Loading income data...</div>
+      <div className="mt-8 flex flex-col items-center justify-center px-8 py-16">
+          <div className="h-[50px] w-[50px] animate-[spin_0.8s_linear_infinite] rounded-full border-4 border-surface-accent border-t-brand-black"></div>
+          <div className="mt-4 font-medium text-ink-muted">Loading income data...</div>
       </div>
   );
   
-  if (error) return <div className="error">Error loading data: {String(error)}</div>;
+  if (error) return (
+    <div className="rounded-lg border-2 border-[#d00] bg-[#fee] p-6 font-medium text-[#d00]">
+      Error loading data: {String(error)}
+    </div>
+  );
 
   return (
-    <div style={{ padding: '1rem', maxWidth: '1200px', margin: '0 auto' }}>
-      <div className="card">
-        <div className="card-header">
+    <div className="mx-auto w-full max-w-[1200px]">
+      <Card>
+        <CardHeader>
             <div>
-                <h2 className="card-title">Income & Election Results Map</h2>
-                <div className="card-subtitle">
+                <CardTitle>Income & Election Results Map</CardTitle>
+                <CardSubtitle>
                    Map displays the winning party (color) and disposable income per capita (opacity).
                    <br/>
                    Darker colors indicate higher income.
-                </div>
+                </CardSubtitle>
             </div>
-        </div>
-        <IncomeConstituencyMap 
+        </CardHeader>
+        <IncomeConstituencyMap
             year={year} 
             data={data?.data || []} 
             selectedConstituencyNumber={selectedConstituency}
             onSelectConstituency={setSelectedConstituency}
         />
-      </div>
+      </Card>
     </div>
   );
 }

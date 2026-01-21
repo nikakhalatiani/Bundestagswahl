@@ -6,7 +6,7 @@ def normalize_string(series):
     return series.astype(str).str.strip().str.lower()
 
 def create_key(df):
-    """Creates the unique identifier based on your specific logic."""
+    """Creates the unique identifier based on specific logic."""
     # Ensure columns exist to avoid KeyErrors
     req_cols = ["Nachname", "Vornamen", "Geschlecht", "Geburtsjahr"]
     for col in req_cols:

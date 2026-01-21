@@ -15,19 +15,31 @@ function normalizePartyName(raw: string): string {
         .replace(/Ä/g, 'A');
 }
 
-// Major parties + colors (as requested)
+// Major parties + colors
 const MAJOR_COLORS: Record<string, string> = {
-    SPD: '#E3000F',
-    'CDU/CSU': '#000000',
-    AFD: '#009EE0',
-    GRUNE: '#46962b',
-    'DIE LINKE': '#B40089',
-    FDP: '#F5D000',
-    BSW: '#FF8002',
-    SSW: '#003063',
+    SPD: 'var(--party-spd)',
+    'CDU/CSU': 'var(--party-cdu)',
+    AFD: 'var(--party-afd)',
+    GRUNE: 'var(--party-grune)',
+    'DIE LINKE': 'var(--party-linke)',
+    FDP: 'var(--party-fdp)',
+    BSW: 'var(--party-bsw)',
+    SSW: 'var(--party-ssw)',
 };
 
-const FALLBACK_COLOR = '#4B5563'; // dark gray
+// Known minor party colors
+const MINOR_COLORS: Record<string, string> = {
+    VOLT: 'var(--party-volt)',
+    PIRATEN: 'var(--party-piraten)',
+    'DIE PARTEI': 'var(--party-partei)',
+    ODP: 'var(--party-odp)',
+    TIERSCHUTZ: 'var(--party-tierschutz)',
+    MLPD: 'var(--party-mlpd)',
+    NPD: 'var(--party-npd)',
+    'FREIE WAHLER': 'var(--party-freie-waehler)',
+};
+
+const FALLBACK_COLOR = 'var(--party-unknown)';
 
 export function getPartyDisplayName(rawPartyName: string, opts?: { combineCduCsu?: boolean }): string {
     const combineCduCsu = opts?.combineCduCsu ?? false;
@@ -62,6 +74,15 @@ export function getPartyColor(displayNameOrRaw: string, opts?: { combineCduCsu?:
     if (normalized === 'DIE LINKE' || normalized === 'LINKE') {
         return MAJOR_COLORS['DIE LINKE'];
     }
+
+    if (normalized === 'VOLT') return MINOR_COLORS.VOLT;
+    if (normalized === 'PIRATEN') return MINOR_COLORS.PIRATEN;
+    if (normalized === 'DIE PARTEI' || normalized === 'PARTEI') return MINOR_COLORS['DIE PARTEI'];
+    if (normalized === 'ODP') return MINOR_COLORS.ODP;
+    if (normalized.includes('TIERSCHUTZ')) return MINOR_COLORS.TIERSCHUTZ;
+    if (normalized === 'MLPD') return MINOR_COLORS.MLPD;
+    if (normalized === 'NPD') return MINOR_COLORS.NPD;
+    if (normalized.includes('FREIE WAHLER') || normalized === 'FW') return MINOR_COLORS['FREIE WAHLER'];
 
     return FALLBACK_COLOR;
 }

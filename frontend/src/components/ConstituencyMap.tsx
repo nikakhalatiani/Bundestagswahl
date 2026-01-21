@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { ConstituencyWinnerItem, ConstituencyVotesBulkItem } from '../types/api';
+import type { ConstituencyWinnerItem, ConstituencyVotesBulkItem, PartyStrengthItem } from '../types/api';
 import { getPartyColor, getPartyDisplayName } from '../utils/party';
+import { cn } from '../utils/cn';
 
 // GeoJSON types for constituencies
 interface GeoFeature {
@@ -47,6 +48,10 @@ interface ConstituencyMapProps {
     onSelectConstituency: (number: number) => void;
     voteType: 'first' | 'second';
     filteredStates?: Set<string>;
+    mode?: 'constituency' | 'strongholds';
+    strongholdParty?: string | null;
+    strongholdData?: PartyStrengthItem[];
+    strongholdView?: 'strength' | 'change';
 }
 
 // Create a lookup map from constituency_number to winner
@@ -133,6 +138,29 @@ function featureToPath(feature: GeoFeature, bounds: BoundsWithSize): string {
     return pathData;
 }
 
+function collectPoints(coords: unknown, points: number[][]): void {
+    if (!Array.isArray(coords)) return;
+    if (typeof coords[0] === 'number' && typeof coords[1] === 'number' && coords.length >= 2) {
+        points.push(coords as number[]);
+    } else {
+        for (const item of coords) {
+            collectPoints(item, points);
+        }
+    }
+}
+
+function computeCentroid(feature: GeoFeature): [number, number] {
+    const points: number[][] = [];
+    collectPoints(feature.geometry.coordinates, points);
+    if (points.length === 0) return [0, 0];
+    const sum = points.reduce((acc, [lon, lat]) => {
+        acc[0] += lon;
+        acc[1] += lat;
+        return acc;
+    }, [0, 0]);
+    return [sum[0] / points.length, sum[1] / points.length];
+}
+
 // Major parties for legend
 const LEGEND_PARTIES = [
     { key: 'CDU/CSU', label: 'CDU/CSU' },
@@ -144,7 +172,19 @@ const LEGEND_PARTIES = [
     { key: 'BSW', label: 'BSW' },
 ];
 
-export function ConstituencyMap({ year, winners, votesBulk, selectedConstituencyNumber, onSelectConstituency, voteType, filteredStates }: ConstituencyMapProps) {
+export function ConstituencyMap({
+    year,
+    winners,
+    votesBulk,
+    selectedConstituencyNumber,
+    onSelectConstituency,
+    voteType,
+    filteredStates,
+    mode = 'constituency',
+    strongholdParty,
+    strongholdData = [],
+    strongholdView = 'strength',
+}: ConstituencyMapProps) {
     const [geoData, setGeoData] = useState<GeoFeatureCollection | null>(null);
     const [stateGeoData, setStateGeoData] = useState<StateGeoFeatureCollection | null>(null);
     const [hoveredNumber, setHoveredNumber] = useState<number | null>(null);
@@ -152,6 +192,22 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
 
     const partyOpts = { combineCduCsu: true };
     const winnerMap = useMemo(() => createWinnerMap(winners), [winners]);
+    const isStrongholds = mode === 'strongholds';
+    const strongholdPartyLabel = strongholdParty ? getPartyDisplayName(strongholdParty, partyOpts) : null;
+    const strongholdPartyColor = strongholdParty ? getPartyColor(strongholdParty, partyOpts) : '#9e9e9e';
+    const strongholdLossColor = '#b7410e';
+    const strongholdGainColor = 'teal';
+    const strongholdDataMap = useMemo(() => {
+        const map = new Map<number, PartyStrengthItem>();
+        strongholdData.forEach(item => map.set(item.constituency_number, item));
+        return map;
+    }, [strongholdData]);
+    const maxStrongholdPercent = useMemo(() => {
+        return strongholdData.reduce((max, item) => Math.max(max, item.percent ?? 0), 0);
+    }, [strongholdData]);
+    const maxStrongholdAbsDiff = useMemo(() => {
+        return strongholdData.reduce((max, item) => Math.max(max, Math.abs(item.diff_percent_pts ?? 0)), 0);
+    }, [strongholdData]);
 
     // Load constituency GeoJSON
     useEffect(() => {
@@ -220,13 +276,19 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
         const width = height * aspectRatio;
 
         const boundsWithSize: BoundsWithSize = { ...paddedBounds, width, height, cosLat };
-        const pathsData = geoData.features.map(feature => ({
-            number: feature.properties.WKR_NR,
-            name: feature.properties.WKR_NAME,
-            stateName: feature.properties.LAND_NAME,
-            stateId: feature.properties.LAND_NR,
-            path: featureToPath(feature, boundsWithSize),
-        }));
+        const pathsData = geoData.features.map(feature => {
+            const [lon, lat] = computeCentroid(feature);
+            const [cx, cy] = projectPoint(lon, lat, boundsWithSize);
+            return {
+                number: feature.properties.WKR_NR,
+                name: feature.properties.WKR_NAME,
+                stateName: feature.properties.LAND_NAME,
+                stateId: feature.properties.LAND_NR,
+                path: featureToPath(feature, boundsWithSize),
+                cx,
+                cy,
+            };
+        });
 
         return { bounds: boundsWithSize, paths: pathsData };
     }, [geoData]);
@@ -247,6 +309,7 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
 
     // Compute aggregated party percentages (filtered by selected states)
     const partyPercentages = useMemo(() => {
+        if (isStrongholds) return [];
         const partyTotals = new Map<string, { votes: number; count: number }>();
         let totalVotes = 0;
 
@@ -290,11 +353,11 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
         }
 
         return top7;
-    }, [votesBulk, voteType, filteredStates, constituencyToState]);
+    }, [isStrongholds, votesBulk, voteType, filteredStates, constituencyToState]);
 
     // City coordinates (lon, lat) and projected positions
     const cities = useMemo(() => {
-        if (!bounds) return [];
+        if (!bounds || isStrongholds) return [];
         const cityData = [
             { name: 'Berlin', lon: 13.405, lat: 52.52 },
             { name: 'Hamburg', lon: 9.993, lat: 53.551 },
@@ -306,7 +369,7 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
             const [x, y] = projectPoint(city.lon, city.lat, bounds);
             return { ...city, x, y };
         });
-    }, [bounds]);
+    }, [bounds, isStrongholds]);
 
     // Compute state border paths from bundeslaender.json
     const stateBorderPaths = useMemo(() => {
@@ -363,23 +426,55 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
 
     if (!geoData || !bounds) {
         return (
-            <div className="constituency-map-loading">
-                <div className="spinner"></div>
+            <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 px-8 py-8 text-ink-muted">
+                <div className="h-[50px] w-[50px] animate-[spin_0.8s_linear_infinite] rounded-full border-4 border-surface-accent border-t-brand-black"></div>
                 <div>Loading map...</div>
             </div>
         );
     }
 
     return (
-        <div className="constituency-map-container">
-            <div className="constituency-map-wrapper" onMouseMove={handleMouseMove}>
+        <div className="relative min-h-[480px]">
+            <div className="flex min-h-[480px] w-full justify-center py-1" onMouseMove={handleMouseMove}>
                 <svg
                     viewBox={`0 0 ${bounds.width} ${bounds.height}`}
                     preserveAspectRatio="xMidYMid meet"
-                    className="constituency-map-svg"
+                    className="h-auto w-full max-w-[415px]"
                 >
                     {/* Layer 1: Constituency fills */}
                     {paths.map(({ number, path, stateName }) => {
+                        const isSelected = selectedConstituencyNumber === number;
+                        const isHovered = hoveredNumber === number;
+
+                        if (isStrongholds) {
+                            const item = strongholdDataMap.get(number);
+                            const percent = item?.percent ?? 0;
+                            const scale = maxStrongholdPercent > 0 ? percent / maxStrongholdPercent : 0;
+                            const baseOpacity = strongholdView === 'strength' ? 0.2 + 0.75 * scale : 0.3;
+                            const fillColor = item ? strongholdPartyColor : '#d0d0d0';
+                            const fill = strongholdView === 'strength' ? fillColor : '#f1f1f1';
+                            const fillOpacity = strongholdView === 'strength'
+                                ? (isSelected ? Math.min(baseOpacity + 0.15, 1) : baseOpacity)
+                                : 1;
+
+                            return (
+                                <path
+                                    key={number}
+                                    d={path}
+                                    fill={fill}
+                                    fillOpacity={fillOpacity}
+                                    stroke="none"
+                                    className={cn(
+                                        'cursor-pointer transition-[filter] duration-150',
+                                        isSelected && 'drop-shadow-[0_0_3px_rgba(0,0,0,0.4)]'
+                                    )}
+                                    onMouseEnter={() => setHoveredNumber(number)}
+                                    onMouseLeave={() => setHoveredNumber(null)}
+                                    onClick={() => onSelectConstituency(number)}
+                                />
+                            );
+                        }
+
                         const winnerData = getWinnerByVoteType(number);
                         const fillColor = winnerData ? getPartyColor(winnerData.party, partyOpts) : '#ccc';
                         // Map percentage to discrete opacity segments
@@ -389,9 +484,6 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
                         else if (percent >= 35) baseOpacity = 0.75;
                         else if (percent >= 30) baseOpacity = 0.7;
                         else if (percent >= 25) baseOpacity = 0.65;
-
-                        const isSelected = selectedConstituencyNumber === number;
-                        const isHovered = hoveredNumber === number;
 
                         // Check if constituency should be greyed out
                         const isFiltered = filteredStates && filteredStates.size > 0;
@@ -405,7 +497,10 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
                                 fill={isGreyedOut ? '#d0d0d0' : fillColor}
                                 fillOpacity={isGreyedOut ? 0.4 : (isSelected || isHovered ? 0.85 : baseOpacity)}
                                 stroke="none"
-                                className={`constituency-path${isSelected ? ' selected' : ''}`}
+                                className={cn(
+                                    'cursor-pointer transition-[filter] duration-150',
+                                    isSelected && 'drop-shadow-[0_0_3px_rgba(0,0,0,0.4)]'
+                                )}
                                 onMouseEnter={() => setHoveredNumber(number)}
                                 onMouseLeave={() => setHoveredNumber(null)}
                                 onClick={() => onSelectConstituency(number)}
@@ -414,24 +509,39 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
                     })}
 
                     {/* Layer 2: Thin constituency borders */}
-                    <g className="constituency-borders-layer" pointerEvents="none">
-                        {paths.map(({ number, path }) => {
-                            const isSelected = selectedConstituencyNumber === number;
-                            return (
+                    {isStrongholds ? (
+                        <g pointerEvents="none">
+                            {paths.map(({ number, path }) => (
                                 <path
                                     key={`border-${number}`}
                                     d={path}
                                     fill="none"
-                                    stroke={isSelected ? "#fff" : "rgba(255,255,255,0.35)"}
-                                    strokeWidth={isSelected ? 1 : 0.4}
+                                    stroke="rgba(255,255,255,0.45)"
+                                    strokeWidth={0.5}
                                     strokeLinejoin="round"
                                 />
-                            );
-                        })}
-                    </g>
+                            ))}
+                        </g>
+                    ) : (
+                        <g pointerEvents="none">
+                            {paths.map(({ number, path }) => {
+                                const isSelected = selectedConstituencyNumber === number;
+                                return (
+                                    <path
+                                        key={`border-${number}`}
+                                        d={path}
+                                        fill="none"
+                                        stroke={isSelected ? "#fff" : "rgba(255,255,255,0.35)"}
+                                        strokeWidth={isSelected ? 1 : 0.4}
+                                        strokeLinejoin="round"
+                                    />
+                                );
+                            })}
+                        </g>
+                    )}
 
                     {/* Layer 3: State borders (thick white lines) */}
-                    <g className="state-borders-layer" pointerEvents="none">
+                    <g pointerEvents="none">
                         {stateBorderPaths.map((state, idx) => (
                             <path
                                 key={`state-${idx}`}
@@ -444,73 +554,158 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
                         ))}
                     </g>
 
+                    {isStrongholds && strongholdView === 'change' && (
+                        <g pointerEvents="none">
+                            {paths.map(({ number, cx, cy }) => {
+                                const item = strongholdDataMap.get(number);
+                                const diff = item?.diff_percent_pts;
+                                if (diff === null || diff === undefined || diff === 0) return null;
+                                const magnitude = Math.abs(diff);
+                                const scale = maxStrongholdAbsDiff > 0 ? magnitude / maxStrongholdAbsDiff : 0;
+                                const height = 9 + scale * 24;
+                                const halfHeight = height / 2;
+                                const halfWidth = Math.max(3, height * 0.2);
+                                const opacity = 0.55 + 0.4 * scale;
+                                const isGain = diff > 0;
+                                const chevronPath = isGain
+                                    ? `M ${-halfWidth},${halfHeight} L 0,${-halfHeight} L ${halfWidth},${halfHeight}`
+                                    : `M ${-halfWidth},${-halfHeight} L 0,${halfHeight} L ${halfWidth},${-halfHeight}`;
+                                return (
+                                    <path
+                                        key={`chg-${number}`}
+                                        d={chevronPath}
+                                        transform={`translate(${cx}, ${cy})`}
+                                        fill="none"
+                                        stroke={isGain ? strongholdGainColor : strongholdLossColor}
+                                        strokeWidth={2}
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        opacity={opacity}
+                                    />
+                                );
+                            })}
+                        </g>
+                    )}
+
                     {/* Layer 4: City markers */}
-                    <g className="city-markers-layer" pointerEvents="none">
-                        {cities.map(city => (
-                            <g key={city.name} transform={`translate(${city.x}, ${city.y})`}>
-                                <circle
-                                    r={3}
-                                    fill="#333"
-                                    stroke="#fff"
-                                    strokeWidth={1.5}
-                                />
-                                <text
-                                    x={8}
-                                    y={4}
-                                    fontSize={11}
-                                    fontWeight={600}
-                                    fill="#333"
-                                    stroke="#fff"
-                                    strokeWidth={2.5}
-                                    paintOrder="stroke"
-                                >
-                                    {city.name}
-                                </text>
-                            </g>
-                        ))}
-                    </g>
+                    {!isStrongholds && (
+                        <g pointerEvents="none">
+                            {cities.map(city => (
+                                <g key={city.name} transform={`translate(${city.x}, ${city.y})`}>
+                                    <circle
+                                        r={3}
+                                        fill="#333"
+                                        stroke="#fff"
+                                        strokeWidth={1.5}
+                                    />
+                                    <text
+                                        x={8}
+                                        y={4}
+                                        fontSize={11}
+                                        fontWeight={600}
+                                        fill="#333"
+                                        stroke="#fff"
+                                        strokeWidth={2.5}
+                                        paintOrder="stroke"
+                                    >
+                                        {city.name}
+                                    </text>
+                                </g>
+                            ))}
+                        </g>
+                    )}
                 </svg>
             </div>
 
             {/* Tooltip with top 5 parties */}
             {hoveredNumber && tooltipPos && (
                 <div
-                    className="constituency-tooltip"
+                    className="fixed z-[1000] min-w-[220px] max-w-[300px] rounded bg-white p-3 shadow-[0_4px_20px_rgba(0,0,0,0.25)] pointer-events-none"
                     style={{ left: tooltipPos.x, top: tooltipPos.y }}
                 >
-                    <div className="constituency-tooltip-title">
+                    <div className="mb-3 border-b border-[#eee] pb-2 text-base font-bold text-ink">
                         {paths.find(p => p.number === hoveredNumber)?.name}
-                        <span className="constituency-tooltip-state">
+                        <span className="mt-1 block text-[0.75rem] font-normal text-ink-faint">
                             {paths.find(p => p.number === hoveredNumber)?.stateName}
                         </span>
                     </div>
-                    <div className="constituency-tooltip-vote-type">
+                    <div className="mb-2 pb-1 text-[0.7rem] uppercase tracking-[0.05em] text-ink-faint">
                         {voteType === 'first' ? 'First Votes (Erststimmen)' : 'Second Votes (Zweitstimmen)'}
                     </div>
-                    {(() => {
+                    {isStrongholds ? (() => {
+                        const item = strongholdDataMap.get(hoveredNumber);
+                        if (!item) return <div className="text-[0.8rem] italic text-ink-faint">No data available</div>;
+                        const percent = item.percent ?? 0;
+                        const votes = item.votes ?? 0;
+                        const barWidth = Math.min(percent, 100);
+
+                        return (
+                            <>
+                                <div className="relative mb-1 grid grid-cols-[auto_1fr_auto_auto] items-center gap-2 text-[0.85rem]">
+                                    <div
+                                        className="absolute inset-y-0 left-0 z-0 rounded opacity-25 transition-[width] duration-200 ease-out"
+                                        style={{
+                                            backgroundColor: strongholdPartyColor,
+                                            width: `${barWidth}%`
+                                        }}
+                                    />
+                                    <span className="z-10 rounded bg-white/85 px-1.5 py-0.5 font-semibold text-ink">
+                                        {strongholdPartyLabel ?? 'Selected party'}
+                                    </span>
+                                    <span className="z-10 text-right font-semibold text-ink">
+                                        {percent.toFixed(1)}%
+                                    </span>
+                                    <span className="z-10 min-w-[50px] text-right text-ink-faint">
+                                        {votes.toLocaleString()}
+                                    </span>
+                                </div>
+                                {strongholdView === 'change' && (
+                                    <div className="mt-2 text-[0.85rem]">
+                                        {item.diff_percent_pts === null ? (
+                                            <div className="text-ink-faint">No change data</div>
+                                        ) : (
+                                            <div className="flex items-center justify-between">
+                                                <span className="font-semibold text-ink">Change vs 2021</span>
+                                                <span
+                                                    className={cn(
+                                                        'font-semibold',
+                                                        item.diff_percent_pts > 0 && 'text-emerald-700',
+                                                        item.diff_percent_pts < 0 && 'text-[#b7410e]',
+                                                        item.diff_percent_pts === 0 && 'text-ink-faint'
+                                                    )}
+                                                >
+                                                    {item.diff_percent_pts > 0 ? '+' : ''}{item.diff_percent_pts.toFixed(1)} pt.
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </>
+                        );
+                    })() : (() => {
                         const voteData = votesBulkMap.get(hoveredNumber);
                         if (!voteData || voteData.parties.length === 0) {
                             // Fallback to winner data
                             if (hoveredWinner) {
                                 return (
-                                    <div className="constituency-tooltip-row">
+                                    <div className="relative mb-1 grid grid-cols-[auto_1fr_auto_auto] items-center gap-2 text-[0.85rem]">
                                         <div
-                                            className="constituency-tooltip-bar"
+                                            className="absolute inset-y-0 left-0 z-0 rounded opacity-25 transition-[width] duration-200 ease-out"
                                             style={{
                                                 backgroundColor: getPartyColor(hoveredWinner.party_name, partyOpts),
                                                 width: `${Math.min(hoveredWinner.percent_of_valid || 0, 100)}%`
                                             }}
                                         />
-                                        <span className="constituency-tooltip-party">
+                                        <span className="z-10 rounded bg-white/85 px-1.5 py-0.5 font-semibold text-ink">
                                             {getPartyDisplayName(hoveredWinner.party_name, partyOpts)}
                                         </span>
-                                        <span className="constituency-tooltip-pct">
+                                        <span className="z-10 text-right font-semibold text-ink">
                                             {hoveredWinner.percent_of_valid?.toFixed(1)}%
                                         </span>
                                     </div>
                                 );
                             }
-                            return <div className="constituency-tooltip-no-data">No data available</div>;
+                            return <div className="text-[0.8rem] italic text-ink-faint">No data available</div>;
                         }
 
                         // Sort by the current vote type and take top 5
@@ -525,28 +720,28 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
                         );
 
                         return (
-                            <div className="constituency-tooltip-parties">
+                            <div className="flex flex-col gap-1">
                                 {top5.map((party, idx) => {
                                     const percent = voteType === 'first' ? party.first_percent : party.second_percent;
                                     const votes = voteType === 'first' ? party.first_votes : party.second_votes;
                                     const barWidth = maxPercent > 0 ? (percent / maxPercent) * 100 : 0;
 
                                     return (
-                                        <div key={idx} className="constituency-tooltip-row">
+                                        <div key={idx} className="relative mb-1 grid grid-cols-[auto_1fr_auto_auto] items-center gap-2 text-[0.85rem]">
                                             <div
-                                                className="constituency-tooltip-bar"
+                                                className="absolute inset-y-0 left-0 z-0 rounded opacity-25 transition-[width] duration-200 ease-out"
                                                 style={{
                                                     backgroundColor: getPartyColor(party.party_name, partyOpts),
                                                     width: `${barWidth}%`
                                                 }}
                                             />
-                                            <span className="constituency-tooltip-party">
+                                            <span className="z-10 rounded bg-white/85 px-1.5 py-0.5 font-semibold text-ink">
                                                 {getPartyDisplayName(party.party_name, partyOpts)}
                                             </span>
-                                            <span className="constituency-tooltip-pct">
+                                            <span className="z-10 text-right font-semibold text-ink">
                                                 {percent.toFixed(1)}%
                                             </span>
-                                            <span className="constituency-tooltip-votes">
+                                            <span className="z-10 min-w-[50px] text-right text-ink-faint">
                                                 {votes.toLocaleString()}
                                             </span>
                                         </div>
@@ -555,39 +750,105 @@ export function ConstituencyMap({ year, winners, votesBulk, selectedConstituency
                             </div>
                         );
                     })()}
-                    {hoveredWinner && voteType === 'first' && (
-                        <div className="constituency-tooltip-candidate">
+                    {!isStrongholds && hoveredWinner && voteType === 'first' && (
+                        <div className="mt-2 border-t border-[#eee] pt-2 text-[0.8rem] text-ink-muted">
                             Winner: {hoveredWinner.winner_name}
                         </div>
                     )}
                 </div>
             )}
 
-            {/* Compact Legend with dynamic percentages */}
-            <div className="constituency-map-legend compact">
-                <div className="constituency-map-legend-header">
-                    <span className="constituency-map-legend-title">
-                        {voteType === 'first' ? 'First Vote Share' : 'Second Vote Share'}
-                    </span>
-                    {filteredStates && filteredStates.size > 0 && (
-                        <span className="constituency-map-legend-filter-note">
-                            {filteredStates.size} state{filteredStates.size > 1 ? 's' : ''}
-                        </span>
-                    )}
-                </div>
-                <div className="constituency-map-legend-grid">
-                    {partyPercentages.map(({ party, percent }) => (
-                        <div key={party} className="constituency-map-legend-item-compact">
-                            <div
-                                className="constituency-map-legend-dot"
-                                style={{ backgroundColor: party === 'Other' ? '#888' : getPartyColor(party, partyOpts) }}
-                            />
-                            <span className="constituency-map-legend-party-abbr">{party}</span>
-                            <span className="constituency-map-legend-pct">{percent.toFixed(1)}%</span>
+            {isStrongholds ? (
+                strongholdParty ? (
+                    strongholdView === 'strength' ? (
+                        <div className="border-t border-line px-3 py-2">
+                            <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-[0.7rem] font-semibold uppercase tracking-[0.03em] text-ink-muted">
+                                <span>Stronghold strength</span>
+                                <span className="flex items-center gap-2 text-[0.75rem] font-semibold normal-case text-ink">
+                                    <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: strongholdPartyColor }} />
+                                    {strongholdPartyLabel ?? 'Party'}
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-3 text-[0.8rem] text-ink-muted">
+                                <span className="min-w-[32px] text-left">0%</span>
+                                <div className="relative h-2 flex-1 rounded-full bg-surface-muted">
+                                    <div
+                                        className="absolute inset-0 rounded-full"
+                                        style={{ background: `linear-gradient(to right, rgba(0,0,0,0.15), ${strongholdPartyColor})` }}
+                                    />
+                                    <span className="absolute left-1/2 top-1/2 h-3 w-[1px] -translate-y-1/2 bg-white/70" />
+                                </div>
+                                <span className="min-w-[46px] text-right">{maxStrongholdPercent.toFixed(1)}%</span>
+                            </div>
+                            <div className="mt-1 flex items-center justify-between text-[0.7rem] text-ink-faint">
+                                <span>Lower</span>
+                                <span>Higher</span>
+                            </div>
                         </div>
-                    ))}
+                    ) : (
+                        <div className="border-t border-line px-3 py-2">
+                            <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-[0.7rem] font-semibold uppercase tracking-[0.03em] text-ink-muted">
+                                <span>Change since 2021</span>
+                                <span className="flex items-center gap-2 text-[0.75rem] font-semibold normal-case text-ink">
+                                    <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: strongholdPartyColor }} />
+                                    {strongholdPartyLabel ?? 'Party'}
+                                </span>
+                            </div>
+                            <div className="flex flex-col items-center gap-2 text-[0.8rem] text-ink-muted">
+                                <div className="grid w-full max-w-[320px] grid-cols-[56px_160px_56px] items-center gap-3">
+                                    <span className="text-left">
+                                    {maxStrongholdAbsDiff ? `-${maxStrongholdAbsDiff.toFixed(1)} pt.` : '-0.0 pt.'}
+                                    </span>
+                                    <div className="flex h-[42px] w-[160px] items-center justify-center">
+                                        <svg className="h-[75px] w-[160px]" viewBox="0 0 170 100" aria-hidden="true">
+                                            <g fill="none" strokeWidth="1.5">
+                                                <path
+                                                    vectorEffect="non-scaling-stroke"
+                                                    d="m5 50 5 50m5-50-5 50m5-50 5 43.333M25 50l-5 43.333M25 50l5 36.667M35 50l-5 36.667M35 50l5 30m5-30-5 30m5-30 5 23.333M55 50l-5 23.333M55 50l5 16.667M65 50l-5 16.667M65 50l5 10m5-10-5 10m5-10 5 3.333M85 50l-5 3.333"
+                                                    stroke={strongholdLossColor}
+                                                />
+                                                <path
+                                                    vectorEffect="non-scaling-stroke"
+                                                    d="m85 50 5-3.333M95 50l-5-3.333M95 50l5-10m5 10-5-10m5 10 5-16.667M115 50l-5-16.667M115 50l5-23.333M125 50l-5-23.333M125 50l5-30m5 30-5-30m5 30 5-36.667M145 50l-5-36.667M145 50l5-43.333M155 50l-5-43.333M155 50l5-50m5 50-5-50"
+                                                    stroke={strongholdGainColor}
+                                                />
+                                            </g>
+                                        </svg>
+                                    </div>
+                                    <span className="text-right">
+                                    {maxStrongholdAbsDiff ? `+${maxStrongholdAbsDiff.toFixed(1)} pt.` : '+0.0 pt.'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    )
+                ) : null
+            ) : (
+                <div className="border-t border-line px-3 py-2">
+                    <div className="mb-1 flex items-center justify-between">
+                        <span className="text-[0.7rem] font-semibold uppercase tracking-[0.03em] text-ink-muted">
+                            {voteType === 'first' ? 'First Vote Share' : 'Second Vote Share'}
+                        </span>
+                        {filteredStates && filteredStates.size > 0 && (
+                            <span className="rounded bg-surface-muted px-1.5 py-[0.1rem] text-[0.65rem] font-medium text-ink-faint">
+                                {filteredStates.size} state{filteredStates.size > 1 ? 's' : ''}
+                            </span>
+                        )}
+                    </div>
+                    <div className="grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] gap-x-3 gap-y-1">
+                        {partyPercentages.map(({ party, percent }) => (
+                            <div key={party} className="flex items-center gap-2 py-0.5 text-[0.9rem]">
+                                <div
+                                    className="h-[9px] w-[9px] flex-shrink-0 rounded-sm"
+                                    style={{ backgroundColor: party === 'Other' ? '#888' : getPartyColor(party, partyOpts) }}
+                                />
+                                <span className="truncate font-semibold text-ink">{party}</span>
+                                <span className="ml-auto text-ink-faint">{percent.toFixed(1)}%</span>
+                            </div>
+                        ))}
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 }

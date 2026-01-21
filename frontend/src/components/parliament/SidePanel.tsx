@@ -1,4 +1,5 @@
-import type { CSSProperties } from 'react';
+import { cn } from '../../utils/cn';
+import { PartyBadge } from '../ui/PartyBadge';
 
 export type SidePanelSeat = {
     id: string;
@@ -21,7 +22,6 @@ export type SidePanelSeat = {
 type Props = {
     open: boolean;
     seat: SidePanelSeat | null;
-    partyColor: string;
     onClose: () => void;
 };
 
@@ -29,61 +29,51 @@ type Props = {
  * Slide-in side panel that shows details for the selected seat.
  * Uses only existing theme primitives via CSS variables.
  */
-export function SidePanel({ open, seat, partyColor, onClose }: Props) {
-    const panelStyle: CSSProperties = {
-        position: 'sticky',
-        top: 16,
-        background: open ? 'var(--bg-primary)' : 'var(--bg-secondary)',
-        border: '1px solid var(--border-color)',
-        borderRadius: 10,
-        boxShadow: 'var(--shadow-md)',
-        minHeight: 420,
-        overflow: 'hidden',
-        transform: open ? 'translateX(0)' : 'translateX(12px)',
-        opacity: open ? 1 : 0.95,
-        transition: 'transform 180ms ease, opacity 180ms ease, background-color 180ms ease',
-    };
-
+export function SidePanel({ open, seat, onClose }: Props) {
     return (
-        <div style={panelStyle} role="region" aria-label="Seat details">
-            <div style={{ padding: '1rem' }}>
+        <div
+            className={cn(
+                'sticky top-4 min-h-[420px] overflow-hidden rounded-[10px] border border-line shadow-md transition-[transform,opacity,background-color] duration-200 ease-out',
+                open ? 'translate-x-0 bg-surface' : 'translate-x-3 bg-surface-muted opacity-95'
+            )}
+            role="region"
+            aria-label="Seat details"
+        >
+            <div className="p-4">
                 {seat ? (
                     <>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                        <div className="flex items-start justify-between gap-3">
                             <div>
-                                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                                <div className="text-[1.1rem] font-extrabold text-ink">
                                     {seat.memberName}
                                 </div>
-                                <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                                    <span
-                                        className="party-badge"
-                                        style={{ backgroundColor: partyColor, color: '#fff' }}
-                                    >
+                                <div className="mt-2 flex flex-wrap items-center gap-2">
+                                    <PartyBadge party={seat.party} combineCduCsu>
                                         {seat.party}
-                                    </span>
+                                    </PartyBadge>
                                     {seat.isNewMember && (
-                                        <span className="seat-badge seat-list">New</span>
+                                        <span className="inline-block rounded px-2 py-1 text-[0.75rem] font-semibold uppercase tracking-[0.5px] text-white bg-[#2196f3]">New</span>
                                     )}
                                 </div>
-                                <div style={{ marginTop: 6, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                                <div className="mt-2 text-[0.9rem] text-ink-muted">
                                     {seat.seatType === 'direct' ? 'Direct mandate' : 'List mandate'}
                                 </div>
                             </div>
 
-                            <button className="btn" onClick={onClose} type="button">
+                            <button className="rounded-md px-2 py-1 text-ink-muted transition hover:text-ink" onClick={onClose} type="button">
                                 ✕
                             </button>
                         </div>
 
-                        <div className="info-box" style={{ marginTop: '1rem' }}>
-                            <div className="info-box-title">Region / Constituency</div>
-                            <div className="info-box-text">{seat.constituency || seat.region}</div>
+                        <div className="mt-4 rounded border-l-4 border-[#2196f3] bg-[#e3f2fd] p-4">
+                            <div className="mb-2 font-semibold text-[#1976d2]">Region / Constituency</div>
+                            <div className="text-sm text-[#555]">{seat.constituency || seat.region}</div>
                         </div>
 
                         {(seat.profession || seat.age !== undefined) && (
-                            <div className="info-box" style={{ marginTop: '0.75rem' }}>
-                                <div className="info-box-title">Personal info</div>
-                                <div className="info-box-text">
+                            <div className="mt-3 rounded border-l-4 border-[#2196f3] bg-[#e3f2fd] p-4">
+                                <div className="mb-2 font-semibold text-[#1976d2]">Personal info</div>
+                                <div className="text-sm text-[#555]">
                                     {seat.profession ? `Profession: ${seat.profession}` : ''}
                                     {seat.profession && seat.age !== undefined ? ' · ' : ''}
                                     {seat.age !== undefined ? `Age: ${seat.age}` : ''}
@@ -92,9 +82,9 @@ export function SidePanel({ open, seat, partyColor, onClose }: Props) {
                         )}
 
                         {(seat.firstElected || seat.yearsInParliament !== undefined) && (
-                            <div className="info-box" style={{ marginTop: '0.75rem' }}>
-                                <div className="info-box-title">Experience</div>
-                                <div className="info-box-text">
+                            <div className="mt-3 rounded border-l-4 border-[#2196f3] bg-[#e3f2fd] p-4">
+                                <div className="mb-2 font-semibold text-[#1976d2]">Experience</div>
+                                <div className="text-sm text-[#555]">
                                     {seat.firstElected ? `First elected: ${seat.firstElected}` : ''}
                                     {seat.firstElected && seat.yearsInParliament !== undefined ? ' · ' : ''}
                                     {seat.yearsInParliament !== undefined
@@ -107,40 +97,32 @@ export function SidePanel({ open, seat, partyColor, onClose }: Props) {
                         )}
 
                         {seat.previousPosition && (
-                            <div className="info-box" style={{ marginTop: '0.75rem' }}>
-                                <div className="info-box-title">Previous position</div>
-                                <div className="info-box-text">{seat.previousPosition}</div>
+                            <div className="mt-3 rounded border-l-4 border-[#2196f3] bg-[#e3f2fd] p-4">
+                                <div className="mb-2 font-semibold text-[#1976d2]">Previous position</div>
+                                <div className="text-sm text-[#555]">{seat.previousPosition}</div>
                             </div>
                         )}
 
                         {seat.seatType === 'direct' && seat.votes !== undefined && seat.percentage !== undefined && (
-                            <div className="info-box" style={{ marginTop: '0.75rem' }}>
-                                <div className="info-box-title">Constituency result</div>
-                                <div className="info-box-text">
+                            <div className="mt-3 rounded border-l-4 border-[#2196f3] bg-[#e3f2fd] p-4">
+                                <div className="mb-2 font-semibold text-[#1976d2]">Constituency result</div>
+                                <div className="text-sm text-[#555]">
                                     {seat.votes.toLocaleString('de-DE')} votes · {seat.percentage.toFixed(1)}%
                                 </div>
                             </div>
                         )}
 
                         {seat.committees && seat.committees.length > 0 && (
-                            <div className="info-box" style={{ marginTop: '0.75rem' }}>
-                                <div className="info-box-title">Committees</div>
-                                <div className="info-box-text">
+                            <div className="mt-3 rounded border-l-4 border-[#2196f3] bg-[#e3f2fd] p-4">
+                                <div className="mb-2 font-semibold text-[#1976d2]">Committees</div>
+                                <div className="text-sm text-[#555]">
                                     {seat.committees.join(', ')}
                                 </div>
                             </div>
                         )}
                     </>
                 ) : (
-                    <div style={{
-                        height: 380,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'var(--text-secondary)',
-                        textAlign: 'center',
-                        padding: '1rem',
-                    }}>
+                    <div className="flex h-[380px] items-center justify-center p-4 text-center text-ink-muted">
                         Select a seat to view details
                     </div>
                 )}

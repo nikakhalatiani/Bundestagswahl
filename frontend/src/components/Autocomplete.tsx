@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { cn } from '../utils/cn';
 
 export type AutocompleteItem = {
     id: string | number;
@@ -14,10 +15,13 @@ type Props<T extends AutocompleteItem> = {
     getItemLabel: (item: T) => string;
     placeholder?: string;
     disabled?: boolean;
+    className?: string;
+    inputClassName?: string;
+    labelClassName?: string;
 };
 
 export function Autocomplete<T extends AutocompleteItem>(props: Props<T>) {
-    const { id, label, items, value, onChange, onSelect, getItemLabel, placeholder, disabled } = props;
+    const { id, label, items, value, onChange, onSelect, getItemLabel, placeholder, disabled, className, inputClassName, labelClassName } = props;
 
     const containerRef = useRef<HTMLDivElement | null>(null);
     const inputRef = useRef<HTMLInputElement | null>(null);
@@ -60,13 +64,16 @@ export function Autocomplete<T extends AutocompleteItem>(props: Props<T>) {
     }
 
     return (
-        <div className="form-group" ref={containerRef}>
-            <label className="form-label" htmlFor={id}>{label}</label>
-            <div style={{ position: 'relative' }}>
+        <div className={cn('mb-6', className)} ref={containerRef}>
+            <label className={cn('mb-2 block font-semibold text-ink', labelClassName)} htmlFor={id}>{label}</label>
+            <div className="relative">
                 <input
                     ref={inputRef}
                     id={id}
-                    className="form-input"
+                    className={cn(
+                        'w-full rounded-md border-2 border-line px-4 py-3 text-base transition focus:border-brand-black focus:outline-none focus:ring-2 focus:ring-black/10',
+                        inputClassName
+                    )}
                     value={value}
                     onFocus={() => setOpen(true)}
                     onChange={(e) => {
@@ -111,19 +118,7 @@ export function Autocomplete<T extends AutocompleteItem>(props: Props<T>) {
                     <div
                         id={`${id}-listbox`}
                         role="listbox"
-                        style={{
-                            position: 'absolute',
-                            zIndex: 10,
-                            top: 'calc(100% + 6px)',
-                            left: 0,
-                            right: 0,
-                            maxHeight: 260,
-                            overflowY: 'auto',
-                            background: 'var(--bg-primary)',
-                            border: '1px solid var(--border-color)',
-                            borderRadius: 6,
-                            boxShadow: 'var(--shadow-md)',
-                        }}
+                        className="absolute left-0 right-0 top-full z-10 mt-1.5 max-h-[260px] overflow-y-auto rounded-md border border-line bg-surface shadow-md"
                     >
                         {filtered.map(({ item, label: itemLabel }, idx) => (
                             <div
@@ -136,11 +131,10 @@ export function Autocomplete<T extends AutocompleteItem>(props: Props<T>) {
                                     e.preventDefault();
                                     commitSelection(idx);
                                 }}
-                                style={{
-                                    padding: '0.5rem 0.75rem',
-                                    cursor: 'pointer',
-                                    background: idx === activeIndex ? 'var(--bg-secondary)' : 'transparent',
-                                }}
+                                className={cn(
+                                    'cursor-pointer px-3 py-2',
+                                    idx === activeIndex ? 'bg-surface-muted' : 'bg-transparent'
+                                )}
                             >
                                 {itemLabel}
                             </div>

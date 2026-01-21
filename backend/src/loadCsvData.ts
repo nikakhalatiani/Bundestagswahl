@@ -55,12 +55,12 @@ async function transactionalInsert(label: string, run: (client: PoolClient) => P
 }
 
 // ---------------------------------------------------------------------
-//  Generic interfaces deriving from your CSV structure
+//  Generic interfaces deriving from CSV structure
 // ---------------------------------------------------------------------
 type CsvRow = Record<string, string>;
 
 // ---------------------------------------------------------------------
-//  Folder setup (you now keep everything inside "data")
+//  Folder setup
 // ---------------------------------------------------------------------
 const DATA_DIR = path.join(__dirname, "..", "..", "data");
 

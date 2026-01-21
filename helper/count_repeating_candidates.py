@@ -34,8 +34,8 @@ def load_and_process(file_path):
     return df
 
 def main():
-    file1_path = 'data/rawData/kand2021.csv' # Replace with your first filename
-    file2_path = 'data/rawData/kand2025.csv' # Replace with your second filename
+    file1_path = 'data/rawData/kand2021.csv'
+    file2_path = 'data/rawData/kand2025.csv'
 
     try:
         print("Loading files...")

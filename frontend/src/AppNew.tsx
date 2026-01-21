@@ -7,7 +7,8 @@ import { Members } from './pages/Members';
 import { ConstituencyAnalysis } from './pages/ConstituencyAnalysis';
 import { IncomeMapPage } from './pages/IncomeMapPage';
 import { ForeignerAfdScatterPage } from './pages/ForeignerAfdScatterPage';
-import { PartyStrengthPage } from './pages/PartyStrengthPage';
+import { cn } from './utils/cn';
+import { Select } from './components/ui/Select';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,51 +24,80 @@ function Navigation({ year, setYear }: { year: number; setYear: (y: number) => v
 
   return (
     <>
-      <header className="header">
-        <div className="header-content">
-          <div className="header-branding">
-            <img src={logo} alt="Bundesarchiv Logo" className="header-logo" />
-            <h1 className="header-title">German Federal Election Explorer</h1>
+      <header className="sticky top-0 z-[100] shadow-md">
+        <div className="ml-[6px] flex flex-wrap items-center justify-between bg-surface pr-8">
+          <div className="flex items-center gap-4">
+            <img src={logo} alt="Bundesarchiv Logo" className="h-[90px] w-auto" />
+            <h1 className="text-2xl font-extrabold leading-tight text-ink">German Federal Election Explorer</h1>
           </div>
-          <div className="year-selector">
+          <div className="flex items-center gap-2 px-4 py-3 text-[0.9rem] text-ink-muted">
             <label>Election year:</label>
-            <select value={year} onChange={(e) => setYear(Number(e.target.value))}>
+            <Select
+              className="font-semibold"
+              value={year}
+              onChange={(e) => setYear(Number(e.target.value))}
+            >
               <option value={2021}>2021</option>
               <option value={2025}>2025</option>
-            </select>
+            </Select>
           </div>
         </div>
-        <nav className="nav">
-          <ul className="nav-list">
+        <nav className="ml-[6px] border-b border-line bg-surface px-8">
+          <ul className="flex list-none gap-2 overflow-x-auto">
             <li>
-              <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}>
-                Seat distribution
-              </Link>
+                <Link
+                  to="/"
+                  className={cn(
+                    'block whitespace-nowrap border-b-[3px] border-transparent px-6 py-4 font-medium text-ink-muted transition hover:bg-surface-muted hover:text-ink',
+                    location.pathname === '/' && 'border-brand-gold bg-surface-muted font-semibold text-ink'
+                  )}
+                >
+                  Seat distribution
+                </Link>
             </li>
             <li>
-              <Link to="/members" className={`nav-link ${location.pathname === '/members' ? 'active' : ''}`}>
-                Members
-              </Link>
+                <Link
+                  to="/members"
+                  className={cn(
+                    'block whitespace-nowrap border-b-[3px] border-transparent px-6 py-4 font-medium text-ink-muted transition hover:bg-surface-muted hover:text-ink',
+                    location.pathname === '/members' && 'border-brand-gold bg-surface-muted font-semibold text-ink'
+                  )}
+                >
+                  Members
+                </Link>
             </li>
             <li>
-              <Link to="/analysis" className={`nav-link ${location.pathname === '/analysis' ? 'active' : ''}`}>
-                Constituency analysis
-              </Link>
-            </li>
-            <li>
-              <Link to="/party-strength" className={`nav-link ${location.pathname === '/party-strength' ? 'active' : ''}`}>
-                Party strongholds
-              </Link>
+                <Link
+                  to="/analysis"
+                  className={cn(
+                    'block whitespace-nowrap border-b-[3px] border-transparent px-6 py-4 font-medium text-ink-muted transition hover:bg-surface-muted hover:text-ink',
+                    location.pathname === '/analysis' && 'border-brand-gold bg-surface-muted font-semibold text-ink'
+                  )}
+                >
+                  Constituency analysis
+                </Link>
             </li>
             {year === 2025 && (
               <>
                 <li>
-                  <Link to="/income" className={`nav-link ${location.pathname === '/income' ? 'active' : ''}`}>
+                  <Link
+                    to="/income"
+                    className={cn(
+                      'block whitespace-nowrap border-b-[3px] border-transparent px-6 py-4 font-medium text-ink-muted transition hover:bg-surface-muted hover:text-ink',
+                      location.pathname === '/income' && 'border-brand-gold bg-surface-muted font-semibold text-ink'
+                    )}
+                  >
                     Income Analysis
                   </Link>
                 </li>
                 <li>
-                  <Link to="/foreigner-afd" className={`nav-link ${location.pathname === '/foreigner-afd' ? 'active' : ''}`}>
+                  <Link
+                    to="/foreigner-afd"
+                    className={cn(
+                      'block whitespace-nowrap border-b-[3px] border-transparent px-6 py-4 font-medium text-ink-muted transition hover:bg-surface-muted hover:text-ink',
+                      location.pathname === '/foreigner-afd' && 'border-brand-gold bg-surface-muted font-semibold text-ink'
+                    )}
+                  >
                     Foreigner/AfD Analysis
                   </Link>
                 </li>
@@ -86,12 +116,11 @@ function AppContent() {
   return (
     <>
       <Navigation year={year} setYear={setYear} />
-      <main className="main">
+      <main className="mx-auto w-full max-w-[1400px] flex-1 p-4">
         <Routes>
           <Route path="/" element={<Dashboard year={year} />} />
           <Route path="/members" element={<Members year={year} />} />
           <Route path="/analysis" element={<ConstituencyAnalysis year={year} />} />
-          <Route path="/party-strength" element={<PartyStrengthPage year={year} />} />
           <Route path="/income" element={<IncomeMapPage year={year} />} />
           <Route path="/foreigner-afd" element={<ForeignerAfdScatterPage />} />
         </Routes>
