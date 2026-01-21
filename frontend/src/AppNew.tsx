@@ -19,6 +19,8 @@ const queryClient = new QueryClient({
   },
 });
 
+const selectBaseClass = `appearance-none rounded-md border border-line bg-surface-muted px-3 py-2 pr-8 text-[0.9rem] font-semibold text-ink transition hover:border-ink-faint hover:bg-surface-accent focus:border-brand-black focus:outline-none focus:ring-2 focus:ring-black/5 bg-[url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e")] bg-no-repeat bg-[right_0.5rem_center] bg-[length:0.9em]`;
+
 function Navigation({ year, setYear }: { year: number; setYear: (y: number) => void }) {
   const location = useLocation();
 
@@ -33,7 +35,7 @@ function Navigation({ year, setYear }: { year: number; setYear: (y: number) => v
           <div className="flex items-center gap-2 px-4 py-3 text-[0.9rem] text-ink-muted">
             <label>Election year:</label>
             <select
-              className="rounded-lg border border-line bg-surface-muted px-4 py-2 text-[0.95rem] font-semibold text-ink transition hover:border-ink-faint hover:bg-surface-accent focus:border-brand-black focus:outline-none focus:ring-2 focus:ring-black/5"
+              className={selectBaseClass}
               value={year}
               onChange={(e) => setYear(Number(e.target.value))}
             >

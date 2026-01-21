@@ -398,7 +398,7 @@ export function Dashboard({ year }: DashboardProps) {
     );
   }
 
-  const filterSelectClass = 'rounded-md border border-line bg-surface-muted px-3 py-2 text-[0.9rem] text-ink transition hover:border-ink-faint focus:border-ink focus:outline-none';
+  const filterSelectClass = `appearance-none rounded-md border border-line bg-surface-muted px-3 py-2 pr-8 text-[0.9rem] text-ink transition hover:border-ink-faint hover:bg-surface-accent focus:border-ink focus:outline-none focus:ring-2 focus:ring-black/5 bg-[url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e")] bg-no-repeat bg-[right_0.5rem_center] bg-[length:0.9em]`;
 
   return (
     <div className="flex flex-col gap-6">
@@ -475,7 +475,7 @@ export function Dashboard({ year }: DashboardProps) {
                     placeholder="Search for a member..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full rounded-md border border-line bg-surface-muted px-4 py-2 pl-9 text-[0.95rem] transition focus:border-ink-faint focus:bg-surface focus:outline-none focus:ring-2 focus:ring-black/5"
+                    className="w-full rounded-md border border-line bg-surface-muted px-3 py-2 pl-9 text-[0.9rem] transition focus:border-ink-faint focus:bg-surface focus:outline-none focus:ring-2 focus:ring-black/5"
                   />
                 </div>
 
@@ -983,7 +983,7 @@ export function Dashboard({ year }: DashboardProps) {
                     setComparisonMode(next);
                   }
                 }}
-                className={cn(filterSelectClass, 'min-w-[160px] px-4 font-medium')}
+                className={cn(filterSelectClass, 'min-w-[160px]')}
               >
                 <option value="seats">Seats</option>
                 <option value="first">First Votes</option>

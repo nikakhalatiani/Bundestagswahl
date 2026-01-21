@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { Users, MapPin, Briefcase, User, Search, Calendar, ListOrdered, Percent, Download, ChevronLeft, ChevronRight, UserPlus } from 'lucide-react';
 import { useMembers } from '../hooks/useQueries';
 import type { MemberItem } from '../types/api';
@@ -295,7 +295,7 @@ export function Members({ year }: MembersProps) {
   }
 
   const hasActiveFilters = selectedParties.size > 0 || selectedStates.size > 0 || filterSeatType !== 'all' || filterGender !== 'all' || filterStatus !== 'all' || searchTerm;
-  const filterSelectClass = 'rounded-md border border-line bg-surface-muted px-3 py-2 text-[0.9rem] text-ink transition hover:border-ink-faint focus:border-ink focus:outline-none';
+  const filterSelectClass = `appearance-none rounded-md border border-line bg-surface-muted px-3 py-2 pr-8 text-[0.9rem] text-ink transition hover:border-ink-faint hover:bg-surface-accent focus:border-ink focus:outline-none focus:ring-2 focus:ring-black/5 bg-[url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e")] bg-no-repeat bg-[right_0.5rem_center] bg-[length:0.9em]`;
 
   return (
     <div className="flex flex-col gap-6">
@@ -417,8 +417,8 @@ export function Members({ year }: MembersProps) {
             <span>Export CSV</span>
           </Button>
         </CardHeader>
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div>
+        <div className="flex flex-col gap-6">
+          <div className="min-w-0">
             <div className="mb-4">
               <div className="flex flex-wrap items-center gap-2">
                 <div className="relative flex-1 min-w-[200px]">
@@ -428,7 +428,7 @@ export function Members({ year }: MembersProps) {
                     placeholder="Search by name..."
                     value={searchTerm}
                     onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                    className="w-full rounded-lg border border-line bg-surface-muted px-4 py-3 pl-10 text-[0.95rem] transition focus:border-ink-faint focus:bg-surface focus:outline-none focus:ring-2 focus:ring-black/5"
+                    className="w-full rounded-md border border-line bg-surface-muted px-3 py-2 pl-9 text-[0.9rem] transition focus:border-ink-faint focus:bg-surface focus:outline-none focus:ring-2 focus:ring-black/5"
                   />
                 </div>
 
@@ -487,7 +487,7 @@ export function Members({ year }: MembersProps) {
               </div>
             )}
 
-            <div className="overflow-hidden rounded-[14px] border border-line bg-surface shadow-sm">
+            <div className="mt-4 overflow-hidden rounded-[14px] border border-line bg-surface shadow-sm">
               <div className="overflow-x-auto">
                 <Table variant="members">
                   <TableHead>
@@ -534,46 +534,159 @@ export function Members({ year }: MembersProps) {
                     {paginatedData.map((member) => {
                       const isSelected = selectedMember?.person_id === member.person_id;
                       const selectedColor = isSelected ? getPartyColor(member.party_name, partyOpts) : undefined;
+                      const isDirect = member.seat_type.toLowerCase().includes('direct');
+
                       return (
-                        <TableRow
-                          key={member.person_id}
-                          className={cn(
-                            'cursor-pointer transition-colors hover:bg-surface-accent',
-                            isSelected && 'bg-surface-accent'
-                          )}
-                          onClick={() => setSelectedMember(isSelected ? null : member)}
-                          style={isSelected ? { boxShadow: `inset 4px 0 0 ${selectedColor}` } : undefined}
-                        >
-                          <TableCell>
-                            <div className="text-ink">
-                              {member.title ? `${member.title} ` : ''}
-                              <strong className="font-semibold">{member.last_name}</strong>, {member.first_name}
-                            </div>
-                            {member.profession && (
-                              <div className="mt-0.5 max-w-[200px] truncate text-[0.8rem] text-ink-faint">{member.profession}</div>
+                        <Fragment key={member.person_id}>
+                          <TableRow
+                            className={cn(
+                              'cursor-pointer transition-colors hover:bg-surface-accent',
+                              isSelected && 'bg-surface-accent'
                             )}
-                          </TableCell>
-                          <TableCell>
-                            <PartyBadge party={member.party_name} combineCduCsu>
-                              {displayParty(member.party_name)}
-                            </PartyBadge>
-                          </TableCell>
-                          <TableCell>{member.state_name}</TableCell>
-                          <TableCell>
-                            <span
-                              className={cn(
-                                'inline-block rounded px-2 py-1 text-[0.75rem] font-semibold uppercase tracking-[0.5px] text-white',
-                                member.seat_type.toLowerCase().includes('direct') ? 'bg-[#4caf50]' : 'bg-[#2196f3]'
+                            onClick={() => setSelectedMember(isSelected ? null : member)}
+                            style={isSelected ? { boxShadow: `inset 4px 0 0 ${selectedColor}` } : undefined}
+                          >
+                            <TableCell>
+                              <div className="text-ink">
+                                {member.title ? `${member.title} ` : ''}
+                                <strong className="font-semibold">{member.last_name}</strong>, {member.first_name}
+                              </div>
+                              {member.profession && (
+                                <div className="mt-0.5 max-w-[200px] truncate text-[0.8rem] text-ink-faint">{member.profession}</div>
                               )}
-                            >
-                              {member.seat_type.toLowerCase().includes('direct') ? 'Direct' : 'List'}
-                            </span>
-                          </TableCell>
-                          <TableCell>{member.constituency_name || '—'}</TableCell>
-                          <TableCell className="text-center">
-                            {member.birth_year ? year - member.birth_year : '—'}
-                          </TableCell>
-                        </TableRow>
+                            </TableCell>
+                            <TableCell>
+                              <PartyBadge party={member.party_name} combineCduCsu>
+                                {displayParty(member.party_name)}
+                              </PartyBadge>
+                            </TableCell>
+                            <TableCell>{member.state_name}</TableCell>
+                            <TableCell>
+                              <span
+                                className={cn(
+                                  'inline-block rounded px-2 py-1 text-[0.75rem] font-semibold uppercase tracking-[0.5px] text-white',
+                                  isDirect ? 'bg-[#4caf50]' : 'bg-[#2196f3]'
+                                )}
+                              >
+                                {isDirect ? 'Direct' : 'List'}
+                              </span>
+                            </TableCell>
+                            <TableCell>{member.constituency_name || '—'}</TableCell>
+                            <TableCell className="text-center">
+                              {member.birth_year ? year - member.birth_year : '—'}
+                            </TableCell>
+                          </TableRow>
+                          {isSelected && (
+                            <TableRow>
+                              <TableCell colSpan={6} className="p-0">
+                                <div className="border-t border-line bg-surface-muted px-6 py-4">
+                                  <div className="flex flex-wrap items-center justify-between gap-4">
+                                    <div className="flex items-center gap-4">
+                                      <div
+                                        className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full text-base font-bold text-white"
+                                        style={{ backgroundColor: getPartyColor(member.party_name, partyOpts) }}
+                                      >
+                                        {member.first_name[0]}{member.last_name[0]}
+                                      </div>
+                                      <div className="flex flex-col gap-1">
+                                        <div className="text-[1rem] font-semibold text-ink">
+                                          {member.title ? `${member.title} ` : ''}
+                                          {member.first_name} {member.last_name}
+                                        </div>
+                                        <PartyBadge party={member.party_name} combineCduCsu size="sm">
+                                          {displayParty(member.party_name)}
+                                        </PartyBadge>
+                                      </div>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                      <span
+                                        className={cn(
+                                          'inline-block rounded px-2 py-1 text-[0.75rem] font-semibold uppercase tracking-[0.5px] text-white',
+                                          isDirect ? 'bg-[#4caf50]' : 'bg-[#2196f3]'
+                                        )}
+                                      >
+                                        {isDirect ? 'Direct Mandate' : 'List Mandate'}
+                                      </span>
+                                      {member.previously_elected ? (
+                                        <span className="inline-block rounded px-2 py-1 text-[0.75rem] font-semibold uppercase tracking-[0.5px] text-white bg-[#9613a2]">
+                                          Re-elected
+                                        </span>
+                                      ) : (
+                                        <span className="inline-block rounded px-2 py-1 text-[0.75rem] font-semibold uppercase tracking-[0.5px] text-white bg-[#ff9800]">
+                                          New Member
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div className="mt-4 grid gap-4 md:grid-cols-2">
+                                    <div className="flex items-start gap-3 text-ink-muted">
+                                      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-surface text-ink-muted">
+                                        <MapPin size={18} />
+                                      </div>
+                                      <div>
+                                        <div className="text-xs uppercase tracking-[0.5px] text-ink-muted">Region / Constituency</div>
+                                        <div className="font-medium text-ink">{member.constituency_name || member.state_name}</div>
+                                      </div>
+                                    </div>
+
+                                    {member.profession && (
+                                      <div className="flex items-start gap-3 text-ink-muted">
+                                        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-surface text-ink-muted">
+                                          <Briefcase size={18} />
+                                        </div>
+                                        <div>
+                                          <div className="text-xs uppercase tracking-[0.5px] text-ink-muted">Profession</div>
+                                          <div className="font-medium text-ink">{member.profession}</div>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {(member.birth_year || member.gender) && (
+                                      <div className="flex items-start gap-3 text-ink-muted">
+                                        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-surface text-ink-muted">
+                                          <User size={18} />
+                                        </div>
+                                        <div>
+                                          <div className="text-xs uppercase tracking-[0.5px] text-ink-muted">Personal Details</div>
+                                          <div className="font-medium text-ink">
+                                            {member.gender ? `${member.gender.toLowerCase() === 'm' ? 'Male' : member.gender.toLowerCase() === 'w' ? 'Female' : member.gender}` : ''}
+                                            {member.gender && member.birth_year ? ', ' : ''}
+                                            {member.birth_year ? `${year - member.birth_year} years old` : ''}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {member.percent_first_votes != null && isDirect && (
+                                      <div className="flex items-start gap-3 text-ink-muted">
+                                        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-surface text-ink-muted">
+                                          <Percent size={18} />
+                                        </div>
+                                        <div>
+                                          <div className="text-xs uppercase tracking-[0.5px] text-ink-muted">First Vote Share</div>
+                                          <div className="font-medium text-ink">{member.percent_first_votes.toFixed(1)}%</div>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {member.list_position != null && (
+                                      <div className="flex items-start gap-3 text-ink-muted">
+                                        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-surface text-ink-muted">
+                                          <ListOrdered size={18} />
+                                        </div>
+                                        <div>
+                                          <div className="text-xs uppercase tracking-[0.5px] text-ink-muted">List Position</div>
+                                          <div className="font-medium text-ink">{member.list_position}</div>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </Fragment>
                       );
                     })}
                   </TableBody>
@@ -609,161 +722,49 @@ export function Members({ year }: MembersProps) {
               </div>
             )}
           </div>
+        </div>
+      </Card>
 
-          <div className="flex min-h-[420px] flex-col overflow-hidden rounded-[10px] border border-line bg-surface shadow-md">
-            <div className="flex items-center justify-between border-b border-line bg-surface-muted p-4">
-              <h3 className="text-base font-semibold text-ink">Analytics</h3>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4">
-              {selectedMember && (
-                <div className="mb-4 flex flex-col gap-4">
-                  <div className="text-[1.1rem] font-bold text-ink">Member Details</div>
-                  <div className="mb-4 flex items-center gap-4 border-b border-line pb-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Party Distribution</CardTitle>
+          <CardSubtitle>Share of all members by party</CardSubtitle>
+        </CardHeader>
+        <div className="flex flex-col gap-3">
+          {Object.entries(allPartyStats)
+            .sort((a, b) => b[1] - a[1])
+            .map(([party, count]) => {
+              const pct = items.length > 0 ? (count / items.length) * 100 : 0;
+              const isSelected = selectedParties.has(party);
+              const isDimmed = selectedParties.size > 0 && !isSelected;
+              return (
+                <div
+                  key={party}
+                  className={cn(
+                    'cursor-pointer rounded-lg border border-line bg-surface-muted p-4 transition hover:border-ink-faint hover:shadow-sm',
+                    isSelected && 'border-ink shadow-[0_0_0_2px_rgba(0,0,0,0.1)]',
+                    isDimmed && 'opacity-[0.45]'
+                  )}
+                  onClick={() => toggleParty(party)}
+                >
+                  <div className="mb-3 h-2 overflow-hidden rounded bg-surface-accent">
                     <div
-                      className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full text-xl font-bold text-white"
-                      style={{ backgroundColor: getPartyColor(selectedMember.party_name, partyOpts) }}
-                    >
-                      {selectedMember.first_name[0]}{selectedMember.last_name[0]}
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <h4 className="text-base font-semibold text-ink">
-                        {selectedMember.title ? `${selectedMember.title} ` : ''}
-                        {selectedMember.first_name} {selectedMember.last_name}
-                      </h4>
-                      <PartyBadge party={selectedMember.party_name} combineCduCsu size="fixed">
-                        {displayParty(selectedMember.party_name)}
-                      </PartyBadge>
-                    </div>
+                      className="h-full rounded transition-[width] duration-300"
+                      style={{
+                        width: `${pct}%`,
+                        backgroundColor: getPartyColor(party, partyOpts)
+                      }}
+                    />
                   </div>
-
-                  <div className="mb-6 flex flex-wrap gap-2">
-                    <span
-                      className={cn(
-                        'inline-block rounded px-2 py-1 text-[0.75rem] font-semibold uppercase tracking-[0.5px] text-white',
-                        selectedMember.seat_type.toLowerCase().includes('direct') ? 'bg-[#4caf50]' : 'bg-[#2196f3]'
-                      )}
-                    >
-                      {selectedMember.seat_type.toLowerCase().includes('direct') ? 'Direct Mandate' : 'List Mandate'}
-                    </span>
-                    {selectedMember.previously_elected ? (
-                      <span className="inline-block rounded px-2 py-1 text-[0.75rem] font-semibold uppercase tracking-[0.5px] text-white bg-[#9613a2]">
-                        Re-elected
-                      </span>
-                    ) : (
-                      <span className="inline-block rounded px-2 py-1 text-[0.75rem] font-semibold uppercase tracking-[0.5px] text-white bg-[#ff9800]">
-                        New Member
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col gap-5">
-                    <div className="flex items-start gap-3 text-ink-muted">
-                      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-surface-accent text-ink-muted">
-                        <MapPin size={18} />
-                      </div>
-                      <div>
-                        <div className="text-xs uppercase tracking-[0.5px] text-ink-muted">Region / Constituency</div>
-                        <div className="font-medium text-ink">{selectedMember.constituency_name || selectedMember.state_name}</div>
-                      </div>
-                    </div>
-
-                    {selectedMember.profession && (
-                      <div className="flex items-start gap-3 text-ink-muted">
-                        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-surface-accent text-ink-muted">
-                          <Briefcase size={18} />
-                        </div>
-                        <div>
-                          <div className="text-xs uppercase tracking-[0.5px] text-ink-muted">Profession</div>
-                          <div className="font-medium text-ink">{selectedMember.profession}</div>
-                        </div>
-                      </div>
-                    )}
-
-                    {(selectedMember.birth_year || selectedMember.gender) && (
-                      <div className="flex items-start gap-3 text-ink-muted">
-                        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-surface-accent text-ink-muted">
-                          <User size={18} />
-                        </div>
-                        <div>
-                          <div className="text-xs uppercase tracking-[0.5px] text-ink-muted">Personal Details</div>
-                          <div className="font-medium text-ink">
-                            {selectedMember.gender ? `${selectedMember.gender.toLowerCase() === 'm' ? 'Male' : selectedMember.gender.toLowerCase() === 'w' ? 'Female' : selectedMember.gender}` : ''}
-                            {selectedMember.gender && selectedMember.birth_year ? ', ' : ''}
-                            {selectedMember.birth_year ? `${year - selectedMember.birth_year} years old` : ''}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {selectedMember.percent_first_votes != null && selectedMember.seat_type.toLowerCase().includes('direct') && (
-                      <div className="flex items-start gap-3 text-ink-muted">
-                        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-surface-accent text-ink-muted">
-                          <Percent size={18} />
-                        </div>
-                        <div>
-                          <div className="text-xs uppercase tracking-[0.5px] text-ink-muted">First Vote Share</div>
-                          <div className="font-medium text-ink">{selectedMember.percent_first_votes.toFixed(1)}%</div>
-                        </div>
-                      </div>
-                    )}
-
-                    {selectedMember.list_position != null && (
-                      <div className="flex items-start gap-3 text-ink-muted">
-                        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-surface-accent text-ink-muted">
-                          <ListOrdered size={18} />
-                        </div>
-                        <div>
-                          <div className="text-xs uppercase tracking-[0.5px] text-ink-muted">List Position</div>
-                          <div className="font-medium text-ink">{selectedMember.list_position}</div>
-                        </div>
-                      </div>
-                    )}
+                  <div className="flex items-center justify-between">
+                    <PartyBadge party={party} combineCduCsu>
+                      {party}
+                    </PartyBadge>
+                    <span className="text-[0.85rem] font-medium text-ink-muted">{count} ({pct.toFixed(1)}%)</span>
                   </div>
                 </div>
-              )}
-
-              {/* Party Distribution */}
-              <div className="mb-6 last:mb-0">
-                <div className="text-[1.1rem] font-bold text-ink">Party Distribution</div>
-                <div className="mt-3 flex flex-col gap-3">
-                  {Object.entries(allPartyStats)
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([party, count]) => {
-                      const pct = items.length > 0 ? (count / items.length) * 100 : 0;
-                      const isSelected = selectedParties.has(party);
-                      const isDimmed = selectedParties.size > 0 && !isSelected;
-                      return (
-                        <div
-                          key={party}
-                          className={cn(
-                            'cursor-pointer rounded-lg border border-line bg-surface-muted p-4 transition hover:border-ink-faint hover:shadow-sm',
-                            isSelected && 'border-ink shadow-[0_0_0_2px_rgba(0,0,0,0.1)]',
-                            isDimmed && 'opacity-[0.45]'
-                          )}
-                          onClick={() => toggleParty(party)}
-                        >
-                          <div className="mb-3 h-2 overflow-hidden rounded bg-surface-accent">
-                            <div
-                              className="h-full rounded transition-[width] duration-300"
-                              style={{
-                                width: `${pct}%`,
-                                backgroundColor: getPartyColor(party, partyOpts)
-                              }}
-                            />
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <PartyBadge party={party} combineCduCsu>
-                              {party}
-                            </PartyBadge>
-                            <span className="text-[0.85rem] font-medium text-ink-muted">{count} ({pct.toFixed(1)}%)</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
-            </div>
-          </div>
+              );
+            })}
         </div>
       </Card>
     </div>

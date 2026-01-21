@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { MapPin, TrendingUp, TrendingDown, Award, AlertTriangle, ChevronLeft, ChevronRight, X, UserPlus, Check } from 'lucide-react';
+import {TrendingUp, TrendingDown, Award, AlertTriangle, ChevronLeft, ChevronRight, X, UserPlus, Check } from 'lucide-react';
 import { Autocomplete } from '../components/Autocomplete';
 import { ConstituencyMap } from '../components/ConstituencyMap';
 import {
@@ -126,7 +126,6 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
           <CardHeader className="flex items-start justify-between gap-4">
             <div>
               <CardTitle>
-                <MapPin size={20} className="mr-2 inline-block align-middle" />
                 Constituency Map
               </CardTitle>
               <CardSubtitle>Click a constituency to view details</CardSubtitle>
