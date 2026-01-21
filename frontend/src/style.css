@@ -2810,6 +2810,115 @@ tr:hover {
   color: var(--text-primary);
 }
 
+/* ==============================================
+   Party Strength Page Styles
+   ============================================== */
+
+.party-strength-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.party-strength-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.party-strength-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.party-strength-select-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.party-strength-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.party-strength-select {
+  padding: 0.55rem 0.85rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.party-strength-select:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
+}
+
+.party-strength-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 1200px) {
+  .party-strength-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.party-strength-legend,
+.party-change-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0.6rem 0.9rem 0.7rem;
+  border-top: 1px solid var(--border-color);
+  font-size: 1rem;
+  color: var(--text-secondary);
+}
+
+
+.party-change-legend {
+  gap: 0rem;
+}
+
+.party-strength-gradient {
+  flex: 1;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.party-change-legend-track {
+  flex: 0 0 auto;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.party-change-legend-label {
+  flex: 0 0 auto;
+  min-width: 56px;
+  text-align: center;
+}
+
+.party-change-legend-svg {
+  width: 160px;
+  height: 75px;
+}
+
 /* State Filter Chips */
 .state-filter-chips {
   padding: 0 1rem 1rem;

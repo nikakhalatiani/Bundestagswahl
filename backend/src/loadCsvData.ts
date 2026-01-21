@@ -286,6 +286,25 @@ async function loadConstituencyPartyVotes() {
   });
 }
 
+async function loadStructuralData() {
+  const rows = readCsv<CsvRow>(path.join(DATA_DIR, "strukturdaten.csv"));
+  await transactionalInsert("Structural Data", async (c) => {
+    for (const r of rows) {
+      await c.query(
+        `UPDATE constituencies
+         SET foreigner_pct = $1,
+             disposable_income = $2
+         WHERE number = $3`,
+        [
+          num(r["ForeignerPct"]),
+          num(r["DisposableIncome"]),
+          num(r["ConstituencyNumber"])
+        ]
+      );
+    }
+  });
+}
+
 // ---------------------------------------------------------------------
 //  Main pipeline
 // ---------------------------------------------------------------------
@@ -301,6 +320,7 @@ async function main() {
     await loadPartyListCandidacy();
     await loadConstituencyElections();
     await loadConstituencyPartyVotes();
+    await loadStructuralData();
     console.log("\n✅ All CSVs from data folder loaded successfully!");
   } finally {
     await disconnect();

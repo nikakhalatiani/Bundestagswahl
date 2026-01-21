@@ -42,9 +42,12 @@ export const constituencies = pgTable("constituencies", {
   state_id: integer("state_id")
     .notNull()
     .references(() => states.id, { onDelete: "restrict", onUpdate: "cascade" }),
+  foreigner_pct: doublePrecision("foreigner_pct"),
+  disposable_income: doublePrecision("disposable_income"),
 },
   (table) => [
     unique().on(table.number, table.name),
+    index("constituencies_state_idx").on(table.state_id),
   ]);
 
 // ---------- Persons (Candidates) ----------
@@ -62,9 +65,6 @@ export const persons = pgTable("persons", {
   birth_place: text("birth_place"),
   profession: text("profession"),
 },
-  // (table) => [
-  //   unique().on(table.last_name, table.first_name, table.birth_year, table.gender),
-  // ]
 );
 
 // ---------- Party Lists (Landeslisten) ----------
@@ -83,6 +83,7 @@ export const partyLists = pgTable("party_lists", {
 },
   (table) => [
     unique().on(table.state_id, table.party_id, table.year),
+    index("party_lists_state_idx").on(table.state_id),
   ]
 );
 
@@ -199,9 +200,9 @@ export const secondVotes = pgTable("second_votes", {
   is_valid: boolean("is_valid").default(true).notNull(),
   created_at: date("created_at").defaultNow(),
 },
-  // (t) => [
-  //   index("second_votes_party_idx").on(t.party_list_id),
-  // ]
+  (t) => [
+    index("second_votes_party_idx").on(t.party_list_id),
+  ]
 );
 
 // ---------- Cache Tables for Seat Allocation Results ----------
@@ -299,17 +300,3 @@ export const stateDistributionCache = pgTable("state_distribution_cache", {
     index("idx_state_dist_state").on(table.state_id, table.year),
   ]
 );
-
-// ---------- Index Helpers ---------- Later
-// export const idx_constituency_state = index("constituencies_state_idx").on(
-//   constituencies.state_id
-// );
-// export const idx_party_list_state = index("party_lists_state_idx").on(
-//   partyLists.state_id
-// );
-// export const idx_direct_person = index("direct_cand_person_idx").on(
-//   directCandidacy.person_id
-// );
-// export const idx_party_votes_party = index("const_party_votes_party_idx").on(
-//   constituencyPartyVotes.party_id
-// );

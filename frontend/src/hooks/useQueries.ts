@@ -7,6 +7,7 @@ import type {
   ConstituencyListItem,
   ConstituencyWinnerItem,
   ConstituencyVotesBulkItem,
+  PartyStrengthItem,
   DirectWithoutCoverageResponse,
   MemberItem,
   NearMissesResponse,
@@ -144,5 +145,24 @@ export function useConstituencyVotesBulk(year: number) {
     queryFn: async () => {
       return fetchJson<ApiResponse<ConstituencyVotesBulkItem[]>>(`${API_BASE}/api/constituency-votes-bulk?year=${year}`);
     },
+  });
+}
+
+export function usePartyConstituencyStrength(
+  year: number,
+  party: string,
+  voteType: 1 | 2 = 2
+) {
+  return useQuery({
+    queryKey: ['partyStrength', year, party, voteType],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        year: String(year),
+        party,
+        vote_type: String(voteType),
+      });
+      return fetchJson<ApiResponse<PartyStrengthItem[]>>(`${API_BASE}/api/party-constituency-strength?${params.toString()}`);
+    },
+    enabled: Boolean(party),
   });
 }

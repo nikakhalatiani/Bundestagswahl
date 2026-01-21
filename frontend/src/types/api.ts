@@ -198,6 +198,15 @@ export interface ConstituencyVotesBulkItem {
     constituency_number: number;
     parties: ConstituencyPartyVoteItem[];
 }
+
+export interface PartyStrengthItem {
+    constituency_number: number;
+    constituency_name: string;
+    state_name: string;
+    votes: number;
+    percent: number;
+    diff_percent_pts: number | null;
+}
 // Near-misses for parties without constituency wins
 export interface NearMissItem {
     party_rank: number;
