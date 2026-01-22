@@ -207,6 +207,23 @@ export interface PartyStrengthItem {
     percent: number;
     diff_percent_pts: number | null;
 }
+
+export interface StructuralMetricDefinition {
+    key: string;
+    label: string;
+    unit: string | null;
+}
+
+export interface StructuralMetricValue {
+    constituency_number: number;
+    constituency_name: string;
+    metrics: Record<string, number | null>;
+}
+
+export interface StructuralDataResponse {
+    metrics: StructuralMetricDefinition[];
+    values: StructuralMetricValue[];
+}
 // Near-misses for parties without constituency wins
 export interface NearMissItem {
     party_rank: number;

@@ -5,7 +5,6 @@ import logo from './assets/Bundesarchiv-Logo.svg';
 import { Dashboard } from './pages/Dashboard';
 import { Members } from './pages/Members';
 import { ConstituencyAnalysis } from './pages/ConstituencyAnalysis';
-import { IncomeMapPage } from './pages/IncomeMapPage';
 import { ForeignerAfdScatterPage } from './pages/ForeignerAfdScatterPage';
 import { cn } from './utils/cn';
 import { Select } from './components/ui/Select';
@@ -81,17 +80,6 @@ function Navigation({ year, setYear }: { year: number; setYear: (y: number) => v
               <>
                 <li>
                   <Link
-                    to="/income"
-                    className={cn(
-                      'block whitespace-nowrap border-b-[3px] border-transparent px-6 py-4 font-medium text-ink-muted transition hover:bg-surface-muted hover:text-ink',
-                      location.pathname === '/income' && 'border-brand-gold bg-surface-muted font-semibold text-ink'
-                    )}
-                  >
-                    Income Analysis
-                  </Link>
-                </li>
-                <li>
-                  <Link
                     to="/foreigner-afd"
                     className={cn(
                       'block whitespace-nowrap border-b-[3px] border-transparent px-6 py-4 font-medium text-ink-muted transition hover:bg-surface-muted hover:text-ink',
@@ -121,7 +109,6 @@ function AppContent() {
           <Route path="/" element={<Dashboard year={year} />} />
           <Route path="/members" element={<Members year={year} />} />
           <Route path="/analysis" element={<ConstituencyAnalysis year={year} />} />
-          <Route path="/income" element={<IncomeMapPage year={year} />} />
           <Route path="/foreigner-afd" element={<ForeignerAfdScatterPage />} />
         </Routes>
       </main>

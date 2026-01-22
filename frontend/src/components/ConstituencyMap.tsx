@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { ConstituencyWinnerItem, ConstituencyVotesBulkItem, PartyStrengthItem } from '../types/api';
+import type {
+    ConstituencyWinnerItem,
+    ConstituencyVotesBulkItem,
+    PartyStrengthItem,
+    StructuralMetricDefinition,
+    StructuralMetricValue,
+} from '../types/api';
 import { getPartyColor, getPartyDisplayName } from '../utils/party';
 import { cn } from '../utils/cn';
 
@@ -52,6 +58,9 @@ interface ConstituencyMapProps {
     strongholdParty?: string | null;
     strongholdData?: PartyStrengthItem[];
     strongholdView?: 'strength' | 'change';
+    opacityMetricKey?: string;
+    structuralData?: StructuralMetricValue[];
+    structuralMetrics?: StructuralMetricDefinition[];
 }
 
 // Create a lookup map from constituency_number to winner
@@ -184,6 +193,9 @@ export function ConstituencyMap({
     strongholdParty,
     strongholdData = [],
     strongholdView = 'strength',
+    opacityMetricKey = 'vote_share',
+    structuralData = [],
+    structuralMetrics = [],
 }: ConstituencyMapProps) {
     const [geoData, setGeoData] = useState<GeoFeatureCollection | null>(null);
     const [stateGeoData, setStateGeoData] = useState<StateGeoFeatureCollection | null>(null);
@@ -197,6 +209,35 @@ export function ConstituencyMap({
     const strongholdPartyColor = strongholdParty ? getPartyColor(strongholdParty, partyOpts) : '#9e9e9e';
     const strongholdLossColor = '#b7410e';
     const strongholdGainColor = 'teal';
+    const structuralMetricMap = useMemo(() => {
+        const map = new Map<string, StructuralMetricDefinition>();
+        structuralMetrics.forEach(metric => map.set(metric.key, metric));
+        return map;
+    }, [structuralMetrics]);
+    const structuralValueMap = useMemo(() => {
+        const map = new Map<number, Record<string, number | null>>();
+        structuralData.forEach(item => {
+            map.set(item.constituency_number, item.metrics);
+        });
+        return map;
+    }, [structuralData]);
+    const selectedMetric = structuralMetricMap.get(opacityMetricKey) || null;
+    const isOpacityMetric = !isStrongholds && opacityMetricKey !== 'vote_share' && Boolean(selectedMetric);
+    const metricRange = useMemo(() => {
+        if (!isOpacityMetric) return null;
+        let min = Infinity;
+        let max = -Infinity;
+        for (const item of structuralData) {
+            const value = item.metrics[opacityMetricKey];
+            if (value === null || value === undefined) continue;
+            min = Math.min(min, value);
+            max = Math.max(max, value);
+        }
+        if (min === Infinity || max === -Infinity) {
+            return null;
+        }
+        return { min, max };
+    }, [isOpacityMetric, structuralData, opacityMetricKey]);
     const strongholdDataMap = useMemo(() => {
         const map = new Map<number, PartyStrengthItem>();
         strongholdData.forEach(item => map.set(item.constituency_number, item));
@@ -357,7 +398,7 @@ export function ConstituencyMap({
 
     // City coordinates (lon, lat) and projected positions
     const cities = useMemo(() => {
-        if (!bounds || isStrongholds) return [];
+        if (!bounds) return [];
         const cityData = [
             { name: 'Berlin', lon: 13.405, lat: 52.52 },
             { name: 'Hamburg', lon: 9.993, lat: 53.551 },
@@ -369,7 +410,7 @@ export function ConstituencyMap({
             const [x, y] = projectPoint(city.lon, city.lat, bounds);
             return { ...city, x, y };
         });
-    }, [bounds, isStrongholds]);
+    }, [bounds]);
 
     // Compute state border paths from bundeslaender.json
     const stateBorderPaths = useMemo(() => {
@@ -423,6 +464,12 @@ export function ConstituencyMap({
     };
 
     const hoveredWinner = hoveredNumber ? winnerMap.get(hoveredNumber) : null;
+    const formatMetricValue = (value: number | null | undefined, unit?: string | null) => {
+        if (value === null || value === undefined) return '—';
+        const isPercent = unit?.includes('%');
+        const formatted = value.toLocaleString(undefined, { maximumFractionDigits: isPercent ? 1 : 2 });
+        return unit ? `${formatted} ${unit}` : formatted;
+    };
 
     if (!geoData || !bounds) {
         return (
@@ -477,13 +524,24 @@ export function ConstituencyMap({
 
                         const winnerData = getWinnerByVoteType(number);
                         const fillColor = winnerData ? getPartyColor(winnerData.party, partyOpts) : '#ccc';
-                        // Map percentage to discrete opacity segments
+                        // Map percentage to discrete opacity segments (default)
                         const percent = winnerData?.percent || 0;
                         let baseOpacity = 0.6;
                         if (percent >= 40) baseOpacity = 0.8;
                         else if (percent >= 35) baseOpacity = 0.75;
                         else if (percent >= 30) baseOpacity = 0.7;
                         else if (percent >= 25) baseOpacity = 0.65;
+
+                        if (isOpacityMetric) {
+                            const metricValue = structuralValueMap.get(number)?.[opacityMetricKey];
+                            if (metricRange && metricValue !== null && metricValue !== undefined) {
+                                const range = metricRange.max - metricRange.min;
+                                const scaled = range > 0 ? (metricValue - metricRange.min) / range : 0;
+                                baseOpacity = 0.2 + 0.8 * scaled;
+                            } else {
+                                baseOpacity = 0.2;
+                            }
+                        }
 
                         // Check if constituency should be greyed out
                         const isFiltered = filteredStates && filteredStates.size > 0;
@@ -588,32 +646,30 @@ export function ConstituencyMap({
                     )}
 
                     {/* Layer 4: City markers */}
-                    {!isStrongholds && (
-                        <g pointerEvents="none">
-                            {cities.map(city => (
-                                <g key={city.name} transform={`translate(${city.x}, ${city.y})`}>
-                                    <circle
-                                        r={3}
-                                        fill="#333"
-                                        stroke="#fff"
-                                        strokeWidth={1.5}
-                                    />
-                                    <text
-                                        x={8}
-                                        y={4}
-                                        fontSize={11}
-                                        fontWeight={600}
-                                        fill="#333"
-                                        stroke="#fff"
-                                        strokeWidth={2.5}
-                                        paintOrder="stroke"
-                                    >
-                                        {city.name}
-                                    </text>
-                                </g>
-                            ))}
-                        </g>
-                    )}
+                    <g pointerEvents="none">
+                        {cities.map(city => (
+                            <g key={city.name} transform={`translate(${city.x}, ${city.y})`}>
+                                <circle
+                                    r={3}
+                                    fill="#333"
+                                    stroke="#fff"
+                                    strokeWidth={1.5}
+                                />
+                                <text
+                                    x={8}
+                                    y={4}
+                                    fontSize={11}
+                                    fontWeight={600}
+                                    fill="#333"
+                                    stroke="#fff"
+                                    strokeWidth={2.5}
+                                    paintOrder="stroke"
+                                >
+                                    {city.name}
+                                </text>
+                            </g>
+                        ))}
+                    </g>
                 </svg>
             </div>
 
@@ -750,6 +806,16 @@ export function ConstituencyMap({
                             </div>
                         );
                     })()}
+                    {!isStrongholds && isOpacityMetric && selectedMetric && (
+                        <div className="mt-2 border-t border-[#eee] pt-2 text-[0.85rem] text-ink">
+                            <div className="flex items-center justify-between gap-2">
+                                <span className="font-semibold text-ink">{selectedMetric.label}</span>
+                                <span className="text-ink-muted">
+                                    {formatMetricValue(structuralValueMap.get(hoveredNumber)?.[opacityMetricKey], selectedMetric.unit)}
+                                </span>
+                            </div>
+                        </div>
+                    )}
                     {!isStrongholds && hoveredWinner && voteType === 'first' && (
                         <div className="mt-2 border-t border-[#eee] pt-2 text-[0.8rem] text-ink-muted">
                             Winner: {hoveredWinner.winner_name}
@@ -823,6 +889,40 @@ export function ConstituencyMap({
                         </div>
                     )
                 ) : null
+            ) : isOpacityMetric ? (
+                <div className="border-t border-line px-3 py-2">
+                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-[0.7rem] font-semibold uppercase tracking-[0.03em] text-ink-muted">
+                        <span>Opacity scale</span>
+                        <span className="text-[0.75rem] font-semibold normal-case text-ink">
+                            {selectedMetric?.label || 'Selected metric'}
+                        </span>
+                    </div>
+                    {metricRange ? (
+                        <>
+                            <div className="flex items-center gap-3 text-[0.8rem] text-ink-muted">
+                                <span className="min-w-[80px] text-left">
+                                    {formatMetricValue(metricRange.min, selectedMetric?.unit)}
+                                </span>
+                                <div className="relative h-2 flex-1 rounded-full bg-surface-muted">
+                                    <div
+                                        className="absolute inset-0 rounded-full"
+                                        style={{ background: 'linear-gradient(to right, rgba(0,0,0,0.2), rgba(0,0,0,1))' }}
+                                    />
+                                    <span className="absolute left-1/2 top-1/2 h-3 w-[1px] -translate-y-1/2 bg-white/70" />
+                                </div>
+                                <span className="min-w-[80px] text-right">
+                                    {formatMetricValue(metricRange.max, selectedMetric?.unit)}
+                                </span>
+                            </div>
+                            <div className="mt-1 flex items-center justify-between text-[0.7rem] text-ink-faint">
+                                <span>Lower</span>
+                                <span>Higher</span>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="text-[0.8rem] text-ink-muted">No data available for this metric.</div>
+                    )}
+                </div>
             ) : (
                 <div className="border-t border-line px-3 py-2">
                     <div className="mb-1 flex items-center justify-between">

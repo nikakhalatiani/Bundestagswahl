@@ -11,6 +11,7 @@ import {
   useDirectWithoutCoverage,
   useConstituencyVotesBulk,
   usePartyConstituencyStrength,
+  useStructuralData,
 } from '../hooks/useQueries';
 import type { ClosestWinnerItem, ConstituencyListItem, VoteDistributionItem } from '../types/api';
 import { getPartyDisplayName, getPartyColor } from '../utils/party';
@@ -19,6 +20,7 @@ import { Card, CardHeader, CardSubtitle, CardTitle } from '../components/ui/Card
 import { PartyBadge } from '../components/ui/PartyBadge';
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from '../components/ui/Table';
 import { ToggleSwitch } from '../components/ui/ToggleSwitch';
+import { Select } from '../components/ui/Select';
 
 interface ConstituencyAnalysisProps {
   year: number;
@@ -59,6 +61,7 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
   const [mapMode, setMapMode] = useState<'constituency' | 'strongholds'>('constituency');
   const [strongholdView, setStrongholdView] = useState<'strength' | 'change'>('strength');
   const [strongholdParty, setStrongholdParty] = useState<string | null>(null);
+  const [opacityMetricKey, setOpacityMetricKey] = useState('vote_share');
 
   // State filter
   const [selectedStates, setSelectedStates] = useState<Set<string>>(new Set());
@@ -77,6 +80,7 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
     strongholdParty ?? undefined,
     mapVoteType === 'first' ? 1 : 2
   );
+  const { data: structuralData, isLoading: loadingStructural } = useStructuralData(year);
 
   // For Q7: Single votes
   const singleVoteIds = useMemo(() => {
@@ -169,6 +173,33 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
   const mapVoteLabel = mapVoteType === 'first' ? 'First vote' : 'Second vote';
   const changeDisabled = year !== 2025;
   const showSingle = mapMode === 'constituency' && showSingleVotes;
+  const structuralMetrics = structuralData?.metrics ?? [];
+  const opacityOptions = useMemo(() => {
+    const options = [
+      { key: 'vote_share', label: 'Vote share (winner)' },
+      ...structuralMetrics.map(metric => ({
+        key: metric.key,
+        label: metric.unit ? `${metric.label} (${metric.unit})` : metric.label,
+      })),
+    ];
+    return options;
+  }, [structuralMetrics]);
+  const opacityDisabled = mapMode === 'strongholds' || loadingStructural || structuralMetrics.length === 0;
+  const opacityStatus = mapMode === 'strongholds'
+    ? 'Available in Constituency mode'
+    : loadingStructural
+      ? 'Loading metrics...'
+      : structuralMetrics.length === 0
+        ? 'No metrics available'
+        : null;
+
+  useEffect(() => {
+    if (opacityMetricKey === 'vote_share') return;
+    const hasMetric = structuralMetrics.some(metric => metric.key === opacityMetricKey);
+    if (!hasMetric) {
+      setOpacityMetricKey('vote_share');
+    }
+  }, [opacityMetricKey, structuralMetrics]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -207,7 +238,6 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                 />
               </div>
             </div>
-
           </CardHeader>
 
           <div className="relative">
@@ -223,6 +253,9 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
               strongholdParty={strongholdParty ?? undefined}
               strongholdData={strongholdItems}
               strongholdView={strongholdView}
+              opacityMetricKey={opacityMetricKey}
+              structuralData={structuralData?.values ?? []}
+              structuralMetrics={structuralData?.metrics ?? []}
             />
             {mapMode === 'strongholds' && !strongholdParty && (
               <div className="absolute inset-0 flex min-h-[420px] flex-col items-center justify-center gap-3 bg-white/90 px-8 py-10 text-center text-ink-muted">
@@ -269,8 +302,6 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                 inputClassName="px-3 py-2 text-[0.85rem]"
               />
             </div>
-
-
             {constituencyListError && (
               <div className="mt-3 rounded border-l-4 border-[#ff9800] bg-[#fff3e0] p-4">
                 <div className="mb-2 font-semibold text-[#f57c00]">Could not load constituencies</div>
@@ -410,6 +441,32 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                 </div>
               </div>
             )}
+            <div className="mt-3 border-t border-line pt-3">
+  <div className="flex items-center gap-3">
+    <span className="shrink-0 text-[0.7rem] font-semibold uppercase tracking-[0.05em] text-ink-muted">
+      Map opacity
+    </span>
+
+    <Select
+      containerClassName="flex-1 min-w-0"
+      className="w-full text-[0.85rem]"
+      value={opacityMetricKey}
+      onChange={(e) => setOpacityMetricKey(e.target.value)}
+      disabled={opacityDisabled}
+    >
+      {opacityOptions.map(option => (
+        <option key={option.key} value={option.key}>
+          {option.label}
+        </option>
+      ))}
+    </Select>
+  </div>
+  {opacityDisabled && opacityStatus && (
+    <span className="mt-1 block text-[0.75rem] text-ink-faint">
+      {opacityStatus}
+    </span>
+  )}
+</div>
           </Card>
 
           {/* Vote Distribution with Toggle */}
@@ -560,41 +617,41 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                                   setMapMode('strongholds');
                                 }}
                               >
-                              <TableCell>
-                                <PartyBadge party={party.party_name} combineCduCsu size="sm">
-                                  {getPartyDisplayName(party.party_name, partyOpts)}
-                                </PartyBadge>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {party.first_votes?.toLocaleString()}
-                                <br />
-                                <span className="text-[0.8rem] text-ink-faint">{party.first_percent?.toFixed(1)}%</span>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {party.second_votes?.toLocaleString()}
-                                <br />
-                                <span className="text-[0.8rem] text-ink-faint">{party.second_percent?.toFixed(1)}%</span>
-                              </TableCell>
-                              {year === 2025 && (
-                                <TableCell className="text-right">
-                                  {party.second_diff_pts != null ? (
-                                    <span className={cn(
-                                      'inline-flex items-center gap-1 text-[0.8rem] font-medium',
-                                      party.second_diff_pts > 0 ? 'text-[#16a34a]' : party.second_diff_pts < 0 ? 'text-[#dc2626]' : 'text-ink-faint'
-                                    )}>
-                                      {party.second_diff_pts > 0 ? (
-                                        <><TrendingUp size={12} /> +{party.second_diff_pts.toFixed(1)}pp</>
-                                      ) : party.second_diff_pts < 0 ? (
-                                        <><TrendingDown size={12} /> {party.second_diff_pts.toFixed(1)}pp</>
-                                      ) : (
-                                        <span className="text-ink-faint">—</span>
-                                      )}
-                                    </span>
-                                  ) : (
-                                    <span className="text-ink-faint">—</span>
-                                  )}
+                                <TableCell>
+                                  <PartyBadge party={party.party_name} combineCduCsu size="sm">
+                                    {getPartyDisplayName(party.party_name, partyOpts)}
+                                  </PartyBadge>
                                 </TableCell>
-                              )}
+                                <TableCell className="text-right">
+                                  {party.first_votes?.toLocaleString()}
+                                  <br />
+                                  <span className="text-[0.8rem] text-ink-faint">{party.first_percent?.toFixed(1)}%</span>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {party.second_votes?.toLocaleString()}
+                                  <br />
+                                  <span className="text-[0.8rem] text-ink-faint">{party.second_percent?.toFixed(1)}%</span>
+                                </TableCell>
+                                {year === 2025 && (
+                                  <TableCell className="text-right">
+                                    {party.second_diff_pts != null ? (
+                                      <span className={cn(
+                                        'inline-flex items-center gap-1 text-[0.8rem] font-medium',
+                                        party.second_diff_pts > 0 ? 'text-[#16a34a]' : party.second_diff_pts < 0 ? 'text-[#dc2626]' : 'text-ink-faint'
+                                      )}>
+                                        {party.second_diff_pts > 0 ? (
+                                          <><TrendingUp size={12} /> +{party.second_diff_pts.toFixed(1)}pp</>
+                                        ) : party.second_diff_pts < 0 ? (
+                                          <><TrendingDown size={12} /> {party.second_diff_pts.toFixed(1)}pp</>
+                                        ) : (
+                                          <span className="text-ink-faint">—</span>
+                                        )}
+                                      </span>
+                                    ) : (
+                                      <span className="text-ink-faint">—</span>
+                                    )}
+                                  </TableCell>
+                                )}
                               </TableRow>
                             );
                           })}
