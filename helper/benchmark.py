@@ -44,7 +44,6 @@ class BenchmarkStats:
         self.errors = 0
         self.start_time = 0
         self.end_time = 0
-        random.seed(42)
 
     def start(self):
         self.start_time = time.time()
@@ -174,6 +173,8 @@ def main():
     parser.add_argument("--url", type=str, default=DEFAULT_BASE_URL, help="Base URL of the WIS backend")
     
     args = parser.parse_args()
+    
+    random.seed(42)
     
     print(f"Starting Benchmark with {args.terminals} terminals...")
     
