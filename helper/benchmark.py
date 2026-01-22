@@ -51,7 +51,7 @@ class BenchmarkStats:
     def stop(self):
         self.end_time = time.time()
 
-    def add_result(self, query_name, duration, status_code):
+    def add_result(self, query_name, duration, status_code, error_msg=None):
         with self.lock:
             self.results.append({
                 "query": query_name,
@@ -61,6 +61,11 @@ class BenchmarkStats:
             })
             if status_code < 200 or status_code >= 400:
                 self.errors += 1
+                if self.errors < 10:
+                    msg = f"Request failed: {status_code} for query {query_name}"
+                    if error_msg:
+                        msg += f" | Error: {error_msg}"
+                    print(msg)
 
 class Terminal(threading.Thread):
     """Emulates a browser/user (Terminal) interacting with the WIS."""
@@ -102,21 +107,23 @@ class Terminal(threading.Thread):
             # 3. Execute Request & Measure Duration
             req_start = time.time()
             status_code = 0
+            error_msg = None
             try:
                 response = requests.get(full_url, timeout=10)
                 status_code = response.status_code
                 # Ensure content is fully read
                 _ = response.content
+                if status_code >= 400:
+                    error_msg = response.text.strip()
             except Exception as e:
                 # Log error (simulated 599 status for client exception)
                 status_code = 599
-                if self.stats.errors < 3:
-                    print(f"Request failed: {e}")
+                error_msg = str(e)
             
             req_end = time.time()
             duration = req_end - req_start
             
-            self.stats.add_result(query_def["name"], duration, status_code)
+            self.stats.add_result(query_def["name"], duration, status_code, error_msg)
 
             # 4. Wait (Think Time)
             # Uniform distribution [0.8 * t, 1.2 * t]
