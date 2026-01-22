@@ -302,31 +302,6 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                 inputClassName="px-3 py-2 text-[0.85rem]"
               />
             </div>
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[0.7rem] font-semibold uppercase tracking-[0.05em] text-ink-muted">Map opacity</span>
-                <Select
-                  containerClassName="w-full sm:w-auto"
-                  className="w-full sm:min-w-[200px] sm:max-w-[260px] text-[0.85rem]"
-                  value={opacityMetricKey}
-                  onChange={(e) => setOpacityMetricKey(e.target.value)}
-                  disabled={opacityDisabled}
-                >
-                  {opacityOptions.map(option => (
-                    <option key={option.key} value={option.key}>
-                      {option.label}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              {opacityDisabled && opacityStatus && (
-                <span className="text-[0.75rem] text-ink-faint">
-                  {opacityStatus}
-                </span>
-              )}
-            </div>
-
-
             {constituencyListError && (
               <div className="mt-3 rounded border-l-4 border-[#ff9800] bg-[#fff3e0] p-4">
                 <div className="mb-2 font-semibold text-[#f57c00]">Could not load constituencies</div>
@@ -466,6 +441,32 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                 </div>
               </div>
             )}
+            <div className="mt-3 border-t border-line pt-3">
+  <div className="flex items-center gap-3">
+    <span className="shrink-0 text-[0.7rem] font-semibold uppercase tracking-[0.05em] text-ink-muted">
+      Map opacity
+    </span>
+
+    <Select
+      containerClassName="flex-1 min-w-0"
+      className="w-full text-[0.85rem]"
+      value={opacityMetricKey}
+      onChange={(e) => setOpacityMetricKey(e.target.value)}
+      disabled={opacityDisabled}
+    >
+      {opacityOptions.map(option => (
+        <option key={option.key} value={option.key}>
+          {option.label}
+        </option>
+      ))}
+    </Select>
+  </div>
+  {opacityDisabled && opacityStatus && (
+    <span className="mt-1 block text-[0.75rem] text-ink-faint">
+      {opacityStatus}
+    </span>
+  )}
+</div>
           </Card>
 
           {/* Vote Distribution with Toggle */}
@@ -616,41 +617,41 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                                   setMapMode('strongholds');
                                 }}
                               >
-                              <TableCell>
-                                <PartyBadge party={party.party_name} combineCduCsu size="sm">
-                                  {getPartyDisplayName(party.party_name, partyOpts)}
-                                </PartyBadge>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {party.first_votes?.toLocaleString()}
-                                <br />
-                                <span className="text-[0.8rem] text-ink-faint">{party.first_percent?.toFixed(1)}%</span>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {party.second_votes?.toLocaleString()}
-                                <br />
-                                <span className="text-[0.8rem] text-ink-faint">{party.second_percent?.toFixed(1)}%</span>
-                              </TableCell>
-                              {year === 2025 && (
-                                <TableCell className="text-right">
-                                  {party.second_diff_pts != null ? (
-                                    <span className={cn(
-                                      'inline-flex items-center gap-1 text-[0.8rem] font-medium',
-                                      party.second_diff_pts > 0 ? 'text-[#16a34a]' : party.second_diff_pts < 0 ? 'text-[#dc2626]' : 'text-ink-faint'
-                                    )}>
-                                      {party.second_diff_pts > 0 ? (
-                                        <><TrendingUp size={12} /> +{party.second_diff_pts.toFixed(1)}pp</>
-                                      ) : party.second_diff_pts < 0 ? (
-                                        <><TrendingDown size={12} /> {party.second_diff_pts.toFixed(1)}pp</>
-                                      ) : (
-                                        <span className="text-ink-faint">—</span>
-                                      )}
-                                    </span>
-                                  ) : (
-                                    <span className="text-ink-faint">—</span>
-                                  )}
+                                <TableCell>
+                                  <PartyBadge party={party.party_name} combineCduCsu size="sm">
+                                    {getPartyDisplayName(party.party_name, partyOpts)}
+                                  </PartyBadge>
                                 </TableCell>
-                              )}
+                                <TableCell className="text-right">
+                                  {party.first_votes?.toLocaleString()}
+                                  <br />
+                                  <span className="text-[0.8rem] text-ink-faint">{party.first_percent?.toFixed(1)}%</span>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {party.second_votes?.toLocaleString()}
+                                  <br />
+                                  <span className="text-[0.8rem] text-ink-faint">{party.second_percent?.toFixed(1)}%</span>
+                                </TableCell>
+                                {year === 2025 && (
+                                  <TableCell className="text-right">
+                                    {party.second_diff_pts != null ? (
+                                      <span className={cn(
+                                        'inline-flex items-center gap-1 text-[0.8rem] font-medium',
+                                        party.second_diff_pts > 0 ? 'text-[#16a34a]' : party.second_diff_pts < 0 ? 'text-[#dc2626]' : 'text-ink-faint'
+                                      )}>
+                                        {party.second_diff_pts > 0 ? (
+                                          <><TrendingUp size={12} /> +{party.second_diff_pts.toFixed(1)}pp</>
+                                        ) : party.second_diff_pts < 0 ? (
+                                          <><TrendingDown size={12} /> {party.second_diff_pts.toFixed(1)}pp</>
+                                        ) : (
+                                          <span className="text-ink-faint">—</span>
+                                        )}
+                                      </span>
+                                    ) : (
+                                      <span className="text-ink-faint">—</span>
+                                    )}
+                                  </TableCell>
+                                )}
                               </TableRow>
                             );
                           })}
