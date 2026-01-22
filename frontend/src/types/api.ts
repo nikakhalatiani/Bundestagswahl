@@ -203,9 +203,15 @@ export interface PartyStrengthItem {
     constituency_number: number;
     constituency_name: string;
     state_name: string;
+    total_voters?: number;
     votes: number;
     percent: number;
     diff_percent_pts: number | null;
+}
+
+export interface PartyListItem {
+    short_name: string;
+    long_name: string | null;
 }
 
 export interface StructuralMetricDefinition {

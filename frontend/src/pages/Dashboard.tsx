@@ -10,6 +10,7 @@ import { Card, CardHeader, CardSubtitle, CardTitle } from '../components/ui/Card
 import { PartyBadge } from '../components/ui/PartyBadge';
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from '../components/ui/Table';
 import { Select } from '../components/ui/Select';
+import { ToggleSwitch } from '../components/ui/ToggleSwitch';
 
 const COALITION_DESCRIPTIONS: Record<string, string> = {
   'Grand Coalition': 'A coalition of the two largest parties, typically CDU/CSU and SPD. Historically the most common coalition in Germany.',
@@ -449,18 +450,14 @@ export function Dashboard({ year }: DashboardProps) {
             <CardTitle>Seat distribution in the Bundestag {year}</CardTitle>
             <CardSubtitle>Total seats: {totalSeats}</CardSubtitle>
           </div>
-          <button
-            className="ml-auto flex items-center gap-2 rounded-full border border-line bg-surface-muted px-2 py-1.5 transition hover:border-ink-muted"
-            onClick={() => setLameMode(!lameMode)}
-            title={lameMode ? 'Switch to Hemicycle view' : 'Switch to Pie Chart view'}
-            type="button"
-          >
-            <span className={cn('text-[0.75rem] font-semibold text-ink-faint', !lameMode && 'text-ink')}>Hemicycle</span>
-            <span className="relative h-[18px] w-8 rounded-full bg-surface-accent transition">
-              <span className={cn('absolute left-0.5 top-0.5 h-3.5 w-3.5 rounded-full bg-brand-black transition-[left]', lameMode && 'left-4')} />
-            </span>
-            <span className={cn('text-[0.75rem] font-semibold text-ink-faint', lameMode && 'text-ink')}>Pie</span>
-          </button>
+          <ToggleSwitch
+            leftLabel="Hemicycle"
+            rightLabel="Pie"
+            value={lameMode ? 'right' : 'left'}
+            onChange={(value) => setLameMode(value === 'right')}
+            leftTitle="Switch to Hemicycle view"
+            rightTitle="Switch to Pie Chart view"
+          />
         </CardHeader>
 
         <div className="grid gap-6 lg:grid-cols-2">

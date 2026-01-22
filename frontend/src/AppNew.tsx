@@ -76,21 +76,17 @@ function Navigation({ year, setYear }: { year: number; setYear: (y: number) => v
                   Constituency analysis
                 </Link>
             </li>
-            {year === 2025 && (
-              <>
-                <li>
-                  <Link
-                    to="/foreigner-afd"
-                    className={cn(
-                      'block whitespace-nowrap border-b-[3px] border-transparent px-6 py-4 font-medium text-ink-muted transition hover:bg-surface-muted hover:text-ink',
-                      location.pathname === '/foreigner-afd' && 'border-brand-gold bg-surface-muted font-semibold text-ink'
-                    )}
-                  >
-                    Foreigner/AfD Analysis
-                  </Link>
-                </li>
-              </>
-            )}
+            <li>
+              <Link
+                to="/foreigner-afd"
+                className={cn(
+                  'block whitespace-nowrap border-b-[3px] border-transparent px-6 py-4 font-medium text-ink-muted transition hover:bg-surface-muted hover:text-ink',
+                  location.pathname === '/foreigner-afd' && 'border-brand-gold bg-surface-muted font-semibold text-ink'
+                )}
+              >
+                Correlation explorer
+              </Link>
+            </li>
           </ul>
         </nav>
       </header>
@@ -109,7 +105,7 @@ function AppContent() {
           <Route path="/" element={<Dashboard year={year} />} />
           <Route path="/members" element={<Members year={year} />} />
           <Route path="/analysis" element={<ConstituencyAnalysis year={year} />} />
-          <Route path="/foreigner-afd" element={<ForeignerAfdScatterPage />} />
+          <Route path="/foreigner-afd" element={<ForeignerAfdScatterPage year={year} />} />
         </Routes>
       </main>
     </>
