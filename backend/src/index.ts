@@ -1227,7 +1227,7 @@ app.get('/api/party-constituency-strength', async (req, res) => {
 
 // Bonus Analysis 1: Disposable Income Data
 app.get('/api/disposable-income', async (req, res) => {
-  const year = 2025;
+  const year = req.query.year ? Number(req.query.year) : 2025;
   try {
     const result = await pool.query(
       `WITH direct_candidate_rankings AS (
@@ -1243,11 +1243,15 @@ app.get('/api/disposable-income', async (req, res) => {
          c.number as constituency_number,
          c.name as constituency_name,
          COALESCE(p.short_name, '') as party_name,
-         CAST(c.disposable_income AS FLOAT) as disposable_income
+         CAST(csd.value AS FLOAT) as disposable_income
        FROM constituencies c
        JOIN constituency_elections ce ON ce.constituency_id = c.id AND ce.year = $1
        LEFT JOIN direct_candidate_rankings r ON r.constituency_id = c.id AND r.rn = 1
        LEFT JOIN parties p ON p.id = r.party_id
+       LEFT JOIN constituency_structural_data csd
+         ON csd.constituency_id = c.id
+        AND csd.year = $1
+        AND csd.metric_key = 'disposable_income'
        ORDER BY c.number`,
       [year]
     );
@@ -1260,26 +1264,75 @@ app.get('/api/disposable-income', async (req, res) => {
 
 // Bonus Analysis 2: Foreigner % vs AfD Votes
 app.get('/api/foreigner-afd', async (req, res) => {
-  const year = 2025;
+  const year = req.query.year ? Number(req.query.year) : 2025;
   try {
     const result = await pool.query(
       `SELECT
          c.number AS constituency_number,
          c.name AS constituency_name,
-         CAST(c.foreigner_pct AS FLOAT) AS foreigner_pct,
+         CAST(csd.value AS FLOAT) AS foreigner_pct,
          CAST(cpv.percent AS FLOAT) AS afd_percent,
          CAST(ce.total_voters AS INTEGER) AS total_voters
        FROM constituencies c
        JOIN constituency_elections ce ON ce.constituency_id = c.id
+       LEFT JOIN constituency_structural_data csd
+         ON csd.constituency_id = c.id
+        AND csd.year = $1
+        AND csd.metric_key = 'foreigner_pct'
        JOIN constituency_party_votes cpv ON cpv.bridge_id = ce.bridge_id
        JOIN parties p ON p.id = cpv.party_id
        WHERE ce.year = $1
          AND cpv.vote_type = 2
          AND p.short_name = 'AfD'
-       ORDER BY c.foreigner_pct ASC`,
+       ORDER BY csd.value ASC NULLS LAST`,
       [year]
     );
     res.json({ data: result.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'db_error' });
+  }
+});
+
+// Structural data for constituency analysis overlays
+app.get('/api/structural-data', async (req, res) => {
+  const year = req.query.year ? Number(req.query.year) : 2025;
+  try {
+    const metricsRes = await pool.query(
+      `SELECT key, label, unit
+       FROM structural_metrics
+       ORDER BY label`
+    );
+
+    const dataRes = await pool.query(
+      `SELECT
+         c.number AS constituency_number,
+         c.name AS constituency_name,
+         csd.metric_key,
+         csd.value
+       FROM constituency_structural_data csd
+       JOIN constituencies c ON c.id = csd.constituency_id
+       WHERE csd.year = $1
+       ORDER BY c.number`,
+      [year]
+    );
+
+    const valuesMap = new Map<number, { constituency_number: number; constituency_name: string; metrics: Record<string, number | null> }>();
+    for (const row of dataRes.rows) {
+      if (!valuesMap.has(row.constituency_number)) {
+        valuesMap.set(row.constituency_number, {
+          constituency_number: row.constituency_number,
+          constituency_name: row.constituency_name,
+          metrics: {},
+        });
+      }
+      valuesMap.get(row.constituency_number)!.metrics[row.metric_key] = row.value !== null ? Number(row.value) : null;
+    }
+
+    res.json({
+      metrics: metricsRes.rows,
+      values: Array.from(valuesMap.values()),
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'db_error' });

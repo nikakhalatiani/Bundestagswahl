@@ -50,6 +50,31 @@ export const constituencies = pgTable("constituencies", {
     index("constituencies_state_idx").on(table.state_id),
   ]);
 
+// ---------- Structural Metrics ----------
+export const structuralMetrics = pgTable("structural_metrics", {
+  key: varchar("key", { length: 120 }).primaryKey(),
+  label: varchar("label", { length: 200 }).notNull(),
+  unit: varchar("unit", { length: 80 }),
+});
+
+export const constituencyStructuralData = pgTable("constituency_structural_data", {
+  constituency_id: integer("constituency_id")
+    .notNull()
+    .references(() => constituencies.id, { onDelete: "cascade" }),
+  year: integer("year")
+    .notNull()
+    .references(() => elections.year, { onDelete: "cascade" }),
+  metric_key: varchar("metric_key", { length: 120 })
+    .notNull()
+    .references(() => structuralMetrics.key, { onDelete: "cascade" }),
+  value: doublePrecision("value"),
+},
+  (table) => [
+    primaryKey({ columns: [table.constituency_id, table.year, table.metric_key] }),
+    index("structural_data_year_idx").on(table.year),
+    index("structural_data_metric_idx").on(table.metric_key),
+  ]);
+
 // ---------- Persons (Candidates) ----------
 export const persons = pgTable("persons", {
   id: serial("id").primaryKey(), // "PersonID"

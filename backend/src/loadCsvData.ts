@@ -288,17 +288,49 @@ async function loadConstituencyPartyVotes() {
 
 async function loadStructuralData() {
   const rows = readCsv<CsvRow>(path.join(DATA_DIR, "strukturdaten.csv"));
+  const mappingRes = await pool.query(
+    `SELECT c.id, c.number, ce.year
+     FROM constituencies c
+     JOIN constituency_elections ce ON ce.constituency_id = c.id`
+  );
+  const constituencyMap = new Map<string, number>();
+  for (const row of mappingRes.rows) {
+    constituencyMap.set(`${row.year}-${row.number}`, row.id);
+  }
+
   await transactionalInsert("Structural Data", async (c) => {
+    await c.query("DELETE FROM constituency_structural_data");
+    await c.query("DELETE FROM structural_metrics");
+    const seenMetrics = new Set<string>();
     for (const r of rows) {
+      const year = num(r["Year"]);
+      const number = num(r["ConstituencyNumber"]);
+      const metricKey = r["MetricKey"];
+      if (!year || !number || !metricKey) continue;
+      const constituencyId = constituencyMap.get(`${year}-${number}`);
+      if (!constituencyId) continue;
+
+      if (!seenMetrics.has(metricKey)) {
+        seenMetrics.add(metricKey);
+        await c.query(
+          `INSERT INTO structural_metrics (key, label, unit)
+           VALUES ($1,$2,$3)
+           ON CONFLICT (key)
+           DO UPDATE SET label=EXCLUDED.label, unit=EXCLUDED.unit`,
+          [metricKey, r["MetricLabel"] || metricKey, r["MetricUnit"] || null]
+        );
+      }
+
       await c.query(
-        `UPDATE constituencies
-         SET foreigner_pct = $1,
-             disposable_income = $2
-         WHERE number = $3`,
+        `INSERT INTO constituency_structural_data (constituency_id, year, metric_key, value)
+         VALUES ($1,$2,$3,$4)
+         ON CONFLICT (constituency_id, year, metric_key)
+         DO UPDATE SET value=EXCLUDED.value`,
         [
-          num(r["ForeignerPct"]),
-          num(r["DisposableIncome"]),
-          num(r["ConstituencyNumber"])
+          constituencyId,
+          year,
+          metricKey,
+          num(r["Value"]),
         ]
       );
     }
