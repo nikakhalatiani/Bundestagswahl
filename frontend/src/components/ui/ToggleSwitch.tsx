@@ -6,6 +6,7 @@ type ToggleSwitchProps = {
   value: 'left' | 'right';
   onChange: (value: 'left' | 'right') => void;
   className?: string;
+  onToggle?: () => void;
   leftTitle?: string;
   rightTitle?: string;
   disabled?: boolean;
@@ -19,6 +20,7 @@ export function ToggleSwitch({
   value,
   onChange,
   className,
+  onToggle,
   leftTitle,
   rightTitle,
   disabled = false,
@@ -28,6 +30,16 @@ export function ToggleSwitch({
   const isRight = value === 'right';
   const leftDisabled = disabled || disabledLeft;
   const rightDisabled = disabled || disabledRight;
+  const toggleDisabled = disabled || (leftDisabled && rightDisabled);
+
+  const handleToggle = () => {
+    if (toggleDisabled) return;
+    if (onToggle) {
+      onToggle();
+      return;
+    }
+    onChange(isRight ? 'left' : 'right');
+  };
 
   return (
     <div
@@ -38,6 +50,10 @@ export function ToggleSwitch({
         className
       )}
       role="group"
+      onClick={(event) => {
+        if ((event.target as HTMLElement).tagName === 'BUTTON') return;
+        handleToggle();
+      }}
     >
       <button
         type="button"

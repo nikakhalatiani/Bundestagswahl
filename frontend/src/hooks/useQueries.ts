@@ -8,6 +8,7 @@ import type {
   ConstituencyWinnerItem,
   ConstituencyVotesBulkItem,
   PartyStrengthItem,
+  PartyListItem,
   StructuralDataResponse,
   DirectWithoutCoverageResponse,
   MemberItem,
@@ -167,6 +168,15 @@ export function usePartyConstituencyStrength(
       return fetchJson<ApiResponse<PartyStrengthItem[]>>(`${API_BASE}/api/party-constituency-strength?${params.toString()}`);
     },
     enabled: Boolean(party),
+  });
+}
+
+export function usePartyList(year: number) {
+  return useQuery({
+    queryKey: ['partyList', year],
+    queryFn: async () => {
+      return fetchJson<ApiResponse<PartyListItem[]>>(`${API_BASE}/api/parties?year=${year}`);
+    },
   });
 }
 

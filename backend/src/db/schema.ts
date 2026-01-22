@@ -42,8 +42,6 @@ export const constituencies = pgTable("constituencies", {
   state_id: integer("state_id")
     .notNull()
     .references(() => states.id, { onDelete: "restrict", onUpdate: "cascade" }),
-  foreigner_pct: doublePrecision("foreigner_pct"),
-  disposable_income: doublePrecision("disposable_income"),
 },
   (table) => [
     unique().on(table.number, table.name),
