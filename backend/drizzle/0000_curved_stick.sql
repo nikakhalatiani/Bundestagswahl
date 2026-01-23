@@ -1,216 +1,134 @@
-import { sql } from "drizzle-orm";
-import {
-  pgTable,
-  pgMaterializedView,
-  serial,
-  integer,
-  bigint,
-  varchar,
-  text,
-  doublePrecision,
-  boolean,
-  date,
-  primaryKey,
-  unique,
-  index,
-  foreignKey,
-} from "drizzle-orm/pg-core";
-
-// ---------- States ----------
-export const states = pgTable("states", {
-  id: serial("id").primaryKey(),        // e.g. 1,2,3,...  ("StateID" in CSV)
-  abbr: varchar("abbr", { length: 2 }).notNull().unique(), // e.g. "BB", "BE"
-  name: varchar("name", { length: 100 }).notNull().unique(), // "Brandenburg"
-});
-
-// ---------- Parties ----------
-export const parties = pgTable("parties", {
-  id: serial("id").primaryKey(),                // "PartyID"
-  short_name: varchar("short_name", { length: 120 }).notNull().unique(),
-  long_name: varchar("long_name", { length: 200 }).notNull(),
-  is_minority: boolean("is_minority").default(false).notNull(),
-});
-
-// ---------- Elections ----------
-export const elections = pgTable("elections", {
-  year: integer("year").primaryKey(),
-  date: date("date").notNull().unique(),
-});
-
-// ---------- Constituencies ----------
-export const constituencies = pgTable("constituencies", {
-  id: serial("id").primaryKey(),               // "ConstituencyID"
-  number: integer("number").notNull(),
-  name: varchar("name", { length: 150 }).notNull(),
-  state_id: integer("state_id")
-    .notNull()
-    .references(() => states.id, { onDelete: "restrict", onUpdate: "cascade" }),
-},
-  (table) => [
-    unique().on(table.number, table.name),
-    index("constituencies_state_idx").on(table.state_id),
-  ]);
-
-// ---------- Structural Metrics ----------
-export const structuralMetrics = pgTable("structural_metrics", {
-  key: varchar("key", { length: 120 }).primaryKey(),
-  label: varchar("label", { length: 200 }).notNull(),
-  unit: varchar("unit", { length: 80 }),
-});
-
-export const constituencyStructuralData = pgTable("constituency_structural_data", {
-  constituency_id: integer("constituency_id")
-    .notNull()
-    .references(() => constituencies.id, { onDelete: "cascade" }),
-  year: integer("year")
-    .notNull()
-    .references(() => elections.year, { onDelete: "cascade" }),
-  metric_key: varchar("metric_key", { length: 120 })
-    .notNull()
-    .references(() => structuralMetrics.key, { onDelete: "cascade" }),
-  value: doublePrecision("value"),
-},
-  (table) => [
-    primaryKey({ columns: [table.constituency_id, table.year, table.metric_key] }),
-    index("structural_data_year_idx").on(table.year),
-    index("structural_data_metric_idx").on(table.metric_key),
-  ]);
-
-// ---------- Persons (Candidates) ----------
-export const persons = pgTable("persons", {
-  id: serial("id").primaryKey(), // "PersonID"
-  title: text("title"),
-  name_addition: text("name_addition"),
-  last_name: text("last_name").notNull(),
-  first_name: text("first_name").notNull(),
-  artist_name: text("artist_name"),
-  gender: text("gender"),
-  birth_year: integer("birth_year"),
-  postal_code: text("postal_code"),
-  city: text("city"),
-  birth_place: text("birth_place"),
-  profession: text("profession"),
-},
+CREATE TABLE "constituencies" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"number" integer NOT NULL,
+	"name" varchar(150) NOT NULL,
+	"state_id" integer NOT NULL,
+	CONSTRAINT "constituencies_number_name_unique" UNIQUE("number","name")
 );
-
-// ---------- Party Lists (Landeslisten) ----------
-export const partyLists = pgTable("party_lists", {
-  id: serial("id").primaryKey(), // PartyListID
-  year: integer("year")
-    .notNull()
-    .references(() => elections.year, { onDelete: "cascade" }),
-  state_id: integer("state_id")
-    .notNull()
-    .references(() => states.id, { onDelete: "cascade" }),
-  party_id: integer("party_id")
-    .notNull()
-    .references(() => parties.id, { onDelete: "cascade" }),
-},
-  (table) => [
-    unique().on(table.state_id, table.party_id, table.year),
-    index("party_lists_state_idx").on(table.state_id),
-  ]
+--> statement-breakpoint
+CREATE TABLE "constituency_elections" (
+	"bridge_id" serial PRIMARY KEY NOT NULL,
+	"year" integer NOT NULL,
+	"constituency_id" integer NOT NULL,
+	"eligible_voters" double precision,
+	CONSTRAINT "constituency_elections_constituency_id_year_unique" UNIQUE("constituency_id","year")
 );
-
-// ---------- Direct Candidacy ----------
-export const directCandidacy = pgTable("direct_candidacy", {
-  person_id: integer("person_id")
-    .notNull()
-    .references(() => persons.id, { onDelete: "cascade" }),
-  year: integer("year")
-    .notNull()
-    .references(() => elections.year, { onDelete: "cascade" }),
-  constituency_id: integer("constituency_id")
-    .notNull()
-    .references(() => constituencies.id, { onDelete: "cascade" }),
-  party_id: integer("party_id")
-    .notNull()
-    .references(() => parties.id, { onDelete: "cascade" }),
-},
-  (table) => [
-    primaryKey({ columns: [table.person_id, table.year] }),
-  ]);
-
-// ---------- Party List Candidacy ----------
-export const partyListCandidacy = pgTable("party_list_candidacy", {
-  person_id: integer("person_id")
-    .notNull()
-    .references(() => persons.id, { onDelete: "cascade" }),
-  party_list_id: integer("party_list_id")
-    .notNull()
-    .references(() => partyLists.id, { onDelete: "cascade" }),
-  list_position: doublePrecision("list_position"),
-},
-  (table) => [
-    primaryKey({ columns: [table.person_id, table.party_list_id] }),
-  ]);
-
-// ---------- Constituency Elections ----------
-export const constituencyElections = pgTable("constituency_elections", {
-  bridge_id: serial("bridge_id").primaryKey(),    // BridgeID
-  year: integer("year")
-    .notNull()
-    .references(() => elections.year, { onDelete: "cascade" }),
-  constituency_id: integer("constituency_id")
-    .notNull()
-    .references(() => constituencies.id, { onDelete: "cascade" }),
-  eligible_voters: doublePrecision("eligible_voters"),
-},
-  (table) => [
-    unique().on(table.constituency_id, table.year),
-  ]);
-
-export const firstVotes = pgTable("first_votes", {
-  id: serial("id").primaryKey(),
-  year: integer("year")
-    .notNull(),
-  direct_person_id: integer("direct_person_id")
-    .notNull(),
-  is_valid: boolean("is_valid").default(true).notNull(),
-  created_at: date("created_at").defaultNow(),
-},
-  (table) => [
-    foreignKey({
-      columns: [table.direct_person_id, table.year],
-      foreignColumns: [
-        directCandidacy.person_id,
-        directCandidacy.year,
-      ],
-      name: "fk_first_vote_direct_cand",
-    }),
-  ]
-
+--> statement-breakpoint
+CREATE TABLE "constituency_structural_data" (
+	"constituency_id" integer NOT NULL,
+	"year" integer NOT NULL,
+	"metric_key" varchar(120) NOT NULL,
+	"value" double precision,
+	CONSTRAINT "constituency_structural_data_constituency_id_year_metric_key_pk" PRIMARY KEY("constituency_id","year","metric_key")
 );
-
-export const secondVotes = pgTable("second_votes", {
-  id: serial("id").primaryKey(),
-  // each second vote is for a party list in some state
-  party_list_id: integer("party_list_id")
-    .notNull()
-    .references(() => partyLists.id, { onDelete: "cascade" }),
-  constituency_id: integer("constituency_id")
-    .notNull()
-    .references(() => constituencies.id, { onDelete: "cascade" }),
-  is_valid: boolean("is_valid").default(true).notNull(),
-  created_at: date("created_at").defaultNow(),
-},
-  (t) => [
-    index("second_votes_party_idx").on(t.party_list_id),
-    index("second_votes_constituency_idx").on(t.constituency_id),
-  ]
+--> statement-breakpoint
+CREATE TABLE "direct_candidacy" (
+	"person_id" integer NOT NULL,
+	"year" integer NOT NULL,
+	"constituency_id" integer NOT NULL,
+	"party_id" integer NOT NULL,
+	CONSTRAINT "direct_candidacy_person_id_year_pk" PRIMARY KEY("person_id","year")
 );
-
-// ---------- Materialized Views ----------
-
-export const mv00DirectCandidacyVotes = pgMaterializedView("mv_00_direct_candidacy_votes", {
-  person_id: integer("person_id"),
-  year: integer("year"),
-  constituency_id: integer("constituency_id"),
-  party_id: integer("party_id"),
-  first_votes: bigint("first_votes", { mode: "number" }),
-})
-  .withNoData()
-  .as(sql`
+--> statement-breakpoint
+CREATE TABLE "elections" (
+	"year" integer PRIMARY KEY NOT NULL,
+	"date" date NOT NULL,
+	CONSTRAINT "elections_date_unique" UNIQUE("date")
+);
+--> statement-breakpoint
+CREATE TABLE "first_votes" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"year" integer NOT NULL,
+	"direct_person_id" integer NOT NULL,
+	"is_valid" boolean DEFAULT true NOT NULL,
+	"created_at" date DEFAULT now()
+);
+--> statement-breakpoint
+CREATE TABLE "parties" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"short_name" varchar(120) NOT NULL,
+	"long_name" varchar(200) NOT NULL,
+	"is_minority" boolean DEFAULT false NOT NULL,
+	CONSTRAINT "parties_short_name_unique" UNIQUE("short_name")
+);
+--> statement-breakpoint
+CREATE TABLE "party_list_candidacy" (
+	"person_id" integer NOT NULL,
+	"party_list_id" integer NOT NULL,
+	"list_position" double precision,
+	CONSTRAINT "party_list_candidacy_person_id_party_list_id_pk" PRIMARY KEY("person_id","party_list_id")
+);
+--> statement-breakpoint
+CREATE TABLE "party_lists" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"year" integer NOT NULL,
+	"state_id" integer NOT NULL,
+	"party_id" integer NOT NULL,
+	CONSTRAINT "party_lists_state_id_party_id_year_unique" UNIQUE("state_id","party_id","year")
+);
+--> statement-breakpoint
+CREATE TABLE "persons" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"title" text,
+	"name_addition" text,
+	"last_name" text NOT NULL,
+	"first_name" text NOT NULL,
+	"artist_name" text,
+	"gender" text,
+	"birth_year" integer,
+	"postal_code" text,
+	"city" text,
+	"birth_place" text,
+	"profession" text
+);
+--> statement-breakpoint
+CREATE TABLE "second_votes" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"party_list_id" integer NOT NULL,
+	"constituency_id" integer NOT NULL,
+	"is_valid" boolean DEFAULT true NOT NULL,
+	"created_at" date DEFAULT now()
+);
+--> statement-breakpoint
+CREATE TABLE "states" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"abbr" varchar(2) NOT NULL,
+	"name" varchar(100) NOT NULL,
+	CONSTRAINT "states_abbr_unique" UNIQUE("abbr"),
+	CONSTRAINT "states_name_unique" UNIQUE("name")
+);
+--> statement-breakpoint
+CREATE TABLE "structural_metrics" (
+	"key" varchar(120) PRIMARY KEY NOT NULL,
+	"label" varchar(200) NOT NULL,
+	"unit" varchar(80)
+);
+--> statement-breakpoint
+ALTER TABLE "constituencies" ADD CONSTRAINT "constituencies_state_id_states_id_fk" FOREIGN KEY ("state_id") REFERENCES "public"."states"("id") ON DELETE restrict ON UPDATE cascade;--> statement-breakpoint
+ALTER TABLE "constituency_elections" ADD CONSTRAINT "constituency_elections_year_elections_year_fk" FOREIGN KEY ("year") REFERENCES "public"."elections"("year") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "constituency_elections" ADD CONSTRAINT "constituency_elections_constituency_id_constituencies_id_fk" FOREIGN KEY ("constituency_id") REFERENCES "public"."constituencies"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "constituency_structural_data" ADD CONSTRAINT "constituency_structural_data_constituency_id_constituencies_id_fk" FOREIGN KEY ("constituency_id") REFERENCES "public"."constituencies"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "constituency_structural_data" ADD CONSTRAINT "constituency_structural_data_year_elections_year_fk" FOREIGN KEY ("year") REFERENCES "public"."elections"("year") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "constituency_structural_data" ADD CONSTRAINT "constituency_structural_data_metric_key_structural_metrics_key_fk" FOREIGN KEY ("metric_key") REFERENCES "public"."structural_metrics"("key") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "direct_candidacy" ADD CONSTRAINT "direct_candidacy_person_id_persons_id_fk" FOREIGN KEY ("person_id") REFERENCES "public"."persons"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "direct_candidacy" ADD CONSTRAINT "direct_candidacy_year_elections_year_fk" FOREIGN KEY ("year") REFERENCES "public"."elections"("year") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "direct_candidacy" ADD CONSTRAINT "direct_candidacy_constituency_id_constituencies_id_fk" FOREIGN KEY ("constituency_id") REFERENCES "public"."constituencies"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "direct_candidacy" ADD CONSTRAINT "direct_candidacy_party_id_parties_id_fk" FOREIGN KEY ("party_id") REFERENCES "public"."parties"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "first_votes" ADD CONSTRAINT "fk_first_vote_direct_cand" FOREIGN KEY ("direct_person_id","year") REFERENCES "public"."direct_candidacy"("person_id","year") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "party_list_candidacy" ADD CONSTRAINT "party_list_candidacy_person_id_persons_id_fk" FOREIGN KEY ("person_id") REFERENCES "public"."persons"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "party_list_candidacy" ADD CONSTRAINT "party_list_candidacy_party_list_id_party_lists_id_fk" FOREIGN KEY ("party_list_id") REFERENCES "public"."party_lists"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "party_lists" ADD CONSTRAINT "party_lists_year_elections_year_fk" FOREIGN KEY ("year") REFERENCES "public"."elections"("year") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "party_lists" ADD CONSTRAINT "party_lists_state_id_states_id_fk" FOREIGN KEY ("state_id") REFERENCES "public"."states"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "party_lists" ADD CONSTRAINT "party_lists_party_id_parties_id_fk" FOREIGN KEY ("party_id") REFERENCES "public"."parties"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "second_votes" ADD CONSTRAINT "second_votes_party_list_id_party_lists_id_fk" FOREIGN KEY ("party_list_id") REFERENCES "public"."party_lists"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "second_votes" ADD CONSTRAINT "second_votes_constituency_id_constituencies_id_fk" FOREIGN KEY ("constituency_id") REFERENCES "public"."constituencies"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "constituencies_state_idx" ON "constituencies" USING btree ("state_id");--> statement-breakpoint
+CREATE INDEX "structural_data_year_idx" ON "constituency_structural_data" USING btree ("year");--> statement-breakpoint
+CREATE INDEX "structural_data_metric_idx" ON "constituency_structural_data" USING btree ("metric_key");--> statement-breakpoint
+CREATE INDEX "party_lists_state_idx" ON "party_lists" USING btree ("state_id");--> statement-breakpoint
+CREATE INDEX "second_votes_party_idx" ON "second_votes" USING btree ("party_list_id");--> statement-breakpoint
+CREATE INDEX "second_votes_constituency_idx" ON "second_votes" USING btree ("constituency_id");--> statement-breakpoint
+CREATE MATERIALIZED VIEW "public"."mv_00_direct_candidacy_votes" AS (
     SELECT
       dc.person_id,
       dc.year,
@@ -222,17 +140,8 @@ export const mv00DirectCandidacyVotes = pgMaterializedView("mv_00_direct_candida
       ON fv.direct_person_id = dc.person_id
      AND fv.year = dc.year
     GROUP BY dc.person_id, dc.year, dc.constituency_id, dc.party_id
-  `);
-
-export const mv01ConstituencyPartyVotes = pgMaterializedView("mv_01_constituency_party_votes", {
-  constituency_id: integer("constituency_id"),
-  year: integer("year"),
-  party_id: integer("party_id"),
-  vote_type: integer("vote_type"),
-  votes: bigint("votes", { mode: "number" }),
-})
-  .withNoData()
-  .as(sql`
+  ) WITH NO DATA;--> statement-breakpoint
+CREATE MATERIALIZED VIEW "public"."mv_01_constituency_party_votes" AS (
     WITH first_party AS (
       SELECT
         dcv.constituency_id,
@@ -258,17 +167,8 @@ export const mv01ConstituencyPartyVotes = pgMaterializedView("mv_01_constituency
     SELECT * FROM first_party
     UNION ALL
     SELECT * FROM second_party
-  `);
-
-export const mv02PartyListVotes = pgMaterializedView("mv_02_party_list_votes", {
-  party_list_id: integer("party_list_id"),
-  party_id: integer("party_id"),
-  state_id: integer("state_id"),
-  year: integer("year"),
-  second_votes: bigint("second_votes", { mode: "number" }),
-})
-  .withNoData()
-  .as(sql`
+  ) WITH NO DATA;--> statement-breakpoint
+CREATE MATERIALIZED VIEW "public"."mv_02_party_list_votes" AS (
     WITH state_votes AS (
       SELECT
         c.state_id,
@@ -291,18 +191,8 @@ export const mv02PartyListVotes = pgMaterializedView("mv_02_party_list_votes", {
       ON sv.state_id = pl.state_id
      AND sv.party_id = pl.party_id
      AND sv.year = pl.year
-  `);
-
-export const mv03ConstituencyElections = pgMaterializedView("mv_03_constituency_elections", {
-  constituency_id: integer("constituency_id"),
-  year: integer("year"),
-  valid_first: bigint("valid_first", { mode: "number" }),
-  valid_second: bigint("valid_second", { mode: "number" }),
-  invalid_first: bigint("invalid_first", { mode: "number" }),
-  invalid_second: bigint("invalid_second", { mode: "number" }),
-})
-  .withNoData()
-  .as(sql`
+  ) WITH NO DATA;--> statement-breakpoint
+CREATE MATERIALIZED VIEW "public"."mv_03_constituency_elections" AS (
     WITH valid_totals AS (
       SELECT
         constituency_id,
@@ -349,22 +239,8 @@ export const mv03ConstituencyElections = pgMaterializedView("mv_03_constituency_
     FULL OUTER JOIN invalid_second i2
       ON i2.constituency_id = COALESCE(vt.constituency_id, i1.constituency_id)
      AND i2.year = COALESCE(vt.year, i1.year)
-  `);
-
-export const seatAllocationCache = pgMaterializedView("seat_allocation_cache", {
-  id: integer("id"),
-  year: integer("year"),
-  person_id: integer("person_id"),
-  party_id: integer("party_id"),
-  state_id: integer("state_id"),
-  seat_type: text("seat_type"),
-  constituency_name: text("constituency_name"),
-  list_position: doublePrecision("list_position"),
-  percent_first_votes: doublePrecision("percent_first_votes"),
-  created_at: date("created_at"),
-})
-  .withNoData()
-  .as(sql`
+  ) WITH NO DATA;--> statement-breakpoint
+CREATE MATERIALIZED VIEW "public"."seat_allocation_cache" AS (
     WITH RECURSIVE
     DirectCandidacyVotes AS (
         SELECT
@@ -780,4 +656,4 @@ export const seatAllocationCache = pgMaterializedView("seat_allocation_cache", {
         CURRENT_DATE AS created_at
     FROM AllSeats
     ORDER BY year, party_id, seat_type, constituency_name NULLS LAST, list_position NULLS LAST
-  `);
+  ) WITH NO DATA;

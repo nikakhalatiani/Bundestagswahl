@@ -5,78 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1765071469849,
-      "tag": "0000_clean_captain_cross",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1765075151595,
-      "tag": "0001_magical_elektra",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1765076434000,
-      "tag": "0002_nosy_jean_grey",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1765576440175,
-      "tag": "0003_damp_hitman",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1766610070976,
-      "tag": "0004_new_golden_guardian",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1768222362047,
-      "tag": "0005_flowery_dragon_man",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1768227218242,
-      "tag": "0006_tough_tenebrous",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1768908894095,
-      "tag": "0007_parched_shatterstar",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1768910211846,
-      "tag": "0008_wandering_mister_sinister",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "7",
-      "when": 1769038694331,
-      "tag": "0009_funny_nuke",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "7",
-      "when": 1769088170659,
-      "tag": "0010_tiresome_shatterstar",
+      "when": 1769181482304,
+      "tag": "0000_curved_stick",
       "breakpoints": true
     }
   ]

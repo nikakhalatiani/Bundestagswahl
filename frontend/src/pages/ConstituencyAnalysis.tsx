@@ -328,19 +328,26 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
 
                 {/* Stats row */}
                 <div className="mb-3 grid grid-cols-2 gap-2 pb-3 sm:grid-cols-4">
+                  {(() => {
+                    const turnout = Number(overview.election_stats.turnout_percent);
+                    const turnoutDiff = overview.comparison_to_2021
+                      ? Number(overview.comparison_to_2021.turnout_diff_pts)
+                      : null;
+                    return (
+                      <>
                   <div className="flex flex-col items-center justify-center gap-1 rounded border border-line bg-surface px-2 py-3 text-center">
-                    <span className="text-base font-bold text-ink">{overview.election_stats.turnout_percent?.toFixed(1)}%</span>
+                    <span className="text-base font-bold text-ink">{Number.isFinite(turnout) ? turnout.toFixed(1) : '—'}%</span>
                     <span className="text-[0.65rem] uppercase tracking-[0.03em] text-ink-faint">Turnout</span>
                     {overview.comparison_to_2021 && (
                       <span
                         className={cn(
                           'rounded px-1 py-0.5 text-[0.7rem] font-semibold',
-                          overview.comparison_to_2021.turnout_diff_pts >= 0
+                          (turnoutDiff ?? 0) >= 0
                             ? 'bg-[#2e7d321a] text-[#2e7d32]'
                             : 'bg-[#c628281a] text-[#c62828]'
                         )}
                       >
-                        {overview.comparison_to_2021.turnout_diff_pts > 0 ? '+' : ''}{overview.comparison_to_2021.turnout_diff_pts.toFixed(1)}pp
+                        {Number.isFinite(turnoutDiff) ? `${turnoutDiff > 0 ? '+' : ''}${turnoutDiff.toFixed(1)}pp` : '—'}
                       </span>
                     )}
                   </div>
@@ -356,6 +363,9 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                     <span className="text-base font-bold text-ink">{overview.election_stats.valid_second?.toLocaleString() ?? '—'}</span>
                     <span className="text-[0.65rem] uppercase tracking-[0.03em] text-ink-faint">Valid 2nd</span>
                   </div>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 {/* Winner row */}
@@ -374,7 +384,10 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                       </div>
                       <div className="flex flex-wrap items-center gap-3">
                         <span className="text-[0.85rem] text-ink-muted">
-                          <strong>{overview.winner.first_votes?.toLocaleString()}</strong> votes ({overview.winner.percent_of_valid?.toFixed(1)}%)
+                          <strong>{overview.winner.first_votes?.toLocaleString()}</strong> votes ({(() => {
+                            const percent = Number(overview.winner.percent_of_valid);
+                            return Number.isFinite(percent) ? percent.toFixed(1) : '—';
+                          })()}%)
                         </span>
                         <span
                           className={cn(

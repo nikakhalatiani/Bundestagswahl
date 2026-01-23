@@ -1,1 +1,0 @@
-CREATE INDEX "second_votes_party_idx" ON "second_votes" USING btree ("party_list_id");

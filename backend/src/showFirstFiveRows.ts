@@ -15,7 +15,6 @@ async function main() {
     { name: "direct_candidacy", pk: "person_id, year" },
     { name: "party_list_candidacy", pk: "person_id, party_list_id" },
     { name: "constituency_elections", pk: "bridge_id" },
-    { name: "constituency_party_votes", pk: "id" },
     { name: "first_votes", pk: "id" },
     { name: "second_votes", pk: "id" },
   ];
