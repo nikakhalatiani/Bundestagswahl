@@ -49,49 +49,82 @@ Notes
 - The backend exposes basic endpoints at `/api/items` and `/api/health`.
 - Edit `backend/.env.example` and copy it to `backend/.env` if you need to change the database URL.
 - The project uses Drizzle ORM for schema management and type-safe DB access. Drizzle schema/migrations live in `backend/drizzle` (or use `drizzle-kit` commands to generate/migrate).
+- When using Docker Compose, run data scripts via `docker-compose exec backend ...` so they target the same DB the backend uses.
+- The Docker backend expects CSVs under `/data`; `docker-compose.yml` mounts the repo `data/` directory there.
 
 ## Database Setup & CSV Data Loading
 
-The database schema has been configured to match the CSV files in `data/`. The schema includes tables for states, parties, elections, constituencies, persons, party lists, direct candidacy, party list candidacy, constituency elections, constituency party votes, first votes, and second votes.
+The database schema matches the CSV files in `data/`. Base tables store source data and single votes. Aggregate results are computed via materialized views and must be refreshed after loading/generating votes.
 
 ### Setting Up the Database and Loading Data
 
-To set up the database from scratch and load all election data, run the following commands in sequence:
+#### Option A: Docker workflow (recommended)
+Run these commands from the repo root (so `docker-compose.yml` is found):
+
+```bash
+# Optional: wipe the DB volume for a clean start
+docker-compose down -v
+
+# Start DB + backend
+docker-compose up -d --build
+
+# Apply migrations (creates tables + materialized views)
+docker-compose exec backend npm run drizzle:migrate
+
+# Load CSVs
+docker-compose exec backend npm run load-csv
+
+# Generate single ballots from CSV aggregates
+docker-compose exec backend npm run generate-ballots
+
+# Refresh materialized views and seat caches
+curl -X POST "http://localhost:4000/api/admin/calculate-seats?year=2025"
+```
+
+#### Option B: Local workflow (advanced)
+Use this only if your backend is not running in Docker. Make sure `backend/.env` points to your local Postgres.
 
 ```bash
 cd backend
 
-# 1. Reset the database (drops all tables and data)
+# Optional: reset DB (drops tables + views)
 npx ts-node src/resetDB.ts
 
-# 2. Generate Drizzle migration files based on the schema
+# Generate and apply migrations (generate only needed if schema changed)
 npx drizzle-kit generate
-
-# 3. Apply migrations to the database
 npx drizzle-kit migrate
 
-# 4. Load all CSV data from data/ into the database
+# Load CSVs + generate ballots
 npx ts-node src/loadCsvData.ts
-
-# 5. Show database statistics and sample data
-npx ts-node src/showDB.ts
-
-# 6. Generate ballot data (first and second votes)
 npx ts-node src/generateBallots.ts
 
-# 7. Verify that generated ballots match the original aggregated data
-npx ts-node src/verifyBallots.ts
+# Refresh materialized views and seat caches
+curl -X POST "http://localhost:4000/api/admin/calculate-seats?year=2025"
 ```
 
-### What Each Command Does
+### What Each Command Does (data pipeline)
 
-- `npx ts-node src/resetDB.ts`: Drops all existing tables in the database to start fresh.
-- `npx drizzle-kit generate`: Generates migration files from the TypeScript schema in `src/db/schema.ts`.
-- `npx drizzle-kit migrate`: Applies all pending migrations to the PostgreSQL database.
-- `npx ts-node src/loadCsvData.ts`: Imports data from CSV files in the `data/` directory into the database tables.
-- `npx ts-node src/showDB.ts`: Displays statistics about the loaded data, including row counts and sample entries.
-- `npx ts-node src/generateBallots.ts`: Generates individual ballot records (first and second votes) based on the loaded election data.
-- `npx ts-node src/verifyBallots.ts`: Verifies that the generated ballots accurately reflect the original vote counts and distributions.
+- `drizzle-kit migrate`: Creates/updates tables and materialized views.
+- `loadCsvData.ts`: Imports base data from `data/`.
+- `generateBallots.ts`: Generates individual `first_votes` and `second_votes` from CSV aggregates.
+- `calculate-seats` endpoint: Refreshes materialized views used by API and seat allocation.
+
+### Resetting the Database
+
+Docker (recommended):
+```bash
+docker-compose down -v
+docker-compose up -d --build
+docker-compose exec backend npm run drizzle:migrate
+```
+
+Local (advanced):
+```bash
+cd backend
+npx ts-node src/resetDB.ts
+npx drizzle-kit generate   # only if schema changed
+npx drizzle-kit migrate
+```
 
 ### Verification Options
 
@@ -113,6 +146,19 @@ The `verifyBallots.ts` script supports command-line options for flexible verific
   ```
 
 These options can be combined as needed.
+
+Additional verification / diagnostics:
+```bash
+# Quick schema + row counts snapshot
+cd backend
+npm run check-db
+
+# Verify CSV -> materialized view consistency
+npm run verify
+
+# Check MV population (row counts)
+npx ts-node src/testCachePopulation.ts
+```
 ### Database Schema Overview
 
 The schema supports multi-year election data with proper foreign key relationships:
@@ -125,13 +171,20 @@ The schema supports multi-year election data with proper foreign key relationshi
 - **Direct Candidacy**: Direct candidates per constituency
 - **Party List Candidacy**: Candidates on party lists
 - **Constituency Elections**: Election statistics per constituency
-- **Constituency Party Votes**: Vote counts by party and type per constituency
 - **First Votes**: Generated individual first vote ballots
 - **Second Votes**: Generated individual second vote ballots
+- **Materialized Views**: Base vote counters (`mv_00_direct_candidacy_votes`, `mv_01_constituency_party_votes`, `mv_02_party_list_votes`, `mv_03_constituency_elections`) and the seat cache (`seat_allocation_cache`)
 
 ## Running Seat Allocation Algorithm
 
-After loading the data, you can run the seat allocation algorithm that implements the German electoral system with the 2023 reform.
+After loading the data, the API relies on materialized views (including `seat_allocation_cache`).
+Refresh the views whenever you load/generate votes or cast new votes:
+
+```bash
+curl -X POST "http://localhost:4000/api/admin/calculate-seats?year=2025"
+```
+
+The endpoint only refreshes materialized views; it does not run the CLI algorithm.
 
 ### Option 1: Full Results (Recommended)
 

@@ -7,10 +7,10 @@ type PartyRow = { id: number; short_name: string; long_name: string };
 type ElectionRow = { year: number; date: string };
 type ConstituencyRow = { id: number; number: number; name: string; state: string };
 type PersonRow = { id: number; first_name: string; last_name: string; birth_year: number | null; profession: string | null };
-type PartyListRow = { id: number; year: number; state: string; party: string; vote_count: number };
-type DirectCandidacyRow = { person_id: number; first_name: string; last_name: string; party: string; constituency: string; year: number; first_votes: number | null };
+type PartyListRow = { id: number; year: number; state: string; party: string };
+type DirectCandidacyRow = { person_id: number; first_name: string; last_name: string; party: string; constituency: string; year: number };
 type PartyListCandidacyRow = { person_id: number; first_name: string; last_name: string; party: string; list_position: number | null; year: number };
-type ConstituencyElectionRow = { bridge_id: number; year: number; constituency: string; eligible_voters: number | null; total_voters: number | null };
+type ConstituencyElectionRow = { bridge_id: number; year: number; constituency: string; eligible_voters: number | null };
 type ConstituencyPartyVotesRow = { year: number; state: string; party: string; vote_type: number; votes: number | string };
 
 async function main() {
@@ -26,7 +26,6 @@ async function main() {
     "direct_candidacy",
     "party_list_candidacy",
     "constituency_elections",
-    "constituency_party_votes",
   ];
 
   // 1️⃣ Row counts for all tables
@@ -82,7 +81,7 @@ async function main() {
   // 7️⃣ Party Lists
   console.log("\n→ Party Lists:");
   const partyLists = await pool.query<PartyListRow>(`
-    SELECT pl.id, e.year, s.abbr AS state, p.short_name AS party, pl.vote_count
+    SELECT pl.id, e.year, s.abbr AS state, p.short_name AS party
     FROM party_lists pl
     JOIN parties p ON pl.party_id = p.id
     JOIN states s ON pl.state_id = s.id
@@ -92,7 +91,7 @@ async function main() {
   `);
   if (partyLists.rowCount === 0) console.log("  (No rows)");
   partyLists.rows.forEach((r) =>
-    console.log(`  [${r.id}] ${r.year} – ${r.state}/${r.party} = ${r.vote_count}`)
+    console.log(`  [${r.id}] ${r.year} – ${r.state}/${r.party}`)
   );
 
   // 8️⃣ Direct Candidacy
@@ -102,7 +101,7 @@ async function main() {
       dc.person_id, p.first_name, p.last_name,
       pa.short_name AS party,
       co.name AS constituency,
-      e.year, dc.first_votes
+      e.year
     FROM direct_candidacy dc
     JOIN persons p ON dc.person_id = p.id
     JOIN parties pa ON dc.party_id = pa.id
@@ -114,7 +113,7 @@ async function main() {
   if (direct.rowCount === 0) console.log("  (No rows)");
   direct.rows.forEach((r) =>
     console.log(
-      `  ${r.first_name} ${r.last_name} (${r.party}) – ${r.constituency} ${r.year}: ${r.first_votes}`
+      `  ${r.first_name} ${r.last_name} (${r.party}) – ${r.constituency} ${r.year}`
     )
   );
 
@@ -143,7 +142,7 @@ async function main() {
   // 🔟 Constituency Elections
   console.log("\n→ Constituency Elections:");
   const constElect = await pool.query<ConstituencyElectionRow>(`
-    SELECT ce.bridge_id, e.year, c.name AS constituency, ce.eligible_voters, ce.total_voters
+    SELECT ce.bridge_id, e.year, c.name AS constituency, ce.eligible_voters
     FROM constituency_elections ce
     JOIN constituencies c ON ce.constituency_id = c.id
     JOIN elections e ON ce.year = e.year
@@ -153,7 +152,7 @@ async function main() {
   if (constElect.rowCount === 0) console.log("  (No rows)");
   constElect.rows.forEach((r) =>
     console.log(
-      `  ${r.year} – ${r.constituency}: ${r.total_voters}/${r.eligible_voters} voters`
+      `  ${r.year} – ${r.constituency}: eligible voters ${r.eligible_voters ?? '—'}`
     )
   );
 
@@ -163,12 +162,11 @@ async function main() {
     SELECT 
       e.year, s.abbr AS state, pa.short_name AS party,
       cpv.vote_type, SUM(cpv.votes) AS votes
-    FROM constituency_party_votes cpv
-      JOIN constituency_elections ce ON cpv.bridge_id = ce.bridge_id
-      JOIN constituencies co ON ce.constituency_id = co.id
+    FROM mv_01_constituency_party_votes cpv
+      JOIN constituencies co ON cpv.constituency_id = co.id
       JOIN states s ON co.state_id = s.id
       JOIN parties pa ON cpv.party_id = pa.id
-      JOIN elections e ON ce.year = e.year
+      JOIN elections e ON cpv.year = e.year
     GROUP BY e.year, s.abbr, pa.short_name, cpv.vote_type
     ORDER BY e.year, s.abbr, pa.short_name, cpv.vote_type
     LIMIT 10

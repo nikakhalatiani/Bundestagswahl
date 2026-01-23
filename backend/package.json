@@ -12,7 +12,7 @@
     "verify": "ts-node src/verifyData.ts",
     "generate-ballots": "ts-node src/generateBallots.ts",
     "verify-ballots": "ts-node src/verifyBallots.ts",
-    "check-db": "ts-node src/check-db.ts"
+    "check-db": "ts-node src/showDB.ts"
   },
   "dependencies": {
     "csv-parse": "^6.1.0",
