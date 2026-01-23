@@ -62,7 +62,20 @@ type CsvRow = Record<string, string>;
 // ---------------------------------------------------------------------
 //  Folder setup
 // ---------------------------------------------------------------------
-const DATA_DIR = path.join(__dirname, "..", "..", "data");
+const DEFAULT_DATA_DIR = path.join(__dirname, "..", "..", "data");
+const DATA_DIR_CANDIDATES = [
+  process.env.DATA_DIR?.trim(),
+  DEFAULT_DATA_DIR,
+  path.join(process.cwd(), "data"),
+  "/data",
+].filter(Boolean) as string[];
+const DATA_DIR = DATA_DIR_CANDIDATES.find((dir) => fs.existsSync(dir)) ?? DEFAULT_DATA_DIR;
+
+if (!fs.existsSync(DATA_DIR)) {
+  throw new Error(
+    `Data directory not found. Set DATA_DIR or mount ./data (tried: ${DATA_DIR_CANDIDATES.join(", ")}).`
+  );
+}
 
 // ---------------------------------------------------------------------
 //  Loaders (one per table)
@@ -155,11 +168,13 @@ async function loadPartyLists() {
   await transactionalInsert("Party Lists", async (c) => {
     for (const r of rows)
       await c.query(
-        `INSERT INTO party_lists (id, year, state_id, party_id, vote_count)
-         VALUES ($1,$2,$3,$4,$5)
+        `INSERT INTO party_lists (id, year, state_id, party_id)
+         VALUES ($1,$2,$3,$4)
          ON CONFLICT (id)
-         DO UPDATE SET vote_count=EXCLUDED.vote_count`,
-        [Number(r["PartyListID"]), Number(r["Year"]), Number(r["StateID"]), Number(r["PartyID"]), Number(r["VoteCount"])]
+         DO UPDATE SET year=EXCLUDED.year,
+                       state_id=EXCLUDED.state_id,
+                       party_id=EXCLUDED.party_id`,
+        [Number(r["PartyListID"]), Number(r["Year"]), Number(r["StateID"]), Number(r["PartyID"])]
       );
   });
 }
@@ -174,18 +189,15 @@ async function loadDirectCandidacy() {
       if (pId === null || year === null) continue;
 
       await c.query(
-        `INSERT INTO direct_candidacy (person_id, year, constituency_id, first_votes, previously_elected, party_id)
-         VALUES ($1,$2,$3,$4,$5,$6)
+        `INSERT INTO direct_candidacy (person_id, year, constituency_id, party_id)
+         VALUES ($1,$2,$3,$4)
          ON CONFLICT (person_id, year) DO UPDATE
-         SET first_votes=EXCLUDED.first_votes,
-             previously_elected=EXCLUDED.previously_elected,
+         SET constituency_id=EXCLUDED.constituency_id,
              party_id=EXCLUDED.party_id`,
         [
           pId,
           year,
           num(r["ConstituencyID"]),
-          num(r["Erststimmen"]), // Handles "NaN" correctly
-          r["PreviouslyElected"]?.toLowerCase() === "true",
           num(r["PartyID"])
         ]
       );
@@ -202,16 +214,14 @@ async function loadPartyListCandidacy() {
       if (pId === null || plId === null) continue;
 
       await c.query(
-        `INSERT INTO party_list_candidacy (person_id, party_list_id, list_position, previously_elected)
-         VALUES ($1,$2,$3,$4)
+        `INSERT INTO party_list_candidacy (person_id, party_list_id, list_position)
+         VALUES ($1,$2,$3)
          ON CONFLICT (person_id, party_list_id)
-         DO UPDATE SET list_position=EXCLUDED.list_position,
-                       previously_elected=EXCLUDED.previously_elected`,
+         DO UPDATE SET list_position=EXCLUDED.list_position`,
         [
           pId,
           plId,
           num(r["Listenplatz"]),
-          r["PreviouslyElected"]?.toLowerCase() === "true",
         ]
       );
     }
@@ -223,66 +233,19 @@ async function loadConstituencyElections() {
   await transactionalInsert("Constituency Elections", async (c) => {
     for (const r of rows)
       await c.query(
-        `INSERT INTO constituency_elections (bridge_id, year, constituency_id, eligible_voters, total_voters, percent, prev_votes, prev_percent, diff_percent_pts, invalid_first, invalid_second, valid_first, valid_second)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+        `INSERT INTO constituency_elections (bridge_id, year, constituency_id, eligible_voters)
+         VALUES ($1,$2,$3,$4)
          ON CONFLICT (bridge_id)
-         DO UPDATE SET eligible_voters=EXCLUDED.eligible_voters,
-                       total_voters=EXCLUDED.total_voters,
-                       percent=EXCLUDED.percent,
-                       prev_votes=EXCLUDED.prev_votes,
-                       prev_percent=EXCLUDED.prev_percent,
-                       diff_percent_pts=EXCLUDED.diff_percent_pts,
-                       invalid_first=EXCLUDED.invalid_first,
-                       invalid_second=EXCLUDED.invalid_second,
-                       valid_first=EXCLUDED.valid_first,
-                       valid_second=EXCLUDED.valid_second`,
+         DO UPDATE SET year=EXCLUDED.year,
+                       constituency_id=EXCLUDED.constituency_id,
+                       eligible_voters=EXCLUDED.eligible_voters`,
         [
           Number(r["BridgeID"]),
           Number(r["Year"]),
           Number(r["ConstituencyID"]),
           num(r["EligibleVoters"]),
-          num(r["TotalVoters"]),
-          num(r["Percent"]),
-          num(r["PrevVotes"]),
-          num(r["PrevPercent"]),
-          num(r["DiffPercentPts"]),
-          num(r["InvalidFirst"]),
-          num(r["InvalidSecond"]),
-          num(r["ValidFirst"]),
-          num(r["ValidSecond"]),
         ]
       );
-  });
-}
-
-async function loadConstituencyPartyVotes() {
-  const rows = readCsv<CsvRow>(path.join(DATA_DIR, "constituency_party_votes.csv"));
-  await transactionalInsert("Constituency Party Votes", async (c) => {
-    for (const r of rows) {
-      const id = num(r["ID"]);
-      if (id === null) continue;
-
-      await c.query(
-        `INSERT INTO constituency_party_votes 
-         (id, bridge_id, party_id, vote_type, votes, percent, prev_votes, prev_percent, diff_percent_pts)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-         ON CONFLICT (id)
-         DO UPDATE SET votes=EXCLUDED.votes, percent=EXCLUDED.percent,
-                       prev_votes=EXCLUDED.prev_votes, prev_percent=EXCLUDED.prev_percent,
-                       diff_percent_pts=EXCLUDED.diff_percent_pts`,
-        [
-          id,
-          num(r["BridgeID"]),
-          num(r["PartyID"]),
-          num(r["VoteType"]),
-          num(r["Votes"]),            // Safely handles "NaN"
-          num(r["Percent"]),          // Safely handles "NaN"
-          num(r["PrevVotes"]),        // Safely handles "NaN"
-          num(r["PrevPercent"]),      // Safely handles "NaN"
-          num(r["DiffPercentPts"]),   // Safely handles "NaN"
-        ]
-      );
-    }
   });
 }
 
@@ -351,14 +314,13 @@ async function main() {
     await loadDirectCandidacy();
     await loadPartyListCandidacy();
     await loadConstituencyElections();
-    await loadConstituencyPartyVotes();
     await loadStructuralData();
     console.log("\n✅ All CSVs from data folder loaded successfully!");
   } finally {
     await disconnect();
   }
   async function resetSequences() {
-    const tables = ["states", "parties", "constituencies", "persons", "party_lists", "constituency_elections", "constituency_party_votes"];
+    const tables = ["states", "parties", "constituencies", "persons", "party_lists", "constituency_elections"];
     const client = await pool.connect();
     try {
       for (const table of tables) {

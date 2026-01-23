@@ -40,32 +40,40 @@ const { pool } = dbModule;
  *    - Primary: Highest quotient (votes / divisor)
  *    - Secondary: Most votes (federal or state level)
  *    - Tertiary: Lower party_id or state_id (deterministic)
- *
- * === ALGORITHM STEPS ===
- *
- * 1. Find winner for each constituency (first votes)
- * 2. Filter parties by 5% threshold, 3 direct mandates, or minority status
- * 3. Independent candidates and candidates from non-qualified parties get seats directly
- * 4. Federal distribution: Sainte-Laguë at federal level
- *    - Allocate 630 seats minus non-qualified party seats
- *    - Only qualified parties participate
- * 5. State distribution: Sainte-Laguë per party at state level
- *    - Each party's federal seats distributed across states by state list votes
- * 6. Second-vote coverage:
- *    - Rank direct candidates by first-vote percentage within each state
- *    - Only top candidates get seats, up to state allocation limit
- *    - Prevents overhang mandates
- * 7. Assign remaining seats to list candidates (excluding seated direct candidates)
- *
- * === REFERENCES ===
- * - Federal Electoral Act (Bundeswahlgesetz, BWG) as amended 2023-03-24
- * - https://www.bundeswahlleiter.de/en/bundestagswahlen/2025.html
  */
 
 async function calculateSeats(electionYear: number = 2025): Promise<CalculateSeatsResult> {
     try {
         const seatAllocationQuery = `
 WITH RECURSIVE
+DirectCandidacyVotes AS (
+    SELECT
+        person_id,
+        year,
+        constituency_id,
+        party_id,
+        first_votes
+    FROM mv_direct_candidacy_votes
+    WHERE year = $1
+),
+PartyListVotes AS (
+    SELECT
+        party_list_id,
+        party_id,
+        state_id,
+        year,
+        second_votes
+    FROM mv_party_list_votes
+    WHERE year = $1
+),
+ConstituencyStats AS (
+    SELECT
+        constituency_id,
+        year,
+        COALESCE(SUM(first_votes), 0) AS valid_first
+    FROM DirectCandidacyVotes
+    GROUP BY constituency_id, year
+),
 
 -- ============================================================
 -- STEP 1: Winners for each constituency (first votes)
@@ -74,18 +82,20 @@ ConstituencyFirstVotes AS (
     SELECT
         ce.constituency_id,
         ce.year,
-        dc.person_id,
-        dc.party_id,
-        dc.first_votes,
+        dcv.person_id,
+        dcv.party_id,
+        dcv.first_votes,
         c.name AS constituency_name,
         c.state_id,
         ROW_NUMBER() OVER (
             PARTITION BY ce.constituency_id, ce.year
-            ORDER BY dc.first_votes DESC, dc.person_id ASC
+            ORDER BY dcv.first_votes DESC, dcv.person_id ASC
         ) AS rank
     FROM constituency_elections ce
     JOIN constituencies c ON ce.constituency_id = c.id
-    JOIN direct_candidacy dc ON dc.constituency_id = c.id AND dc.year = ce.year
+    JOIN DirectCandidacyVotes dcv
+      ON dcv.constituency_id = c.id
+     AND dcv.year = ce.year
     WHERE ce.year = $1
 ),
 
@@ -110,9 +120,9 @@ NationalSecondVotes AS (
         p.id AS party_id,
         p.short_name,
         p.is_minority,
-        COALESCE(SUM(pl.vote_count), 0) AS total_second_votes
+        COALESCE(SUM(plv.second_votes), 0) AS total_second_votes
     FROM parties p
-    LEFT JOIN party_lists pl ON pl.party_id = p.id AND pl.year = $1
+    LEFT JOIN PartyListVotes plv ON plv.party_id = p.id
     GROUP BY p.id, p.short_name, p.is_minority
 ),
 
@@ -175,15 +185,13 @@ NumDirectSeatsNonQualified AS (
     SELECT COUNT(*) AS count FROM DirectSeatsNonQualified
 ),
 
--- ============================================================
--- STEP 5: Federal distribution with Sainte-Laguë
--- 630 seats minus independent candidates/non-qualified parties
--- ============================================================
 AvailableSeats AS (
-    SELECT 630 - (SELECT count FROM NumDirectSeatsNonQualified) AS seats
+    SELECT 630 - COALESCE((SELECT count FROM NumDirectSeatsNonQualified), 0) AS seats
 ),
 
--- Only qualified parties for federal distribution
+-- ============================================================
+-- STEP 5: Federal distribution (Sainte-Laguë)
+-- ============================================================
 QualifiedSecondVotes AS (
     SELECT
         party_id,
@@ -193,16 +201,12 @@ QualifiedSecondVotes AS (
     WHERE is_qualified = TRUE AND total_second_votes > 0
 ),
 
--- Sainte-Laguë divisors (1, 3, 5, 7, ...)
 Divisors AS (
     SELECT 1 AS divisor
     UNION ALL
-    SELECT divisor + 2
-    FROM Divisors
-    WHERE divisor < 1260  -- Enough divisors for all possible seats (double for safety)
+    SELECT divisor + 2 FROM Divisors WHERE divisor < 1260
 ),
 
--- Highest quotients for federal distribution
 FederalDistributionQuotients AS (
     SELECT
         qsv.party_id,
@@ -214,15 +218,15 @@ FederalDistributionQuotients AS (
     CROSS JOIN Divisors d
 ),
 
--- Allocate seats by highest quotient method
--- Tie-breaking: quotient DESC, total_second_votes DESC, party_id ASC
 FederalDistributionRanked AS (
     SELECT
         party_id,
         short_name,
         quotient,
         total_second_votes,
-        ROW_NUMBER() OVER (ORDER BY quotient DESC, total_second_votes DESC, party_id ASC) AS seat_number
+        ROW_NUMBER() OVER (
+            ORDER BY quotient DESC, total_second_votes DESC, party_id ASC
+        ) AS seat_number
     FROM FederalDistributionQuotients
 ),
 
@@ -237,23 +241,21 @@ FederalDistribution AS (
 ),
 
 -- ============================================================
--- STEP 6: State distribution - seats per state per party
+-- STEP 6: State distribution (Sainte-Laguë per party)
 -- ============================================================
 StateListSecondVotes AS (
     SELECT
-        pl.party_id,
-        pl.state_id,
+        plv.party_id,
+        plv.state_id,
         s.name AS state_name,
         p.short_name AS party_name,
-        pl.vote_count AS state_second_votes
-    FROM party_lists pl
-    JOIN states s ON s.id = pl.state_id
-    JOIN parties p ON p.id = pl.party_id
-    WHERE pl.year = $1
-    AND pl.party_id IN (SELECT party_id FROM FederalDistribution)
+        plv.second_votes AS state_second_votes
+    FROM PartyListVotes plv
+    JOIN states s ON s.id = plv.state_id
+    JOIN parties p ON p.id = plv.party_id
+    WHERE plv.party_id IN (SELECT party_id FROM FederalDistribution)
 ),
 
--- For each party: distribute seats to federal states
 StateDistributionQuotients AS (
     SELECT
         slsv.party_id,
@@ -310,40 +312,16 @@ QualifiedConstituencyWinners AS (
         cw.first_votes,
         cw.state_id,
         p.short_name AS party_name,
-        -- Percentage of first votes in constituency
-        (cw.first_votes * 100.0 / NULLIF(ce.valid_first, 0)) AS percent_first_votes
+        (cw.first_votes * 100.0 / NULLIF(cs.valid_first, 0)) AS percent_first_votes
     FROM ConstituencyWinners cw
     JOIN parties p ON p.id = cw.party_id
     JOIN QualifiedParties qp ON qp.party_id = cw.party_id AND qp.is_qualified = TRUE
-    JOIN constituency_elections ce ON ce.constituency_id = cw.constituency_id AND ce.year = $1
+    JOIN ConstituencyStats cs ON cs.constituency_id = cw.constituency_id AND cs.year = cw.year
 ),
 
 -- ============================================================
 -- STEP 8: Second-vote coverage (2023 reform)
 -- ============================================================
--- This is the CORE of the 2023 reform that eliminates overhang mandates.
---
--- PROBLEM BEFORE REFORM:
--- If a party won 40 constituencies but only deserved 35 seats proportionally,
--- they kept all 40 (overhang mandates), and other parties got leveling seats.
--- This caused the Bundestag to grow from 598 to 736 seats by 2021.
---
--- SOLUTION AFTER REFORM:
--- 1. Each party gets a fixed number of seats per state (from state distribution)
--- 2. Direct candidates are ranked by first-vote percentage WITHIN each state
--- 3. Only the STRONGEST direct candidates get seats (up to the state limit)
--- 4. Weaker direct candidates LOSE their mandate despite winning their constituency
--- 5. Remaining seats filled by list candidates
---
--- EXAMPLE:
--- Party wins 10 constituencies in Bavaria but only gets 8 seats allocated
--- → Rank all 10 candidates by first-vote percentage in Bavaria
--- → Top 8 get direct mandates
--- → Bottom 2 lose despite winning (no seat!)
--- → No additional list seats since all 8 are filled
--- ============================================================
-
--- Rank direct candidates per party AND STATE by first-vote percentage
 DirectMandatesRankedPerState AS (
     SELECT
         qcw.*,
@@ -354,8 +332,6 @@ DirectMandatesRankedPerState AS (
     FROM QualifiedConstituencyWinners qcw
 ),
 
--- Only direct candidates who actually get a seat
--- (up to the state distribution limit per state)
 DirectMandatesWithSeat AS (
     SELECT
         dmr.person_id,
@@ -372,7 +348,6 @@ DirectMandatesWithSeat AS (
     WHERE dmr.rank_in_state <= sd.seats_state
 ),
 
--- Number of allocated direct mandates per party per state
 DirectMandatesPerPartyState AS (
     SELECT
         party_id,
@@ -400,8 +375,6 @@ ListSeatsPerPartyState AS (
         ON dmps.party_id = sd.party_id AND dmps.state_id = sd.state_id
 ),
 
--- List candidates who get seats (sorted by list position)
--- Excluded: Candidates who already got a direct mandate WITH seat
 ListCandidatesRanked AS (
     SELECT
         plc.person_id,
@@ -422,7 +395,6 @@ ListCandidatesRanked AS (
     JOIN parties p ON p.id = pl.party_id
     JOIN states s ON s.id = pl.state_id
     JOIN persons per ON per.id = plc.person_id
-    -- Exclude candidates who already got a direct mandate WITH seat
     WHERE plc.person_id NOT IN (
         SELECT person_id FROM DirectMandatesWithSeat
     )
@@ -489,19 +461,36 @@ FROM DirectSeatsNonQualified
 ORDER BY party_name, seat_type, constituency NULLS LAST, list_position NULLS LAST;
 `;
 
-        // Summary of seat distribution per party
         const summaryQuery = `
 WITH RECURSIVE
-
--- Base CTEs (same as above, shortened for overview)
+DirectCandidacyVotes AS (
+    SELECT
+        person_id,
+        year,
+        constituency_id,
+        party_id,
+        first_votes
+    FROM mv_direct_candidacy_votes
+    WHERE year = $1
+),
+PartyListVotes AS (
+    SELECT
+        party_list_id,
+        party_id,
+        state_id,
+        year,
+        second_votes
+    FROM mv_party_list_votes
+    WHERE year = $1
+),
 NationalSecondVotes AS (
     SELECT
         p.id AS party_id,
         p.short_name,
         p.is_minority,
-        COALESCE(SUM(pl.vote_count), 0) AS total_second_votes
+        COALESCE(SUM(plv.second_votes), 0) AS total_second_votes
     FROM parties p
-    LEFT JOIN party_lists pl ON pl.party_id = p.id AND pl.year = $1
+    LEFT JOIN PartyListVotes plv ON plv.party_id = p.id
     GROUP BY p.id, p.short_name, p.is_minority
 ),
 
@@ -511,16 +500,15 @@ TotalSecondVotes AS (
 
 ConstituencyWinners AS (
     SELECT
-        dc.party_id,
-        dc.person_id,
-        dc.constituency_id,
-        dc.first_votes,
+        dcv.party_id,
+        dcv.person_id,
+        dcv.constituency_id,
+        dcv.first_votes,
         ROW_NUMBER() OVER (
-            PARTITION BY dc.constituency_id
-            ORDER BY dc.first_votes DESC
+            PARTITION BY dcv.constituency_id
+            ORDER BY dcv.first_votes DESC, dcv.person_id ASC
         ) AS rank
-    FROM direct_candidacy dc
-    WHERE dc.year = $1
+    FROM DirectCandidacyVotes dcv
 ),
 
 ConstituencyWinnersPerParty AS (
@@ -559,18 +547,36 @@ WHERE total_second_votes > 0
 ORDER BY total_second_votes DESC;
 `;
 
-        // Federal Distribution (seats per party nationwide)
         const federalDistributionQuery = `
 WITH RECURSIVE
-
+DirectCandidacyVotes AS (
+    SELECT
+        person_id,
+        year,
+        constituency_id,
+        party_id,
+        first_votes
+    FROM mv_direct_candidacy_votes
+    WHERE year = $1
+),
+PartyListVotes AS (
+    SELECT
+        party_list_id,
+        party_id,
+        state_id,
+        year,
+        second_votes
+    FROM mv_party_list_votes
+    WHERE year = $1
+),
 NationalSecondVotes AS (
     SELECT
         p.id AS party_id,
         p.short_name,
         p.is_minority,
-        COALESCE(SUM(pl.vote_count), 0) AS total_second_votes
+        COALESCE(SUM(plv.second_votes), 0) AS total_second_votes
     FROM parties p
-    LEFT JOIN party_lists pl ON pl.party_id = p.id AND pl.year = $1
+    LEFT JOIN PartyListVotes plv ON plv.party_id = p.id
     GROUP BY p.id, p.short_name, p.is_minority
 ),
 
@@ -579,15 +585,22 @@ TotalSecondVotes AS (
 ),
 
 ConstituencyWinners AS (
-    SELECT dc.party_id, COUNT(*) AS count
-    FROM direct_candidacy dc
-    WHERE dc.year = $1
-    AND dc.first_votes = (
-        SELECT MAX(dc2.first_votes)
-        FROM direct_candidacy dc2
-        WHERE dc2.constituency_id = dc.constituency_id AND dc2.year = $1
-    )
-    GROUP BY dc.party_id
+    SELECT
+        dcv.party_id,
+        dcv.person_id,
+        dcv.constituency_id,
+        dcv.first_votes,
+        ROW_NUMBER() OVER (
+            PARTITION BY dcv.constituency_id
+            ORDER BY dcv.first_votes DESC, dcv.person_id ASC
+        ) AS rank
+    FROM DirectCandidacyVotes dcv
+),
+
+ConstituencyWinnersPerParty AS (
+    SELECT party_id, COUNT(*) AS count
+    FROM ConstituencyWinners WHERE rank = 1
+    GROUP BY party_id
 ),
 
 QualifiedParties AS (
@@ -596,9 +609,9 @@ QualifiedParties AS (
         nsv.short_name,
         nsv.total_second_votes
     FROM NationalSecondVotes nsv
-    LEFT JOIN ConstituencyWinners cw ON cw.party_id = nsv.party_id
+    LEFT JOIN ConstituencyWinnersPerParty cwp ON cwp.party_id = nsv.party_id
     WHERE nsv.is_minority = TRUE
-       OR COALESCE(cw.count, 0) >= 3
+       OR COALESCE(cwp.count, 0) >= 3
        OR (nsv.total_second_votes * 100.0 / NULLIF((SELECT total FROM TotalSecondVotes), 0)) >= 5
 ),
 
@@ -639,18 +652,36 @@ GROUP BY party_id, short_name
 ORDER BY seats DESC;
 `;
 
-        // State Distribution (seats per state per party)
         const stateDistributionQuery = `
 WITH RECURSIVE
-
+DirectCandidacyVotes AS (
+    SELECT
+        person_id,
+        year,
+        constituency_id,
+        party_id,
+        first_votes
+    FROM mv_direct_candidacy_votes
+    WHERE year = $1
+),
+PartyListVotes AS (
+    SELECT
+        party_list_id,
+        party_id,
+        state_id,
+        year,
+        second_votes
+    FROM mv_party_list_votes
+    WHERE year = $1
+),
 NationalSecondVotes AS (
     SELECT
         p.id AS party_id,
         p.short_name,
         p.is_minority,
-        COALESCE(SUM(pl.vote_count), 0) AS total_second_votes
+        COALESCE(SUM(plv.second_votes), 0) AS total_second_votes
     FROM parties p
-    LEFT JOIN party_lists pl ON pl.party_id = p.id AND pl.year = $1
+    LEFT JOIN PartyListVotes plv ON plv.party_id = p.id
     GROUP BY p.id, p.short_name, p.is_minority
 ),
 
@@ -659,23 +690,30 @@ TotalSecondVotes AS (
 ),
 
 ConstituencyWinners AS (
-    SELECT dc.party_id, COUNT(*) AS count
-    FROM direct_candidacy dc
-    WHERE dc.year = $1
-    AND dc.first_votes = (
-        SELECT MAX(dc2.first_votes)
-        FROM direct_candidacy dc2
-        WHERE dc2.constituency_id = dc.constituency_id AND dc2.year = $1
-    )
-    GROUP BY dc.party_id
+    SELECT
+        dcv.party_id,
+        dcv.person_id,
+        dcv.constituency_id,
+        dcv.first_votes,
+        ROW_NUMBER() OVER (
+            PARTITION BY dcv.constituency_id
+            ORDER BY dcv.first_votes DESC, dcv.person_id ASC
+        ) AS rank
+    FROM DirectCandidacyVotes dcv
+),
+
+ConstituencyWinnersPerParty AS (
+    SELECT party_id, COUNT(*) AS count
+    FROM ConstituencyWinners WHERE rank = 1
+    GROUP BY party_id
 ),
 
 QualifiedParties AS (
     SELECT nsv.party_id, nsv.short_name, nsv.total_second_votes
     FROM NationalSecondVotes nsv
-    LEFT JOIN ConstituencyWinners cw ON cw.party_id = nsv.party_id
+    LEFT JOIN ConstituencyWinnersPerParty cwp ON cwp.party_id = nsv.party_id
     WHERE nsv.is_minority = TRUE
-       OR COALESCE(cw.count, 0) >= 3
+       OR COALESCE(cwp.count, 0) >= 3
        OR (nsv.total_second_votes * 100.0 / NULLIF((SELECT total FROM TotalSecondVotes), 0)) >= 5
 ),
 
@@ -685,10 +723,12 @@ Divisors AS (
     SELECT divisor + 2 FROM Divisors WHERE divisor < 1260
 ),
 
--- Federal Distribution
 FederalQuotients AS (
     SELECT
-        qp.party_id, qp.short_name, qp.total_second_votes, d.divisor,
+        qp.party_id,
+        qp.short_name,
+        qp.total_second_votes,
+        d.divisor,
         (qp.total_second_votes * 1.0 / d.divisor) AS quotient
     FROM QualifiedParties qp
     CROSS JOIN Divisors d
@@ -696,30 +736,47 @@ FederalQuotients AS (
 ),
 
 FederalRanked AS (
-    SELECT party_id, short_name, quotient, total_second_votes,
+    SELECT
+        party_id,
+        short_name,
+        quotient,
+        total_second_votes,
         ROW_NUMBER() OVER (ORDER BY quotient DESC, total_second_votes DESC, party_id ASC) AS rank
     FROM FederalQuotients
 ),
 
 FederalDistribution AS (
-    SELECT party_id, short_name, COUNT(*) AS seats_national
-    FROM FederalRanked WHERE rank <= 630
+    SELECT
+        party_id,
+        short_name,
+        COUNT(*) AS seats_national
+    FROM FederalRanked
+    WHERE rank <= 630
     GROUP BY party_id, short_name
 ),
 
--- State Distribution
 StateSecondVotes AS (
-    SELECT pl.party_id, pl.state_id, s.name AS state_name, p.short_name, pl.vote_count
-    FROM party_lists pl
-    JOIN states s ON s.id = pl.state_id
-    JOIN parties p ON p.id = pl.party_id
-    WHERE pl.year = $1 AND pl.party_id IN (SELECT party_id FROM FederalDistribution)
+    SELECT
+        plv.party_id,
+        plv.state_id,
+        s.name AS state_name,
+        p.short_name,
+        plv.second_votes
+    FROM PartyListVotes plv
+    JOIN states s ON s.id = plv.state_id
+    JOIN parties p ON p.id = plv.party_id
+    WHERE plv.party_id IN (SELECT party_id FROM FederalDistribution)
 ),
 
 StateQuotients AS (
     SELECT
-        ssv.party_id, ssv.short_name, ssv.state_id, ssv.state_name, ssv.vote_count,
-        d.divisor, (ssv.vote_count * 1.0 / d.divisor) AS quotient,
+        ssv.party_id,
+        ssv.short_name,
+        ssv.state_id,
+        ssv.state_name,
+        ssv.second_votes,
+        d.divisor,
+        (ssv.second_votes * 1.0 / d.divisor) AS quotient,
         fd.seats_national
     FROM StateSecondVotes ssv
     JOIN FederalDistribution fd ON fd.party_id = ssv.party_id
@@ -728,8 +785,17 @@ StateQuotients AS (
 
 StateRanked AS (
     SELECT
-        party_id, short_name, state_id, state_name, quotient, vote_count, seats_national,
-        ROW_NUMBER() OVER (PARTITION BY party_id ORDER BY quotient DESC, vote_count DESC, state_id ASC) AS rank
+        party_id,
+        short_name,
+        state_id,
+        state_name,
+        quotient,
+        second_votes,
+        seats_national,
+        ROW_NUMBER() OVER (
+            PARTITION BY party_id
+            ORDER BY quotient DESC, second_votes DESC, state_id ASC
+        ) AS rank
     FROM StateQuotients
 )
 
@@ -748,14 +814,12 @@ ORDER BY short_name, seats DESC;
         const federalRes = await pool.query<FederalDistributionRow>(federalDistributionQuery, [electionYear]);
         const stateRes = await pool.query<StateDistributionRow>(stateDistributionQuery, [electionYear]);
 
-        const results: CalculateSeatsResult = {
+        return {
             seatAllocation: seatAllocationRes.rows,
             summary: summaryRes.rows,
             federalDistribution: federalRes.rows,
-            stateDistribution: stateRes.rows
+            stateDistribution: stateRes.rows,
         };
-
-        return results;
     } catch (error) {
         console.error('Database query error:', error);
         throw error;

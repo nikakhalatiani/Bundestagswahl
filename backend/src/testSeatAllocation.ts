@@ -101,9 +101,9 @@ class SeatAllocationTester {
       WITH RECURSIVE
       NationalSecondVotes AS (
           SELECT p.id AS party_id, p.short_name, p.is_minority,
-                 COALESCE(SUM(pl.vote_count), 0) AS total_second_votes
+                 COALESCE(SUM(pl.second_votes), 0) AS total_second_votes
           FROM parties p
-          LEFT JOIN party_lists pl ON pl.party_id = p.id AND pl.year = $1
+          LEFT JOIN mv_party_list_votes pl ON pl.party_id = p.id AND pl.year = $1
           GROUP BY p.id, p.short_name, p.is_minority
       ),
       TotalSecondVotes AS (
@@ -111,11 +111,11 @@ class SeatAllocationTester {
       ),
       ConstituencyWinners AS (
           SELECT dc.party_id, COUNT(*) AS count
-          FROM direct_candidacy dc
+          FROM mv_direct_candidacy_votes dc
           WHERE dc.year = $1
           AND dc.first_votes = (
               SELECT MAX(dc2.first_votes)
-              FROM direct_candidacy dc2
+              FROM mv_direct_candidacy_votes dc2
               WHERE dc2.constituency_id = dc.constituency_id AND dc2.year = $1
           )
           GROUP BY dc.party_id

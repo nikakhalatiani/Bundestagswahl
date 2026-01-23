@@ -41,18 +41,18 @@ async function debugBasic(year: number) {
   console.log('='.repeat(60));
 
   // 1. List all parties with their vote counts
-  console.log('\n--- All Parties with Second Votes (from party_lists) ---');
+  console.log('\n--- All Parties with Second Votes (from mv_party_list_votes) ---');
   const partyVotesRes = await pool.query(`
     SELECT
       p.id AS party_id,
       p.short_name,
       p.long_name,
       p.is_minority,
-      COALESCE(SUM(pl.vote_count), 0) AS total_second_votes
+      COALESCE(SUM(pl.second_votes), 0) AS total_second_votes
     FROM parties p
-    LEFT JOIN party_lists pl ON pl.party_id = p.id AND pl.year = $1
+    LEFT JOIN mv_party_list_votes pl ON pl.party_id = p.id AND pl.year = $1
     GROUP BY p.id, p.short_name, p.long_name, p.is_minority
-    HAVING COALESCE(SUM(pl.vote_count), 0) > 0
+    HAVING COALESCE(SUM(pl.second_votes), 0) > 0
     ORDER BY total_second_votes DESC
     LIMIT 20;
   `, [year]);
@@ -60,8 +60,8 @@ async function debugBasic(year: number) {
 
   // 2. Check total second votes
   const totalRes = await pool.query(`
-    SELECT SUM(vote_count) AS total_second_votes
-    FROM party_lists
+    SELECT SUM(second_votes) AS total_second_votes
+    FROM mv_party_list_votes
     WHERE year = $1;
   `, [year]);
   console.log('\n--- Total Second Votes ---');
@@ -74,9 +74,9 @@ async function debugBasic(year: number) {
       SELECT
         p.id AS party_id,
         p.short_name,
-        COALESCE(SUM(pl.vote_count), 0) AS total_second_votes
+        COALESCE(SUM(pl.second_votes), 0) AS total_second_votes
       FROM parties p
-      LEFT JOIN party_lists pl ON pl.party_id = p.id AND pl.year = $1
+      LEFT JOIN mv_party_list_votes pl ON pl.party_id = p.id AND pl.year = $1
       GROUP BY p.id, p.short_name
     ),
     TotalVotes AS (
@@ -98,15 +98,15 @@ async function debugBasic(year: number) {
   const winnersRes = await pool.query(`
     WITH ConstituencyWinners AS (
       SELECT
-        dc.party_id,
-        dc.constituency_id,
-        dc.first_votes,
+        dcv.party_id,
+        dcv.constituency_id,
+        dcv.first_votes,
         ROW_NUMBER() OVER (
-          PARTITION BY dc.constituency_id
-          ORDER BY dc.first_votes DESC
+          PARTITION BY dcv.constituency_id
+          ORDER BY dcv.first_votes DESC
         ) AS rank
-      FROM direct_candidacy dc
-      WHERE dc.year = $1
+      FROM mv_direct_candidacy_votes dcv
+      WHERE dcv.year = $1
     )
     SELECT
       p.short_name,
@@ -128,9 +128,9 @@ async function debugBasic(year: number) {
             p.id AS party_id,
             p.short_name,
             p.is_minority,
-            COALESCE(SUM(pl.vote_count), 0) AS total_second_votes
+            COALESCE(SUM(pl.second_votes), 0) AS total_second_votes
         FROM parties p
-        LEFT JOIN party_lists pl ON pl.party_id = p.id AND pl.year = $1
+        LEFT JOIN mv_party_list_votes pl ON pl.party_id = p.id AND pl.year = $1
         GROUP BY p.id, p.short_name, p.is_minority
     ),
     TotalSecondVotes AS (
@@ -138,11 +138,11 @@ async function debugBasic(year: number) {
     ),
     ConstituencyWinners AS (
         SELECT dc.party_id, COUNT(*) AS count
-        FROM direct_candidacy dc
+        FROM mv_direct_candidacy_votes dc
         WHERE dc.year = $1
         AND dc.first_votes = (
             SELECT MAX(dc2.first_votes)
-            FROM direct_candidacy dc2
+            FROM mv_direct_candidacy_votes dc2
             WHERE dc2.constituency_id = dc.constituency_id AND dc2.year = $1
         )
         GROUP BY dc.party_id
@@ -176,9 +176,9 @@ async function debugFederalDistribution(year: number) {
     WITH RECURSIVE
     NationalSecondVotes AS (
         SELECT p.id AS party_id, p.short_name, p.is_minority,
-               COALESCE(SUM(pl.vote_count), 0) AS total_second_votes
+               COALESCE(SUM(pl.second_votes), 0) AS total_second_votes
         FROM parties p
-        LEFT JOIN party_lists pl ON pl.party_id = p.id AND pl.year = $1
+        LEFT JOIN mv_party_list_votes pl ON pl.party_id = p.id AND pl.year = $1
         GROUP BY p.id, p.short_name, p.is_minority
     ),
     TotalSecondVotes AS (
@@ -186,11 +186,11 @@ async function debugFederalDistribution(year: number) {
     ),
     ConstituencyWinners AS (
         SELECT dc.party_id, COUNT(*) AS count
-        FROM direct_candidacy dc
+        FROM mv_direct_candidacy_votes dc
         WHERE dc.year = $1
         AND dc.first_votes = (
             SELECT MAX(dc2.first_votes)
-            FROM direct_candidacy dc2
+            FROM mv_direct_candidacy_votes dc2
             WHERE dc2.constituency_id = dc.constituency_id AND dc2.year = $1
         )
         GROUP BY dc.party_id
@@ -246,9 +246,9 @@ async function debugStateDistribution(year: number) {
     WITH RECURSIVE
     NationalSecondVotes AS (
         SELECT p.id AS party_id, p.short_name, p.is_minority,
-               COALESCE(SUM(pl.vote_count), 0) AS total_second_votes
+               COALESCE(SUM(pl.second_votes), 0) AS total_second_votes
         FROM parties p
-        LEFT JOIN party_lists pl ON pl.party_id = p.id AND pl.year = $1
+        LEFT JOIN mv_party_list_votes pl ON pl.party_id = p.id AND pl.year = $1
         GROUP BY p.id, p.short_name, p.is_minority
     ),
     TotalSecondVotes AS (
@@ -256,11 +256,11 @@ async function debugStateDistribution(year: number) {
     ),
     ConstituencyWinners AS (
         SELECT dc.party_id, COUNT(*) AS count
-        FROM direct_candidacy dc
+        FROM mv_direct_candidacy_votes dc
         WHERE dc.year = $1
         AND dc.first_votes = (
             SELECT MAX(dc2.first_votes)
-            FROM direct_candidacy dc2
+            FROM mv_direct_candidacy_votes dc2
             WHERE dc2.constituency_id = dc.constituency_id AND dc2.year = $1
         )
         GROUP BY dc.party_id
@@ -293,15 +293,15 @@ async function debugStateDistribution(year: number) {
         GROUP BY party_id, short_name
     ),
     StateSecondVotes AS (
-        SELECT pl.party_id, pl.state_id, s.name AS state_name, p.short_name, pl.vote_count
-        FROM party_lists pl
+        SELECT pl.party_id, pl.state_id, s.name AS state_name, p.short_name, pl.second_votes
+        FROM mv_party_list_votes pl
         JOIN states s ON s.id = pl.state_id
         JOIN parties p ON p.id = pl.party_id
         WHERE pl.year = $1 AND pl.party_id IN (SELECT party_id FROM FederalDistribution)
     ),
     StateQuotients AS (
-        SELECT lz.party_id, lz.short_name, lz.state_id, lz.state_name, lz.vote_count,
-               d.divisor, (lz.vote_count * 1.0 / d.divisor) AS quotient, o.seats_national
+        SELECT lz.party_id, lz.short_name, lz.state_id, lz.state_name, lz.second_votes,
+               d.divisor, (lz.second_votes * 1.0 / d.divisor) AS quotient, o.seats_national
         FROM StateSecondVotes lz
         JOIN FederalDistribution o ON o.party_id = lz.party_id
         CROSS JOIN Divisors d
@@ -402,16 +402,16 @@ async function debugParty(year: number, partyName: string) {
   // Party votes
   console.log(`\n--- Second Votes for ${partyShortName} ---`);
   const votesRes = await pool.query(`
-    SELECT s.name AS state, pl.vote_count
-    FROM party_lists pl
+    SELECT s.name AS state, pl.second_votes
+    FROM mv_party_list_votes pl
     JOIN states s ON s.id = pl.state_id
     WHERE pl.party_id = $1 AND pl.year = $2
-    ORDER BY pl.vote_count DESC;
+    ORDER BY pl.second_votes DESC;
   `, [partyId, year]);
   console.table(votesRes.rows);
 
   const totalVotes = votesRes.rows.reduce(
-    (sum: number, row: { vote_count: string | number }) => sum + Number(row.vote_count),
+    (sum: number, row: { second_votes: string | number }) => sum + Number(row.second_votes),
     0
   );
   console.log(`Total Second Votes: ${totalVotes}`);
@@ -422,12 +422,12 @@ async function debugParty(year: number, partyName: string) {
     WITH ConstituencyWinners AS (
         SELECT dc.party_id, dc.person_id, c.state_id, c.name AS constituency_name,
                dc.first_votes
-        FROM direct_candidacy dc
+        FROM mv_direct_candidacy_votes dc
         JOIN constituencies c ON c.id = dc.constituency_id
         WHERE dc.year = $2
         AND dc.first_votes = (
             SELECT MAX(dc2.first_votes)
-            FROM direct_candidacy dc2
+            FROM mv_direct_candidacy_votes dc2
             WHERE dc2.constituency_id = dc.constituency_id AND dc2.year = $2
         )
     )

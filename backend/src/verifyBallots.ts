@@ -17,6 +17,10 @@ async function verifyBallots(options: VerificationOptions = {}) {
   console.log("=".repeat(60));
   console.log(`Year: ${year}\n`);
 
+  // Ensure materialized views are current for validation
+  await pool.query("REFRESH MATERIALIZED VIEW mv_direct_candidacy_votes");
+  await pool.query("REFRESH MATERIALIZED VIEW mv_party_list_votes");
+
   // Constituencies to verify
   const constituenciesRes = constituencyNumber
     ? await pool.query("SELECT * FROM constituencies WHERE number = $1", [
@@ -96,7 +100,7 @@ async function verifyBallots(options: VerificationOptions = {}) {
   let totalSecondVoteMismatches = 0;
 
   // Precompute: second-vote ballot counts per party (year-filtered)
-  // Compare against expected from party_lists (year-filtered)
+  // Compare against expected from mv_party_list_votes (year-filtered)
   const secondBallotsByPartyRes = await pool.query(
     `
     SELECT pl.party_id, COUNT(*)::bigint AS cnt
@@ -110,10 +114,10 @@ async function verifyBallots(options: VerificationOptions = {}) {
 
   const expectedSecondByPartyRes = await pool.query(
     `
-    SELECT pl.party_id, SUM(pl.vote_count)::bigint AS expected
-    FROM party_lists pl
-    WHERE pl.year = $1
-    GROUP BY pl.party_id
+    SELECT plv.party_id, SUM(plv.second_votes)::bigint AS expected
+    FROM mv_party_list_votes plv
+    WHERE plv.year = $1
+    GROUP BY plv.party_id
   `,
     [year]
   );
@@ -139,12 +143,12 @@ async function verifyBallots(options: VerificationOptions = {}) {
     `
     SELECT
       p.short_name,
-      pl.party_id,
-      SUM(pl.vote_count)::bigint AS expected
-    FROM party_lists pl
-    JOIN parties p ON p.id = pl.party_id
-    WHERE pl.year = $1
-    GROUP BY p.short_name, pl.party_id
+      plv.party_id,
+      SUM(plv.second_votes)::bigint AS expected
+    FROM mv_party_list_votes plv
+    JOIN parties p ON p.id = plv.party_id
+    WHERE plv.year = $1
+    GROUP BY p.short_name, plv.party_id
     ORDER BY expected DESC
     LIMIT $2
   `,
@@ -202,18 +206,18 @@ async function verifyBallots(options: VerificationOptions = {}) {
     const candidatesRes = await pool.query(
       `
       SELECT
-        dc.person_id,
-        dc.first_votes::bigint AS expected,
+        dcv.person_id,
+        dcv.first_votes::bigint AS expected,
         p.first_name,
         p.last_name,
         pr.short_name AS party_short_name
-      FROM direct_candidacy dc
-      JOIN persons p ON p.id = dc.person_id
-      LEFT JOIN parties pr ON pr.id = dc.party_id
-      WHERE dc.constituency_id = $1
-        AND dc.year = $2
-        AND dc.first_votes IS NOT NULL
-        AND dc.first_votes::bigint > 0
+      FROM mv_direct_candidacy_votes dcv
+      JOIN persons p ON p.id = dcv.person_id
+      LEFT JOIN parties pr ON pr.id = dcv.party_id
+      WHERE dcv.constituency_id = $1
+        AND dcv.year = $2
+        AND dcv.first_votes IS NOT NULL
+        AND dcv.first_votes::bigint > 0
       ORDER BY expected DESC
       LIMIT $3
     `,
@@ -225,13 +229,13 @@ async function verifyBallots(options: VerificationOptions = {}) {
     const ballotCountsRes = await pool.query(
       `
       WITH top_candidates AS (
-        SELECT dc.person_id
-        FROM direct_candidacy dc
-        WHERE dc.constituency_id = $1
-          AND dc.year = $2
-          AND dc.first_votes IS NOT NULL
-          AND dc.first_votes::bigint > 0
-        ORDER BY dc.first_votes::bigint DESC
+        SELECT dcv.person_id
+        FROM mv_direct_candidacy_votes dcv
+        WHERE dcv.constituency_id = $1
+          AND dcv.year = $2
+          AND dcv.first_votes IS NOT NULL
+          AND dcv.first_votes::bigint > 0
+        ORDER BY dcv.first_votes::bigint DESC
         LIMIT $3
       )
       SELECT
@@ -276,13 +280,13 @@ async function verifyBallots(options: VerificationOptions = {}) {
       `
       WITH expected AS (
         SELECT
-          dc.person_id,
-          dc.first_votes::bigint AS expected
-        FROM direct_candidacy dc
-        WHERE dc.constituency_id = $1
-          AND dc.year = $2
-          AND dc.first_votes IS NOT NULL
-          AND dc.first_votes::bigint >= 0
+          dcv.person_id,
+          dcv.first_votes::bigint AS expected
+        FROM mv_direct_candidacy_votes dcv
+        WHERE dcv.constituency_id = $1
+          AND dcv.year = $2
+          AND dcv.first_votes IS NOT NULL
+          AND dcv.first_votes::bigint >= 0
       ),
       got AS (
         SELECT

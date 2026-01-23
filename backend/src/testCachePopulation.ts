@@ -1,4 +1,4 @@
-import { populateCacheForYear } from './services/cacheSeats';
+import { refreshSeatCaches } from './services/cacheSeats';
 import dbModule from './db';
 
 const { pool } = dbModule;
@@ -7,17 +7,20 @@ async function test() {
   try {
     console.log('=== Testing Cache Population ===\n');
 
-    // Populate cache for 2025
-    await populateCacheForYear(2025);
+    // Refresh materialized views for 2025
+    await refreshSeatCaches();
 
     // Verify row counts
     console.log('=== Verifying Cache Tables ===\n');
 
     const queries = [
+      { name: 'mv_direct_candidacy_votes', query: 'SELECT COUNT(*) FROM mv_direct_candidacy_votes WHERE year = 2025' },
+      { name: 'mv_party_list_votes', query: 'SELECT COUNT(*) FROM mv_party_list_votes WHERE year = 2025' },
+      { name: 'mv_constituency_first_votes', query: 'SELECT COUNT(*) FROM mv_constituency_first_votes WHERE year = 2025' },
+      { name: 'mv_constituency_second_votes', query: 'SELECT COUNT(*) FROM mv_constituency_second_votes WHERE year = 2025' },
+      { name: 'mv_constituency_invalid_votes', query: 'SELECT COUNT(*) FROM mv_constituency_invalid_votes WHERE year = 2025' },
+      { name: 'mv_constituency_vote_totals', query: 'SELECT COUNT(*) FROM mv_constituency_vote_totals WHERE year = 2025' },
       { name: 'seat_allocation_cache', query: 'SELECT COUNT(*) FROM seat_allocation_cache WHERE year = 2025' },
-      { name: 'party_summary_cache', query: 'SELECT COUNT(*) FROM party_summary_cache WHERE year = 2025' },
-      { name: 'federal_distribution_cache', query: 'SELECT COUNT(*) FROM federal_distribution_cache WHERE year = 2025' },
-      { name: 'state_distribution_cache', query: 'SELECT COUNT(*) FROM state_distribution_cache WHERE year = 2025' },
     ];
 
     for (const { name, query } of queries) {

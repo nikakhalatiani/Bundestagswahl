@@ -1,0 +1,1244 @@
+{
+  "id": "5d05fa58-f95e-4004-bc52-63fe15b17bac",
+  "prevId": "1e324856-802d-4a3e-9aac-155ecf60dd8c",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.constituencies": {
+      "name": "constituencies",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "number": {
+          "name": "number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(150)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state_id": {
+          "name": "state_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "constituencies_state_idx": {
+          "name": "constituencies_state_idx",
+          "columns": [
+            {
+              "expression": "state_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "constituencies_state_id_states_id_fk": {
+          "name": "constituencies_state_id_states_id_fk",
+          "tableFrom": "constituencies",
+          "tableTo": "states",
+          "columnsFrom": [
+            "state_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "constituencies_number_name_unique": {
+          "name": "constituencies_number_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "number",
+            "name"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.constituency_elections": {
+      "name": "constituency_elections",
+      "schema": "",
+      "columns": {
+        "bridge_id": {
+          "name": "bridge_id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "year": {
+          "name": "year",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "constituency_id": {
+          "name": "constituency_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "eligible_voters": {
+          "name": "eligible_voters",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "constituency_elections_year_elections_year_fk": {
+          "name": "constituency_elections_year_elections_year_fk",
+          "tableFrom": "constituency_elections",
+          "tableTo": "elections",
+          "columnsFrom": [
+            "year"
+          ],
+          "columnsTo": [
+            "year"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "constituency_elections_constituency_id_constituencies_id_fk": {
+          "name": "constituency_elections_constituency_id_constituencies_id_fk",
+          "tableFrom": "constituency_elections",
+          "tableTo": "constituencies",
+          "columnsFrom": [
+            "constituency_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "constituency_elections_constituency_id_year_unique": {
+          "name": "constituency_elections_constituency_id_year_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "constituency_id",
+            "year"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.constituency_structural_data": {
+      "name": "constituency_structural_data",
+      "schema": "",
+      "columns": {
+        "constituency_id": {
+          "name": "constituency_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "year": {
+          "name": "year",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "metric_key": {
+          "name": "metric_key",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "structural_data_year_idx": {
+          "name": "structural_data_year_idx",
+          "columns": [
+            {
+              "expression": "year",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "structural_data_metric_idx": {
+          "name": "structural_data_metric_idx",
+          "columns": [
+            {
+              "expression": "metric_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "constituency_structural_data_constituency_id_constituencies_id_fk": {
+          "name": "constituency_structural_data_constituency_id_constituencies_id_fk",
+          "tableFrom": "constituency_structural_data",
+          "tableTo": "constituencies",
+          "columnsFrom": [
+            "constituency_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "constituency_structural_data_year_elections_year_fk": {
+          "name": "constituency_structural_data_year_elections_year_fk",
+          "tableFrom": "constituency_structural_data",
+          "tableTo": "elections",
+          "columnsFrom": [
+            "year"
+          ],
+          "columnsTo": [
+            "year"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "constituency_structural_data_metric_key_structural_metrics_key_fk": {
+          "name": "constituency_structural_data_metric_key_structural_metrics_key_fk",
+          "tableFrom": "constituency_structural_data",
+          "tableTo": "structural_metrics",
+          "columnsFrom": [
+            "metric_key"
+          ],
+          "columnsTo": [
+            "key"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "constituency_structural_data_constituency_id_year_metric_key_pk": {
+          "name": "constituency_structural_data_constituency_id_year_metric_key_pk",
+          "columns": [
+            "constituency_id",
+            "year",
+            "metric_key"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.direct_candidacy": {
+      "name": "direct_candidacy",
+      "schema": "",
+      "columns": {
+        "person_id": {
+          "name": "person_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "year": {
+          "name": "year",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "constituency_id": {
+          "name": "constituency_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "party_id": {
+          "name": "party_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "direct_candidacy_person_id_persons_id_fk": {
+          "name": "direct_candidacy_person_id_persons_id_fk",
+          "tableFrom": "direct_candidacy",
+          "tableTo": "persons",
+          "columnsFrom": [
+            "person_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "direct_candidacy_year_elections_year_fk": {
+          "name": "direct_candidacy_year_elections_year_fk",
+          "tableFrom": "direct_candidacy",
+          "tableTo": "elections",
+          "columnsFrom": [
+            "year"
+          ],
+          "columnsTo": [
+            "year"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "direct_candidacy_constituency_id_constituencies_id_fk": {
+          "name": "direct_candidacy_constituency_id_constituencies_id_fk",
+          "tableFrom": "direct_candidacy",
+          "tableTo": "constituencies",
+          "columnsFrom": [
+            "constituency_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "direct_candidacy_party_id_parties_id_fk": {
+          "name": "direct_candidacy_party_id_parties_id_fk",
+          "tableFrom": "direct_candidacy",
+          "tableTo": "parties",
+          "columnsFrom": [
+            "party_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "direct_candidacy_person_id_year_pk": {
+          "name": "direct_candidacy_person_id_year_pk",
+          "columns": [
+            "person_id",
+            "year"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.elections": {
+      "name": "elections",
+      "schema": "",
+      "columns": {
+        "year": {
+          "name": "year",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "elections_date_unique": {
+          "name": "elections_date_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "date"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.first_votes": {
+      "name": "first_votes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "year": {
+          "name": "year",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "direct_person_id": {
+          "name": "direct_person_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_valid": {
+          "name": "is_valid",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "fk_first_vote_direct_cand": {
+          "name": "fk_first_vote_direct_cand",
+          "tableFrom": "first_votes",
+          "tableTo": "direct_candidacy",
+          "columnsFrom": [
+            "direct_person_id",
+            "year"
+          ],
+          "columnsTo": [
+            "person_id",
+            "year"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.parties": {
+      "name": "parties",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "short_name": {
+          "name": "short_name",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "long_name": {
+          "name": "long_name",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_minority": {
+          "name": "is_minority",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "parties_short_name_unique": {
+          "name": "parties_short_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "short_name"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.party_list_candidacy": {
+      "name": "party_list_candidacy",
+      "schema": "",
+      "columns": {
+        "person_id": {
+          "name": "person_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "party_list_id": {
+          "name": "party_list_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "list_position": {
+          "name": "list_position",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "party_list_candidacy_person_id_persons_id_fk": {
+          "name": "party_list_candidacy_person_id_persons_id_fk",
+          "tableFrom": "party_list_candidacy",
+          "tableTo": "persons",
+          "columnsFrom": [
+            "person_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "party_list_candidacy_party_list_id_party_lists_id_fk": {
+          "name": "party_list_candidacy_party_list_id_party_lists_id_fk",
+          "tableFrom": "party_list_candidacy",
+          "tableTo": "party_lists",
+          "columnsFrom": [
+            "party_list_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "party_list_candidacy_person_id_party_list_id_pk": {
+          "name": "party_list_candidacy_person_id_party_list_id_pk",
+          "columns": [
+            "person_id",
+            "party_list_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.party_lists": {
+      "name": "party_lists",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "year": {
+          "name": "year",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state_id": {
+          "name": "state_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "party_id": {
+          "name": "party_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "party_lists_state_idx": {
+          "name": "party_lists_state_idx",
+          "columns": [
+            {
+              "expression": "state_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "party_lists_year_elections_year_fk": {
+          "name": "party_lists_year_elections_year_fk",
+          "tableFrom": "party_lists",
+          "tableTo": "elections",
+          "columnsFrom": [
+            "year"
+          ],
+          "columnsTo": [
+            "year"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "party_lists_state_id_states_id_fk": {
+          "name": "party_lists_state_id_states_id_fk",
+          "tableFrom": "party_lists",
+          "tableTo": "states",
+          "columnsFrom": [
+            "state_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "party_lists_party_id_parties_id_fk": {
+          "name": "party_lists_party_id_parties_id_fk",
+          "tableFrom": "party_lists",
+          "tableTo": "parties",
+          "columnsFrom": [
+            "party_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "party_lists_state_id_party_id_year_unique": {
+          "name": "party_lists_state_id_party_id_year_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "state_id",
+            "party_id",
+            "year"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.persons": {
+      "name": "persons",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name_addition": {
+          "name": "name_addition",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_name": {
+          "name": "last_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "first_name": {
+          "name": "first_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "artist_name": {
+          "name": "artist_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "gender": {
+          "name": "gender",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "birth_year": {
+          "name": "birth_year",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "postal_code": {
+          "name": "postal_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "city": {
+          "name": "city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "birth_place": {
+          "name": "birth_place",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "profession": {
+          "name": "profession",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.second_votes": {
+      "name": "second_votes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "party_list_id": {
+          "name": "party_list_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "constituency_id": {
+          "name": "constituency_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_valid": {
+          "name": "is_valid",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "second_votes_party_idx": {
+          "name": "second_votes_party_idx",
+          "columns": [
+            {
+              "expression": "party_list_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "second_votes_constituency_idx": {
+          "name": "second_votes_constituency_idx",
+          "columns": [
+            {
+              "expression": "constituency_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "second_votes_party_list_id_party_lists_id_fk": {
+          "name": "second_votes_party_list_id_party_lists_id_fk",
+          "tableFrom": "second_votes",
+          "tableTo": "party_lists",
+          "columnsFrom": [
+            "party_list_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "second_votes_constituency_id_constituencies_id_fk": {
+          "name": "second_votes_constituency_id_constituencies_id_fk",
+          "tableFrom": "second_votes",
+          "tableTo": "constituencies",
+          "columnsFrom": [
+            "constituency_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.states": {
+      "name": "states",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "abbr": {
+          "name": "abbr",
+          "type": "varchar(2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "states_abbr_unique": {
+          "name": "states_abbr_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "abbr"
+          ]
+        },
+        "states_name_unique": {
+          "name": "states_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "name"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.structural_metrics": {
+      "name": "structural_metrics",
+      "schema": "",
+      "columns": {
+        "key": {
+          "name": "key",
+          "type": "varchar(120)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "label": {
+          "name": "label",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unit": {
+          "name": "unit",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {
+    "public.mv_constituency_first_votes": {
+      "columns": {
+        "constituency_id": {
+          "name": "constituency_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "year": {
+          "name": "year",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "party_id": {
+          "name": "party_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "first_votes": {
+          "name": "first_votes",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "definition": "\n    SELECT\n      dcv.constituency_id,\n      dcv.year,\n      dcv.party_id,\n      COALESCE(SUM(dcv.first_votes), 0) AS first_votes\n    FROM mv_direct_candidacy_votes dcv\n    GROUP BY dcv.constituency_id, dcv.year, dcv.party_id\n  ",
+      "name": "mv_constituency_first_votes",
+      "schema": "public",
+      "isExisting": false,
+      "withNoData": true,
+      "materialized": true
+    },
+    "public.mv_constituency_invalid_votes": {
+      "columns": {
+        "constituency_id": {
+          "name": "constituency_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "year": {
+          "name": "year",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "invalid_first": {
+          "name": "invalid_first",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "invalid_second": {
+          "name": "invalid_second",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "definition": "\n    WITH invalid_first AS (\n      SELECT\n        dc.constituency_id,\n        fv.year,\n        COUNT(*) AS invalid_first\n      FROM first_votes fv\n      JOIN direct_candidacy dc\n        ON dc.person_id = fv.direct_person_id\n       AND dc.year = fv.year\n      WHERE fv.is_valid = false\n      GROUP BY dc.constituency_id, fv.year\n    ),\n    invalid_second AS (\n      SELECT\n        sv.constituency_id,\n        pl.year,\n        COUNT(*) AS invalid_second\n      FROM second_votes sv\n      JOIN party_lists pl\n        ON pl.id = sv.party_list_id\n      WHERE sv.is_valid = false\n      GROUP BY sv.constituency_id, pl.year\n    )\n    SELECT\n      COALESCE(i1.constituency_id, i2.constituency_id) AS constituency_id,\n      COALESCE(i1.year, i2.year) AS year,\n      COALESCE(i1.invalid_first, 0) AS invalid_first,\n      COALESCE(i2.invalid_second, 0) AS invalid_second\n    FROM invalid_first i1\n    FULL OUTER JOIN invalid_second i2\n      ON i2.constituency_id = i1.constituency_id\n     AND i2.year = i1.year\n  ",
+      "name": "mv_constituency_invalid_votes",
+      "schema": "public",
+      "isExisting": false,
+      "withNoData": true,
+      "materialized": true
+    },
+    "public.mv_constituency_second_votes": {
+      "columns": {
+        "constituency_id": {
+          "name": "constituency_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "year": {
+          "name": "year",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "party_id": {
+          "name": "party_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "second_votes": {
+          "name": "second_votes",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "definition": "\n    SELECT\n      sv.constituency_id,\n      pl.year,\n      pl.party_id,\n      COUNT(sv.id) FILTER (WHERE sv.is_valid) AS second_votes\n    FROM second_votes sv\n    JOIN party_lists pl\n      ON pl.id = sv.party_list_id\n    GROUP BY sv.constituency_id, pl.year, pl.party_id\n  ",
+      "name": "mv_constituency_second_votes",
+      "schema": "public",
+      "isExisting": false,
+      "withNoData": true,
+      "materialized": true
+    },
+    "public.mv_constituency_vote_totals": {
+      "columns": {
+        "constituency_id": {
+          "name": "constituency_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "year": {
+          "name": "year",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "valid_first": {
+          "name": "valid_first",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "valid_second": {
+          "name": "valid_second",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "definition": "\n    WITH first_totals AS (\n      SELECT\n        constituency_id,\n        year,\n        COALESCE(SUM(first_votes), 0) AS valid_first\n      FROM mv_constituency_first_votes\n      GROUP BY constituency_id, year\n    ),\n    second_totals AS (\n      SELECT\n        constituency_id,\n        year,\n        COALESCE(SUM(second_votes), 0) AS valid_second\n      FROM mv_constituency_second_votes\n      GROUP BY constituency_id, year\n    )\n    SELECT\n      COALESCE(ft.constituency_id, st.constituency_id) AS constituency_id,\n      COALESCE(ft.year, st.year) AS year,\n      COALESCE(ft.valid_first, 0) AS valid_first,\n      COALESCE(st.valid_second, 0) AS valid_second\n    FROM first_totals ft\n    FULL OUTER JOIN second_totals st\n      ON st.constituency_id = ft.constituency_id\n     AND st.year = ft.year\n  ",
+      "name": "mv_constituency_vote_totals",
+      "schema": "public",
+      "isExisting": false,
+      "withNoData": true,
+      "materialized": true
+    },
+    "public.mv_direct_candidacy_votes": {
+      "columns": {
+        "person_id": {
+          "name": "person_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "year": {
+          "name": "year",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "constituency_id": {
+          "name": "constituency_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "party_id": {
+          "name": "party_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "first_votes": {
+          "name": "first_votes",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "definition": "\n    SELECT\n      dc.person_id,\n      dc.year,\n      dc.constituency_id,\n      dc.party_id,\n      COUNT(fv.id) FILTER (WHERE fv.is_valid) AS first_votes\n    FROM direct_candidacy dc\n    LEFT JOIN first_votes fv\n      ON fv.direct_person_id = dc.person_id\n     AND fv.year = dc.year\n    GROUP BY dc.person_id, dc.year, dc.constituency_id, dc.party_id\n  ",
+      "name": "mv_direct_candidacy_votes",
+      "schema": "public",
+      "isExisting": false,
+      "withNoData": true,
+      "materialized": true
+    },
+    "public.mv_party_list_votes": {
+      "columns": {
+        "party_list_id": {
+          "name": "party_list_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "party_id": {
+          "name": "party_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "state_id": {
+          "name": "state_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "year": {
+          "name": "year",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "second_votes": {
+          "name": "second_votes",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "definition": "\n    SELECT\n      pl.id AS party_list_id,\n      pl.party_id,\n      pl.state_id,\n      pl.year,\n      COUNT(sv.id) FILTER (WHERE sv.is_valid) AS second_votes\n    FROM party_lists pl\n    LEFT JOIN second_votes sv\n      ON sv.party_list_id = pl.id\n    GROUP BY pl.id, pl.party_id, pl.state_id, pl.year\n  ",
+      "name": "mv_party_list_votes",
+      "schema": "public",
+      "isExisting": false,
+      "withNoData": true,
+      "materialized": true
+    },
+    "public.seat_allocation_cache": {
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "year": {
+          "name": "year",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "person_id": {
+          "name": "person_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "party_id": {
+          "name": "party_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "state_id": {
+          "name": "state_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "seat_type": {
+          "name": "seat_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "constituency_name": {
+          "name": "constituency_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "list_position": {
+          "name": "list_position",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "percent_first_votes": {
+          "name": "percent_first_votes",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "definition": "\n    WITH RECURSIVE\n    DirectCandidacyVotes AS (\n        SELECT\n            person_id,\n            year,\n            constituency_id,\n            party_id,\n            first_votes\n        FROM mv_direct_candidacy_votes\n    ),\n    PartyListVotes AS (\n        SELECT\n            party_list_id,\n            party_id,\n            state_id,\n            year,\n            second_votes\n        FROM mv_party_list_votes\n    ),\n    ConstituencyStats AS (\n        SELECT\n            constituency_id,\n            year,\n            COALESCE(valid_first, 0) AS valid_first\n        FROM mv_constituency_vote_totals\n    ),\n    ConstituencyFirstVotes AS (\n        SELECT\n            dcv.constituency_id,\n            dcv.year,\n            dcv.person_id,\n            dcv.party_id,\n            dcv.first_votes,\n            c.name AS constituency_name,\n            c.state_id,\n            ROW_NUMBER() OVER (\n                PARTITION BY dcv.constituency_id, dcv.year\n                ORDER BY dcv.first_votes DESC, dcv.person_id ASC\n            ) AS rank\n        FROM DirectCandidacyVotes dcv\n        JOIN constituencies c ON c.id = dcv.constituency_id\n    ),\n    ConstituencyWinners AS (\n        SELECT\n            constituency_id,\n            year,\n            person_id,\n            party_id,\n            first_votes,\n            constituency_name,\n            state_id\n        FROM ConstituencyFirstVotes\n        WHERE rank = 1\n    ),\n    NationalSecondVotes AS (\n        SELECT\n            p.id AS party_id,\n            p.short_name,\n            p.is_minority,\n            e.year,\n            COALESCE(SUM(plv.second_votes), 0) AS total_second_votes\n        FROM elections e\n        CROSS JOIN parties p\n        LEFT JOIN PartyListVotes plv\n          ON plv.party_id = p.id\n         AND plv.year = e.year\n        GROUP BY p.id, p.short_name, p.is_minority, e.year\n    ),\n    TotalSecondVotes AS (\n        SELECT year, SUM(total_second_votes) AS total\n        FROM NationalSecondVotes\n        GROUP BY year\n    ),\n    ConstituencyWinnersPerParty AS (\n        SELECT\n            year,\n            party_id,\n            COUNT(*) AS num_winners\n        FROM ConstituencyWinners\n        GROUP BY year, party_id\n    ),\n    QualifiedParties AS (\n        SELECT\n            nsv.party_id,\n            nsv.short_name,\n            nsv.total_second_votes,\n            COALESCE(cwp.num_winners, 0) AS num_direct_mandates,\n            nsv.is_minority,\n            nsv.year,\n            (nsv.total_second_votes * 100.0 / NULLIF(tsv.total, 0)) AS percent_second_votes,\n            CASE\n                WHEN nsv.is_minority THEN TRUE\n                WHEN COALESCE(cwp.num_winners, 0) >= 3 THEN TRUE\n                WHEN (nsv.total_second_votes * 100.0 / NULLIF(tsv.total, 0)) >= 5 THEN TRUE\n                ELSE FALSE\n            END AS is_qualified\n        FROM NationalSecondVotes nsv\n        LEFT JOIN ConstituencyWinnersPerParty cwp\n          ON cwp.party_id = nsv.party_id\n         AND cwp.year = nsv.year\n        LEFT JOIN TotalSecondVotes tsv\n          ON tsv.year = nsv.year\n    ),\n    DirectSeatsNonQualified AS (\n        SELECT\n            cw.person_id,\n            cw.constituency_id,\n            cw.constituency_name,\n            cw.party_id,\n            cw.first_votes,\n            cw.state_id,\n            cw.year,\n            p.short_name AS party_name,\n            'Direct Mandate (Non-Qualified Party)' AS seat_type\n        FROM ConstituencyWinners cw\n        JOIN parties p ON p.id = cw.party_id\n        JOIN QualifiedParties qp\n          ON qp.party_id = cw.party_id\n         AND qp.year = cw.year\n        WHERE qp.is_qualified = FALSE\n    ),\n    NumDirectSeatsNonQualified AS (\n        SELECT year, COUNT(*) AS count\n        FROM DirectSeatsNonQualified\n        GROUP BY year\n    ),\n    AvailableSeats AS (\n        SELECT\n            e.year,\n            630 - COALESCE(nd.count, 0) AS seats\n        FROM elections e\n        LEFT JOIN NumDirectSeatsNonQualified nd ON nd.year = e.year\n    ),\n    QualifiedSecondVotes AS (\n        SELECT\n            year,\n            party_id,\n            short_name,\n            total_second_votes\n        FROM QualifiedParties\n        WHERE is_qualified = TRUE AND total_second_votes > 0\n    ),\n    Divisors AS (\n        SELECT 1 AS divisor\n        UNION ALL\n        SELECT divisor + 2\n        FROM Divisors\n        WHERE divisor < 1260\n    ),\n    FederalDistributionQuotients AS (\n        SELECT\n            qsv.year,\n            qsv.party_id,\n            qsv.short_name,\n            qsv.total_second_votes,\n            d.divisor,\n            (qsv.total_second_votes * 1.0 / d.divisor) AS quotient\n        FROM QualifiedSecondVotes qsv\n        CROSS JOIN Divisors d\n    ),\n    FederalDistributionRanked AS (\n        SELECT\n            year,\n            party_id,\n            short_name,\n            quotient,\n            total_second_votes,\n            ROW_NUMBER() OVER (\n                PARTITION BY year\n                ORDER BY quotient DESC, total_second_votes DESC, party_id ASC\n            ) AS seat_number\n        FROM FederalDistributionQuotients\n    ),\n    FederalDistribution AS (\n        SELECT\n            fdr.year,\n            fdr.party_id,\n            fdr.short_name,\n            COUNT(*) AS seats_national\n        FROM FederalDistributionRanked fdr\n        JOIN AvailableSeats a ON a.year = fdr.year\n        WHERE fdr.seat_number <= a.seats\n        GROUP BY fdr.year, fdr.party_id, fdr.short_name\n    ),\n    StateListSecondVotes AS (\n        SELECT\n            plv.year,\n            plv.party_id,\n            plv.state_id,\n            s.name AS state_name,\n            p.short_name AS party_name,\n            plv.second_votes AS state_second_votes\n        FROM PartyListVotes plv\n        JOIN states s ON s.id = plv.state_id\n        JOIN parties p ON p.id = plv.party_id\n        WHERE plv.party_id IN (\n            SELECT party_id FROM FederalDistribution fd WHERE fd.year = plv.year\n        )\n    ),\n    StateDistributionQuotients AS (\n        SELECT\n            slsv.year,\n            slsv.party_id,\n            slsv.party_name,\n            slsv.state_id,\n            slsv.state_name,\n            slsv.state_second_votes,\n            d.divisor,\n            (slsv.state_second_votes * 1.0 / d.divisor) AS quotient,\n            fd.seats_national\n        FROM StateListSecondVotes slsv\n        JOIN FederalDistribution fd\n          ON fd.party_id = slsv.party_id\n         AND fd.year = slsv.year\n        CROSS JOIN Divisors d\n    ),\n    StateDistributionRanked AS (\n        SELECT\n            year,\n            party_id,\n            party_name,\n            state_id,\n            state_name,\n            state_second_votes,\n            quotient,\n            seats_national,\n            ROW_NUMBER() OVER (\n                PARTITION BY year, party_id\n                ORDER BY quotient DESC, state_second_votes DESC, state_id ASC\n            ) AS seat_number\n        FROM StateDistributionQuotients\n    ),\n    StateDistribution AS (\n        SELECT\n            year,\n            party_id,\n            party_name,\n            state_id,\n            state_name,\n            COUNT(*) AS seats_state\n        FROM StateDistributionRanked sdr\n        WHERE seat_number <= seats_national\n        GROUP BY year, party_id, party_name, state_id, state_name\n    ),\n    QualifiedConstituencyWinners AS (\n        SELECT\n            cw.person_id,\n            cw.constituency_id,\n            cw.constituency_name,\n            cw.party_id,\n            cw.first_votes,\n            cw.state_id,\n            cw.year,\n            p.short_name AS party_name,\n            (cw.first_votes * 100.0 / NULLIF(COALESCE(cs.valid_first, 0), 0)) AS percent_first_votes\n        FROM ConstituencyWinners cw\n        JOIN parties p ON p.id = cw.party_id\n        JOIN QualifiedParties qp\n          ON qp.party_id = cw.party_id\n         AND qp.year = cw.year\n         AND qp.is_qualified = TRUE\n        LEFT JOIN ConstituencyStats cs\n          ON cs.constituency_id = cw.constituency_id\n         AND cs.year = cw.year\n    ),\n    DirectMandatesRankedPerState AS (\n        SELECT\n            qcw.*,\n            ROW_NUMBER() OVER (\n                PARTITION BY qcw.year, qcw.party_id, qcw.state_id\n                ORDER BY qcw.percent_first_votes DESC, qcw.first_votes DESC, qcw.person_id ASC\n            ) AS rank_in_state\n        FROM QualifiedConstituencyWinners qcw\n    ),\n    DirectMandatesWithSeat AS (\n        SELECT\n            dmr.person_id,\n            dmr.constituency_id,\n            dmr.constituency_name,\n            dmr.party_id,\n            dmr.first_votes,\n            dmr.state_id,\n            dmr.party_name,\n            dmr.percent_first_votes,\n            dmr.rank_in_state,\n            dmr.year\n        FROM DirectMandatesRankedPerState dmr\n        JOIN StateDistribution sd\n          ON sd.party_id = dmr.party_id\n         AND sd.state_id = dmr.state_id\n         AND sd.year = dmr.year\n        WHERE dmr.rank_in_state <= sd.seats_state\n    ),\n    DirectMandatesPerPartyState AS (\n        SELECT\n            year,\n            party_id,\n            state_id,\n            COUNT(*) AS num_direct_mandates\n        FROM DirectMandatesWithSeat\n        GROUP BY year, party_id, state_id\n    ),\n    ListSeatsPerPartyState AS (\n        SELECT\n            sd.year,\n            sd.party_id,\n            sd.party_name,\n            sd.state_id,\n            sd.state_name,\n            sd.seats_state,\n            COALESCE(dmps.num_direct_mandates, 0) AS direct_mandates,\n            GREATEST(0, sd.seats_state - COALESCE(dmps.num_direct_mandates, 0)) AS list_seats\n        FROM StateDistribution sd\n        LEFT JOIN DirectMandatesPerPartyState dmps\n          ON dmps.party_id = sd.party_id\n         AND dmps.state_id = sd.state_id\n         AND dmps.year = sd.year\n    ),\n    ListCandidatesRanked AS (\n        SELECT\n            plc.person_id,\n            plc.party_list_id,\n            plc.list_position,\n            pl.party_id,\n            pl.state_id,\n            pl.year,\n            p.short_name AS party_name,\n            s.name AS state_name,\n            per.first_name,\n            per.last_name,\n            ROW_NUMBER() OVER (\n                PARTITION BY pl.year, pl.party_id, pl.state_id\n                ORDER BY plc.list_position ASC\n            ) AS rank\n        FROM party_list_candidacy plc\n        JOIN party_lists pl ON pl.id = plc.party_list_id\n        JOIN parties p ON p.id = pl.party_id\n        JOIN states s ON s.id = pl.state_id\n        JOIN persons per ON per.id = plc.person_id\n        WHERE NOT EXISTS (\n            SELECT 1\n            FROM DirectMandatesWithSeat dms\n            WHERE dms.person_id = plc.person_id\n              AND dms.year = pl.year\n        )\n        AND pl.party_id IN (\n            SELECT party_id FROM FederalDistribution fd WHERE fd.year = pl.year\n        )\n    ),\n    ListSeatWinners AS (\n        SELECT\n            lcr.person_id,\n            lcr.party_id,\n            lcr.state_id,\n            lcr.party_name,\n            lcr.state_name,\n            lcr.first_name,\n            lcr.last_name,\n            lcr.list_position,\n            lcr.year,\n            'List Seat' AS seat_type\n        FROM ListCandidatesRanked lcr\n        JOIN ListSeatsPerPartyState lspps\n          ON lspps.party_id = lcr.party_id\n         AND lspps.state_id = lcr.state_id\n         AND lspps.year = lcr.year\n        WHERE lcr.rank <= lspps.list_seats\n    ),\n    AllSeats AS (\n        SELECT\n            year,\n            person_id,\n            party_id,\n            state_id,\n            constituency_name AS constituency_name,\n            NULL::double precision AS list_position,\n            'Direct Mandate' AS seat_type,\n            percent_first_votes\n        FROM DirectMandatesWithSeat\n        UNION ALL\n        SELECT\n            year,\n            person_id,\n            party_id,\n            state_id,\n            NULL AS constituency_name,\n            list_position,\n            seat_type,\n            NULL::double precision AS percent_first_votes\n        FROM ListSeatWinners\n        UNION ALL\n        SELECT\n            year,\n            person_id,\n            party_id,\n            state_id,\n            constituency_name AS constituency_name,\n            NULL::double precision AS list_position,\n            seat_type,\n            NULL::double precision AS percent_first_votes\n        FROM DirectSeatsNonQualified\n    )\n    SELECT\n        ROW_NUMBER() OVER () AS id,\n        year,\n        person_id,\n        party_id,\n        state_id,\n        seat_type,\n        constituency_name,\n        list_position,\n        percent_first_votes,\n        CURRENT_DATE AS created_at\n    FROM AllSeats\n    ORDER BY year, party_id, seat_type, constituency_name NULLS LAST, list_position NULLS LAST\n  ",
+      "name": "seat_allocation_cache",
+      "schema": "public",
+      "isExisting": false,
+      "withNoData": true,
+      "materialized": true
+    }
+  },
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
