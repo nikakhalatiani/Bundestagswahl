@@ -18,8 +18,9 @@ async function verifyBallots(options: VerificationOptions = {}) {
   console.log(`Year: ${year}\n`);
 
   // Ensure materialized views are current for validation
-  await pool.query("REFRESH MATERIALIZED VIEW mv_direct_candidacy_votes");
-  await pool.query("REFRESH MATERIALIZED VIEW mv_party_list_votes");
+  await pool.query("REFRESH MATERIALIZED VIEW mv_00_direct_candidacy_votes");
+  await pool.query("REFRESH MATERIALIZED VIEW mv_01_constituency_party_votes");
+  await pool.query("REFRESH MATERIALIZED VIEW mv_02_party_list_votes");
 
   // Constituencies to verify
   const constituenciesRes = constituencyNumber
@@ -100,7 +101,7 @@ async function verifyBallots(options: VerificationOptions = {}) {
   let totalSecondVoteMismatches = 0;
 
   // Precompute: second-vote ballot counts per party (year-filtered)
-  // Compare against expected from mv_party_list_votes (year-filtered)
+  // Compare against expected from mv_02_party_list_votes (year-filtered)
   const secondBallotsByPartyRes = await pool.query(
     `
     SELECT pl.party_id, COUNT(*)::bigint AS cnt
@@ -115,7 +116,7 @@ async function verifyBallots(options: VerificationOptions = {}) {
   const expectedSecondByPartyRes = await pool.query(
     `
     SELECT plv.party_id, SUM(plv.second_votes)::bigint AS expected
-    FROM mv_party_list_votes plv
+    FROM mv_02_party_list_votes plv
     WHERE plv.year = $1
     GROUP BY plv.party_id
   `,
@@ -145,7 +146,7 @@ async function verifyBallots(options: VerificationOptions = {}) {
       p.short_name,
       plv.party_id,
       SUM(plv.second_votes)::bigint AS expected
-    FROM mv_party_list_votes plv
+    FROM mv_02_party_list_votes plv
     JOIN parties p ON p.id = plv.party_id
     WHERE plv.year = $1
     GROUP BY p.short_name, plv.party_id
@@ -211,7 +212,7 @@ async function verifyBallots(options: VerificationOptions = {}) {
         p.first_name,
         p.last_name,
         pr.short_name AS party_short_name
-      FROM mv_direct_candidacy_votes dcv
+      FROM mv_00_direct_candidacy_votes dcv
       JOIN persons p ON p.id = dcv.person_id
       LEFT JOIN parties pr ON pr.id = dcv.party_id
       WHERE dcv.constituency_id = $1
@@ -230,7 +231,7 @@ async function verifyBallots(options: VerificationOptions = {}) {
       `
       WITH top_candidates AS (
         SELECT dcv.person_id
-        FROM mv_direct_candidacy_votes dcv
+        FROM mv_00_direct_candidacy_votes dcv
         WHERE dcv.constituency_id = $1
           AND dcv.year = $2
           AND dcv.first_votes IS NOT NULL
@@ -282,7 +283,7 @@ async function verifyBallots(options: VerificationOptions = {}) {
         SELECT
           dcv.person_id,
           dcv.first_votes::bigint AS expected
-        FROM mv_direct_candidacy_votes dcv
+        FROM mv_00_direct_candidacy_votes dcv
         WHERE dcv.constituency_id = $1
           AND dcv.year = $2
           AND dcv.first_votes IS NOT NULL

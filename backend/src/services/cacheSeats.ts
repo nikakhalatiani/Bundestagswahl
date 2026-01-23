@@ -2,10 +2,10 @@ import dbModule from '../db';
 const { pool } = dbModule;
 
 const BASE_VIEWS = [
-  "mv_direct_candidacy_votes",
-  "mv_constituency_party_votes",
-  "mv_constituency_elections",
-  "mv_party_list_votes",
+  "mv_00_direct_candidacy_votes",
+  "mv_01_constituency_party_votes",
+  "mv_02_party_list_votes",
+  "mv_03_constituency_elections",
 ];
 
 const SEAT_VIEWS = [

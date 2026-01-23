@@ -162,7 +162,7 @@ async function main() {
     SELECT 
       e.year, s.abbr AS state, pa.short_name AS party,
       cpv.vote_type, SUM(cpv.votes) AS votes
-    FROM mv_constituency_party_votes cpv
+    FROM mv_01_constituency_party_votes cpv
       JOIN constituencies co ON cpv.constituency_id = co.id
       JOIN states s ON co.state_id = s.id
       JOIN parties pa ON cpv.party_id = pa.id

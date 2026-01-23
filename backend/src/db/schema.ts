@@ -202,7 +202,7 @@ export const secondVotes = pgTable("second_votes", {
 
 // ---------- Materialized Views ----------
 
-export const mvDirectCandidacyVotes = pgMaterializedView("mv_direct_candidacy_votes", {
+export const mv00DirectCandidacyVotes = pgMaterializedView("mv_00_direct_candidacy_votes", {
   person_id: integer("person_id"),
   year: integer("year"),
   constituency_id: integer("constituency_id"),
@@ -224,7 +224,7 @@ export const mvDirectCandidacyVotes = pgMaterializedView("mv_direct_candidacy_vo
     GROUP BY dc.person_id, dc.year, dc.constituency_id, dc.party_id
   `);
 
-export const mvConstituencyPartyVotes = pgMaterializedView("mv_constituency_party_votes", {
+export const mv01ConstituencyPartyVotes = pgMaterializedView("mv_01_constituency_party_votes", {
   constituency_id: integer("constituency_id"),
   year: integer("year"),
   party_id: integer("party_id"),
@@ -240,7 +240,7 @@ export const mvConstituencyPartyVotes = pgMaterializedView("mv_constituency_part
         dcv.party_id,
         1::int AS vote_type,
         COALESCE(SUM(dcv.first_votes), 0) AS votes
-      FROM mv_direct_candidacy_votes dcv
+      FROM mv_00_direct_candidacy_votes dcv
       GROUP BY dcv.constituency_id, dcv.year, dcv.party_id
     ),
     second_party AS (
@@ -260,7 +260,7 @@ export const mvConstituencyPartyVotes = pgMaterializedView("mv_constituency_part
     SELECT * FROM second_party
   `);
 
-export const mvPartyListVotes = pgMaterializedView("mv_party_list_votes", {
+export const mv02PartyListVotes = pgMaterializedView("mv_02_party_list_votes", {
   party_list_id: integer("party_list_id"),
   party_id: integer("party_id"),
   state_id: integer("state_id"),
@@ -275,7 +275,7 @@ export const mvPartyListVotes = pgMaterializedView("mv_party_list_votes", {
         cpv.party_id,
         cpv.year,
         COALESCE(SUM(cpv.votes), 0) AS second_votes
-      FROM mv_constituency_party_votes cpv
+      FROM mv_01_constituency_party_votes cpv
       JOIN constituencies c ON c.id = cpv.constituency_id
       WHERE cpv.vote_type = 2
       GROUP BY c.state_id, cpv.party_id, cpv.year
@@ -293,7 +293,7 @@ export const mvPartyListVotes = pgMaterializedView("mv_party_list_votes", {
      AND sv.year = pl.year
   `);
 
-export const mvConstituencyElections = pgMaterializedView("mv_constituency_elections", {
+export const mv03ConstituencyElections = pgMaterializedView("mv_03_constituency_elections", {
   constituency_id: integer("constituency_id"),
   year: integer("year"),
   valid_first: bigint("valid_first", { mode: "number" }),
@@ -309,7 +309,7 @@ export const mvConstituencyElections = pgMaterializedView("mv_constituency_elect
         year,
         COALESCE(SUM(CASE WHEN vote_type = 1 THEN votes ELSE 0 END), 0) AS valid_first,
         COALESCE(SUM(CASE WHEN vote_type = 2 THEN votes ELSE 0 END), 0) AS valid_second
-      FROM mv_constituency_party_votes
+      FROM mv_01_constituency_party_votes
       GROUP BY constituency_id, year
     ),
     invalid_first AS (
@@ -373,7 +373,7 @@ export const seatAllocationCache = pgMaterializedView("seat_allocation_cache", {
             constituency_id,
             party_id,
             first_votes
-        FROM mv_direct_candidacy_votes
+        FROM mv_00_direct_candidacy_votes
     ),
     PartyListVotes AS (
         SELECT
@@ -382,14 +382,14 @@ export const seatAllocationCache = pgMaterializedView("seat_allocation_cache", {
             state_id,
             year,
             second_votes
-        FROM mv_party_list_votes
+        FROM mv_02_party_list_votes
     ),
     ConstituencyStats AS (
         SELECT
             constituency_id,
             year,
             COALESCE(valid_first, 0) AS valid_first
-        FROM mv_constituency_elections
+        FROM mv_03_constituency_elections
     ),
     ConstituencyFirstVotes AS (
         SELECT

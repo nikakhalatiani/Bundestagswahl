@@ -73,7 +73,7 @@ DirectCandidacyVotes AS (
         constituency_id,
         party_id,
         first_votes
-    FROM mv_direct_candidacy_votes
+    FROM mv_00_direct_candidacy_votes
     WHERE year = $1
 ),
 PartyListVotes AS (
@@ -83,7 +83,7 @@ PartyListVotes AS (
         state_id,
         year,
         second_votes
-    FROM mv_party_list_votes
+    FROM mv_02_party_list_votes
     WHERE year = $1
 ),
 ConstituencyStats AS (
@@ -91,7 +91,7 @@ ConstituencyStats AS (
         constituency_id,
         year,
         COALESCE(valid_first, 0) AS valid_first
-    FROM mv_constituency_elections
+    FROM mv_03_constituency_elections
     WHERE year = $1
 ),
 
@@ -490,7 +490,7 @@ DirectCandidacyVotes AS (
         constituency_id,
         party_id,
         first_votes
-    FROM mv_direct_candidacy_votes
+    FROM mv_00_direct_candidacy_votes
     WHERE year = $1
 ),
 PartyListVotes AS (
@@ -500,7 +500,7 @@ PartyListVotes AS (
         state_id,
         year,
         second_votes
-    FROM mv_party_list_votes
+    FROM mv_02_party_list_votes
     WHERE year = $1
 ),
 NationalSecondVotes AS (
@@ -576,7 +576,7 @@ DirectCandidacyVotes AS (
         constituency_id,
         party_id,
         first_votes
-    FROM mv_direct_candidacy_votes
+    FROM mv_00_direct_candidacy_votes
     WHERE year = $1
 ),
 PartyListVotes AS (
@@ -586,7 +586,7 @@ PartyListVotes AS (
         state_id,
         year,
         second_votes
-    FROM mv_party_list_votes
+    FROM mv_02_party_list_votes
     WHERE year = $1
 ),
 NationalSecondVotes AS (
@@ -681,7 +681,7 @@ DirectCandidacyVotes AS (
         constituency_id,
         party_id,
         first_votes
-    FROM mv_direct_candidacy_votes
+    FROM mv_00_direct_candidacy_votes
     WHERE year = $1
 ),
 PartyListVotes AS (
@@ -691,7 +691,7 @@ PartyListVotes AS (
         state_id,
         year,
         second_votes
-    FROM mv_party_list_votes
+    FROM mv_02_party_list_votes
     WHERE year = $1
 ),
 NationalSecondVotes AS (

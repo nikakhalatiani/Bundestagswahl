@@ -14,10 +14,10 @@ async function test() {
     console.log('=== Verifying Cache Tables ===\n');
 
     const queries = [
-      { name: 'mv_direct_candidacy_votes', query: 'SELECT COUNT(*) FROM mv_direct_candidacy_votes WHERE year = 2025' },
-      { name: 'mv_constituency_party_votes', query: 'SELECT COUNT(*) FROM mv_constituency_party_votes WHERE year = 2025' },
-      { name: 'mv_constituency_elections', query: 'SELECT COUNT(*) FROM mv_constituency_elections WHERE year = 2025' },
-      { name: 'mv_party_list_votes', query: 'SELECT COUNT(*) FROM mv_party_list_votes WHERE year = 2025' },
+      { name: 'mv_00_direct_candidacy_votes', query: 'SELECT COUNT(*) FROM mv_00_direct_candidacy_votes WHERE year = 2025' },
+      { name: 'mv_01_constituency_party_votes', query: 'SELECT COUNT(*) FROM mv_01_constituency_party_votes WHERE year = 2025' },
+      { name: 'mv_03_constituency_elections', query: 'SELECT COUNT(*) FROM mv_03_constituency_elections WHERE year = 2025' },
+      { name: 'mv_02_party_list_votes', query: 'SELECT COUNT(*) FROM mv_02_party_list_votes WHERE year = 2025' },
       { name: 'seat_allocation_cache', query: 'SELECT COUNT(*) FROM seat_allocation_cache WHERE year = 2025' },
     ];
 
