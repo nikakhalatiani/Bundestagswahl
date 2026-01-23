@@ -10,6 +10,18 @@ async function dropAllTables() {
       DECLARE
           r RECORD;
       BEGIN
+          -- drop all materialized views in the public schema
+          FOR r IN (SELECT matviewname FROM pg_matviews WHERE schemaname = 'public')
+          LOOP
+              EXECUTE 'DROP MATERIALIZED VIEW IF EXISTS "public"."' || r.matviewname || '" CASCADE;';
+          END LOOP;
+
+          -- drop all views in the public schema
+          FOR r IN (SELECT viewname FROM pg_views WHERE schemaname = 'public')
+          LOOP
+              EXECUTE 'DROP VIEW IF EXISTS "public"."' || r.viewname || '" CASCADE;';
+          END LOOP;
+
           -- drop all tables in the public schema
           FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public')
           LOOP

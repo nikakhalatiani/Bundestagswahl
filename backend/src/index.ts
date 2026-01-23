@@ -3,8 +3,6 @@ import dbModule from "./db";
 const { pool } = dbModule;
 
 // helper modules
-// calculateSeats is CommonJS-exported
-const calculateSeats = require("./calculateSeats");
 import { ensureCacheExists } from "./services/cacheSeats";
 
 const app = express();
@@ -845,14 +843,22 @@ app.post('/api/admin/calculate-seats', async (req, res) => {
   try {
     const { refreshSeatCaches } = await import('./services/cacheSeats');
     await refreshSeatCaches();
-    const results = await calculateSeats(year);
+    const statsRes = await pool.query(
+      `SELECT
+         COUNT(*)::int AS seats,
+         COUNT(DISTINCT party_id)::int AS parties
+       FROM seat_allocation_cache
+       WHERE year = $1`,
+      [year]
+    );
+    const statsRow = statsRes.rows[0] || { seats: 0, parties: 0 };
 
     res.json({
       message: 'Cache regenerated successfully',
       year,
       stats: {
-        seats: results.seatAllocation.length,
-        parties: results.summary.length,
+        seats: Number(statsRow.seats) || 0,
+        parties: Number(statsRow.parties) || 0,
       }
     });
   } catch (err) {
@@ -1074,6 +1080,41 @@ app.get('/api/election-results', async (req, res) => {
       } else {
         // For first/second votes - only state and party filters apply
         const voteType = type === 'first' ? 1 : 2;
+        if (voteType === 2) {
+          const conditions: string[] = ['plv.year = $1'];
+          if (stateIds.length > 0) {
+            const placeholders = stateIds.map(() => `$${paramIdx++}`).join(', ');
+            conditions.push(`plv.state_id IN (${placeholders})`);
+            params.push(...stateIds);
+          }
+          if (parties.length > 0) {
+            const expandedParties = parties.flatMap(p => p === 'CDU/CSU' ? ['CDU', 'CSU'] : [p]);
+            const placeholders = expandedParties.map(() => `$${paramIdx++}`).join(', ');
+            conditions.push(`p.short_name IN (${placeholders})`);
+            params.push(...expandedParties);
+          }
+
+          const query = `
+            SELECT
+              CASE 
+                WHEN p.short_name IN ('CDU', 'CSU') THEN 'CDU/CSU' 
+                ELSE p.short_name 
+              END as short_name,
+              CASE 
+                WHEN p.short_name IN ('CDU', 'CSU') THEN 'CDU/CSU' 
+                ELSE p.long_name 
+              END as long_name,
+              SUM(plv.second_votes) as votes
+            FROM mv_party_list_votes plv
+            JOIN parties p ON p.id = plv.party_id
+            WHERE ${conditions.join(' AND ')}
+            GROUP BY 1, 2
+            ORDER BY votes DESC
+          `;
+          const result = await pool.query<ElectionResultsRow>(query, params);
+          return result.rows;
+        }
+
         const conditions: string[] = ['pv.year = $1', `pv.vote_type = $2`];
         params.push(voteType);
         paramIdx++;

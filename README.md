@@ -87,10 +87,10 @@ Use this only if your backend is not running in Docker. Make sure `backend/.env`
 ```bash
 cd backend
 
-# Optional: reset DB (drops all tables)
+# Optional: reset DB (drops tables + views)
 npx ts-node src/resetDB.ts
 
-# Generate and apply migrations
+# Generate and apply migrations (generate only needed if schema changed)
 npx drizzle-kit generate
 npx drizzle-kit migrate
 
@@ -108,6 +108,23 @@ curl -X POST "http://localhost:4000/api/admin/calculate-seats?year=2025"
 - `loadCsvData.ts`: Imports base data from `data/`.
 - `generateBallots.ts`: Generates individual `first_votes` and `second_votes` from CSV aggregates.
 - `calculate-seats` endpoint: Refreshes materialized views used by API and seat allocation.
+
+### Resetting the Database
+
+Docker (recommended):
+```bash
+docker-compose down -v
+docker-compose up -d --build
+docker-compose exec backend npm run drizzle:migrate
+```
+
+Local (advanced):
+```bash
+cd backend
+npx ts-node src/resetDB.ts
+npx drizzle-kit generate   # only if schema changed
+npx drizzle-kit migrate
+```
 
 ### Verification Options
 
@@ -129,6 +146,19 @@ The `verifyBallots.ts` script supports command-line options for flexible verific
   ```
 
 These options can be combined as needed.
+
+Additional verification / diagnostics:
+```bash
+# Quick schema + row counts snapshot
+cd backend
+npm run check-db
+
+# Verify CSV -> materialized view consistency
+npm run verify
+
+# Check MV population (row counts)
+npx ts-node src/testCachePopulation.ts
+```
 ### Database Schema Overview
 
 The schema supports multi-year election data with proper foreign key relationships:
@@ -147,12 +177,14 @@ The schema supports multi-year election data with proper foreign key relationshi
 
 ## Running Seat Allocation Algorithm
 
-After loading the data, you can run the seat allocation algorithm that implements the German electoral system with the 2023 reform.
-Make sure materialized views are refreshed first via:
+After loading the data, the API relies on materialized views (including `seat_allocation_cache`).
+Refresh the views whenever you load/generate votes or cast new votes:
 
 ```bash
 curl -X POST "http://localhost:4000/api/admin/calculate-seats?year=2025"
 ```
+
+The endpoint only refreshes materialized views; it does not run the CLI algorithm.
 
 ### Option 1: Full Results (Recommended)
 
