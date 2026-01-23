@@ -3,11 +3,9 @@ const { pool } = dbModule;
 
 const BASE_VIEWS = [
   "mv_direct_candidacy_votes",
+  "mv_constituency_party_votes",
+  "mv_constituency_elections",
   "mv_party_list_votes",
-  "mv_constituency_first_votes",
-  "mv_constituency_second_votes",
-  "mv_constituency_invalid_votes",
-  "mv_constituency_vote_totals",
 ];
 
 const SEAT_VIEWS = [

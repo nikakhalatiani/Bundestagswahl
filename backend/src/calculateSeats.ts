@@ -40,6 +40,26 @@ const { pool } = dbModule;
  *    - Primary: Highest quotient (votes / divisor)
  *    - Secondary: Most votes (federal or state level)
  *    - Tertiary: Lower party_id or state_id (deterministic)
+ *
+ * === ALGORITHM STEPS ===
+ *
+ * 1. Find winner for each constituency (first votes)
+ * 2. Filter parties by 5% threshold, 3 direct mandates, or minority status
+ * 3. Independent candidates and candidates from non-qualified parties get seats directly
+ * 4. Federal distribution: Sainte-Laguë at federal level
+ *    - Allocate 630 seats minus non-qualified party seats
+ *    - Only qualified parties participate
+ * 5. State distribution: Sainte-Laguë per party at state level
+ *    - Each party's federal seats distributed across states by state list votes
+ * 6. Second-vote coverage:
+ *    - Rank direct candidates by first-vote percentage within each state
+ *    - Only top candidates get seats, up to state allocation limit
+ *    - Prevents overhang mandates
+ * 7. Assign remaining seats to list candidates (excluding seated direct candidates)
+ *
+ * === REFERENCES ===
+ * - Federal Electoral Act (Bundeswahlgesetz, BWG) as amended 2023-03-24
+ * - https://www.bundeswahlleiter.de/en/bundestagswahlen/2025.html
  */
 
 async function calculateSeats(electionYear: number = 2025): Promise<CalculateSeatsResult> {
@@ -70,9 +90,9 @@ ConstituencyStats AS (
     SELECT
         constituency_id,
         year,
-        COALESCE(SUM(first_votes), 0) AS valid_first
-    FROM DirectCandidacyVotes
-    GROUP BY constituency_id, year
+        COALESCE(valid_first, 0) AS valid_first
+    FROM mv_constituency_elections
+    WHERE year = $1
 ),
 
 -- ============================================================

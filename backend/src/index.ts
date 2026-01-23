@@ -109,13 +109,14 @@ app.get('/api/members', ensureCache, async (req, res) => {
       LEFT JOIN LATERAL (
         SELECT
           c2.name AS constituency_name
-        FROM mv_constituency_second_votes csv
-        JOIN constituencies c2 ON c2.id = csv.constituency_id
+        FROM mv_constituency_party_votes cpv2
+        JOIN constituencies c2 ON c2.id = cpv2.constituency_id
         WHERE
-          csv.year = $1
+          cpv2.year = $1
           AND c2.state_id = sac.state_id
-          AND csv.party_id = sac.party_id
-        ORDER BY csv.second_votes DESC
+          AND cpv2.vote_type = 2
+          AND cpv2.party_id = sac.party_id
+        ORDER BY cpv2.votes DESC
         LIMIT 1
       ) top_second_votes ON true
       WHERE sac.year = $1
@@ -136,10 +137,10 @@ app.get('/api/constituency/:id/parties', async (req, res) => {
 
   try {
     const result = await pool.query(
-      `SELECT p.id, p.short_name, p.long_name, csv.second_votes AS votes, 2 AS vote_type
-       FROM mv_constituency_second_votes csv
-       JOIN parties p ON csv.party_id = p.id
-       WHERE csv.constituency_id = $1 AND csv.year = $2
+      `SELECT p.id, p.short_name, p.long_name, cpv.votes AS votes, cpv.vote_type
+       FROM mv_constituency_party_votes cpv
+       JOIN parties p ON cpv.party_id = p.id
+       WHERE cpv.constituency_id = $1 AND cpv.year = $2 AND cpv.vote_type = 2
        ORDER BY p.short_name`,
       [constituencyId, year]
     );
@@ -264,22 +265,19 @@ app.get('/api/constituency/:id/overview', ensureCache, async (req, res) => {
     const statsRes = await pool.query(
       `SELECT
          ce.eligible_voters,
-         (COALESCE(vt.valid_first, 0) + COALESCE(iv.invalid_first, 0)) AS total_voters,
+         (COALESCE(mce.valid_first, 0) + COALESCE(mce.invalid_first, 0)) AS total_voters,
          CASE
            WHEN ce.eligible_voters IS NULL OR ce.eligible_voters = 0 THEN NULL
-           ELSE ((COALESCE(vt.valid_first, 0) + COALESCE(iv.invalid_first, 0)) * 100.0 / ce.eligible_voters)
+           ELSE ((COALESCE(mce.valid_first, 0) + COALESCE(mce.invalid_first, 0)) * 100.0 / ce.eligible_voters)
          END AS turnout_percent,
-         COALESCE(iv.invalid_first, 0) AS invalid_first,
-         COALESCE(iv.invalid_second, 0) AS invalid_second,
-         COALESCE(vt.valid_first, 0) AS valid_first,
-         COALESCE(vt.valid_second, 0) AS valid_second
+         COALESCE(mce.invalid_first, 0) AS invalid_first,
+         COALESCE(mce.invalid_second, 0) AS invalid_second,
+         COALESCE(mce.valid_first, 0) AS valid_first,
+         COALESCE(mce.valid_second, 0) AS valid_second
        FROM constituency_elections ce
-       LEFT JOIN mv_constituency_vote_totals vt
-         ON vt.constituency_id = ce.constituency_id
-        AND vt.year = ce.year
-       LEFT JOIN mv_constituency_invalid_votes iv
-         ON iv.constituency_id = ce.constituency_id
-        AND iv.year = ce.year
+       LEFT JOIN mv_constituency_elections mce
+         ON mce.constituency_id = ce.constituency_id
+        AND mce.year = ce.year
        WHERE ce.constituency_id = $1 AND ce.year = $2`,
       [constituencyId, year]
     );
@@ -290,12 +288,12 @@ app.get('/api/constituency/:id/overview', ensureCache, async (req, res) => {
               p.first_name || ' ' || p.last_name AS full_name,
               pt.short_name AS party_name,
               dcv.first_votes,
-              (dcv.first_votes * 100.0 / NULLIF(vt.valid_first, 0))::double precision AS percent_of_valid,
+              (dcv.first_votes * 100.0 / NULLIF(mce.valid_first, 0))::double precision AS percent_of_valid,
               sac.seat_type
        FROM mv_direct_candidacy_votes dcv
        JOIN persons p ON p.id = dcv.person_id
        JOIN parties pt ON pt.id = dcv.party_id
-       JOIN mv_constituency_vote_totals vt ON vt.constituency_id = dcv.constituency_id AND vt.year = dcv.year
+       JOIN mv_constituency_elections mce ON mce.constituency_id = dcv.constituency_id AND mce.year = dcv.year
        LEFT JOIN seat_allocation_cache sac ON sac.person_id = dcv.person_id AND sac.year = dcv.year
        WHERE dcv.constituency_id = $1 AND dcv.year = $2
        ORDER BY dcv.first_votes DESC
@@ -312,51 +310,51 @@ app.get('/api/constituency/:id/overview', ensureCache, async (req, res) => {
        ),
        current_totals AS (
          SELECT valid_first, valid_second
-         FROM mv_constituency_vote_totals
+         FROM mv_constituency_elections
          WHERE constituency_id = $1 AND year = $2
        ),
        prev_totals AS (
          SELECT valid_first, valid_second
-         FROM mv_constituency_vote_totals
+         FROM mv_constituency_elections
          WHERE constituency_id = $1 AND year = (SELECT year FROM prev_year)
        ),
        current_first AS (
-         SELECT party_id, first_votes
-         FROM mv_constituency_first_votes
-         WHERE constituency_id = $1 AND year = $2
+         SELECT party_id, votes
+         FROM mv_constituency_party_votes
+         WHERE constituency_id = $1 AND year = $2 AND vote_type = 1
        ),
        current_second AS (
-         SELECT party_id, second_votes
-         FROM mv_constituency_second_votes
-         WHERE constituency_id = $1 AND year = $2
+         SELECT party_id, votes
+         FROM mv_constituency_party_votes
+         WHERE constituency_id = $1 AND year = $2 AND vote_type = 2
        ),
        prev_first AS (
-         SELECT party_id, first_votes
-         FROM mv_constituency_first_votes
-         WHERE constituency_id = $1 AND year = (SELECT year FROM prev_year)
+         SELECT party_id, votes
+         FROM mv_constituency_party_votes
+         WHERE constituency_id = $1 AND year = (SELECT year FROM prev_year) AND vote_type = 1
        ),
        prev_second AS (
-         SELECT party_id, second_votes
-         FROM mv_constituency_second_votes
-         WHERE constituency_id = $1 AND year = (SELECT year FROM prev_year)
+         SELECT party_id, votes
+         FROM mv_constituency_party_votes
+         WHERE constituency_id = $1 AND year = (SELECT year FROM prev_year) AND vote_type = 2
        )
        SELECT
          p.short_name AS party_name,
-         COALESCE(cf.first_votes, 0) AS first_votes,
-         COALESCE((COALESCE(cf.first_votes, 0) * 100.0 / NULLIF(ct.valid_first, 0))::double precision, 0) AS first_percent,
-         COALESCE(cs.second_votes, 0) AS second_votes,
-         COALESCE((COALESCE(cs.second_votes, 0) * 100.0 / NULLIF(ct.valid_second, 0))::double precision, 0) AS second_percent,
+         COALESCE(cf.votes, 0) AS first_votes,
+         COALESCE((COALESCE(cf.votes, 0) * 100.0 / NULLIF(ct.valid_first, 0))::double precision, 0) AS first_percent,
+         COALESCE(cs.votes, 0) AS second_votes,
+         COALESCE((COALESCE(cs.votes, 0) * 100.0 / NULLIF(ct.valid_second, 0))::double precision, 0) AS second_percent,
          CASE
            WHEN ct.valid_first IS NULL OR ct.valid_first = 0
              OR pt.valid_first IS NULL OR pt.valid_first = 0
-             OR pf.first_votes IS NULL THEN NULL
-           ELSE ((COALESCE(cf.first_votes, 0) * 100.0 / ct.valid_first) - (pf.first_votes * 100.0 / pt.valid_first))::double precision
+             OR pf.votes IS NULL THEN NULL
+           ELSE ((COALESCE(cf.votes, 0) * 100.0 / ct.valid_first) - (pf.votes * 100.0 / pt.valid_first))::double precision
          END AS first_diff_pts,
          CASE
            WHEN ct.valid_second IS NULL OR ct.valid_second = 0
              OR pt.valid_second IS NULL OR pt.valid_second = 0
-             OR ps.second_votes IS NULL THEN NULL
-           ELSE ((COALESCE(cs.second_votes, 0) * 100.0 / ct.valid_second) - (ps.second_votes * 100.0 / pt.valid_second))::double precision
+             OR ps.votes IS NULL THEN NULL
+           ELSE ((COALESCE(cs.votes, 0) * 100.0 / ct.valid_second) - (ps.votes * 100.0 / pt.valid_second))::double precision
          END AS second_diff_pts
        FROM parties p
        LEFT JOIN current_first cf ON cf.party_id = p.id
@@ -365,8 +363,8 @@ app.get('/api/constituency/:id/overview', ensureCache, async (req, res) => {
        LEFT JOIN prev_second ps ON ps.party_id = p.id
        LEFT JOIN current_totals ct ON true
        LEFT JOIN prev_totals pt ON true
-       WHERE (cf.first_votes IS NOT NULL OR cs.second_votes IS NOT NULL)
-       ORDER BY cs.second_votes DESC NULLS LAST`,
+       WHERE (cf.votes IS NOT NULL OR cs.votes IS NOT NULL)
+       ORDER BY cs.votes DESC NULLS LAST`,
       [constituencyId, year]
     );
 
@@ -405,18 +403,15 @@ app.get('/api/constituency/:id/overview', ensureCache, async (req, res) => {
            SELECT
              ce.constituency_id,
              ce.eligible_voters,
-             (COALESCE(vt.valid_first, 0) + COALESCE(iv.invalid_first, 0)) AS total_voters,
+             (COALESCE(mce.valid_first, 0) + COALESCE(mce.invalid_first, 0)) AS total_voters,
              CASE
                WHEN ce.eligible_voters IS NULL OR ce.eligible_voters = 0 THEN NULL
-               ELSE ((COALESCE(vt.valid_first, 0) + COALESCE(iv.invalid_first, 0)) * 100.0 / ce.eligible_voters)
+               ELSE ((COALESCE(mce.valid_first, 0) + COALESCE(mce.invalid_first, 0)) * 100.0 / ce.eligible_voters)
              END AS turnout_percent
            FROM constituency_elections ce
-           LEFT JOIN mv_constituency_vote_totals vt
-             ON vt.constituency_id = ce.constituency_id
-            AND vt.year = ce.year
-           LEFT JOIN mv_constituency_invalid_votes iv
-             ON iv.constituency_id = ce.constituency_id
-            AND iv.year = ce.year
+           LEFT JOIN mv_constituency_elections mce
+             ON mce.constituency_id = ce.constituency_id
+            AND mce.year = ce.year
            WHERE ce.year = 2021
          )
          SELECT stats_2021.turnout_percent as turnout_percent,
@@ -489,14 +484,14 @@ app.get('/api/constituency-winners', ensureCache, async (req, res) => {
          p.first_name || ' ' || p.last_name AS winner_name,
          pt.short_name AS party_name,
          cw.first_votes,
-         (cw.first_votes * 100.0 / NULLIF(vt.valid_first, 0))::double precision AS percent_of_valid,
+         (cw.first_votes * 100.0 / NULLIF(mce.valid_first, 0))::double precision AS percent_of_valid,
          CASE WHEN sac.id IS NOT NULL THEN true ELSE false END AS got_seat
        FROM ConstituencyWinners cw
        JOIN constituencies c ON c.id = cw.constituency_id
        JOIN states s ON s.id = c.state_id
        JOIN persons p ON p.id = cw.person_id
        JOIN parties pt ON pt.id = cw.party_id
-       JOIN mv_constituency_vote_totals vt ON vt.constituency_id = cw.constituency_id AND vt.year = $1
+       JOIN mv_constituency_elections mce ON mce.constituency_id = cw.constituency_id AND mce.year = $1
        LEFT JOIN seat_allocation_cache sac ON sac.person_id = cw.person_id AND sac.year = $1
        WHERE cw.rank = 1 ${stateFilter}
        ORDER BY s.name, c.number`,
@@ -535,19 +530,20 @@ app.get('/api/direct-without-coverage', ensureCache, async (req, res) => {
          pt.short_name AS party_name,
          s.name AS state_name,
          cw.first_votes,
-         (cw.first_votes * 100.0 / NULLIF(vt.valid_first, 0))::double precision AS percent_first_votes,
-         COALESCE(csv.second_votes, 0) AS party_second_votes,
-         COALESCE((COALESCE(csv.second_votes, 0) * 100.0 / NULLIF(vt.valid_second, 0))::double precision, 0) AS party_second_percent
+         (cw.first_votes * 100.0 / NULLIF(mce.valid_first, 0))::double precision AS percent_first_votes,
+         COALESCE(cpv2.votes, 0) AS party_second_votes,
+         COALESCE((COALESCE(cpv2.votes, 0) * 100.0 / NULLIF(mce.valid_second, 0))::double precision, 0) AS party_second_percent
        FROM ConstituencyWinners cw
        JOIN constituencies c ON c.id = cw.constituency_id
        JOIN states s ON s.id = c.state_id
        JOIN persons p ON p.id = cw.person_id
        JOIN parties pt ON pt.id = cw.party_id
-       JOIN mv_constituency_vote_totals vt ON vt.constituency_id = cw.constituency_id AND vt.year = $1
-       LEFT JOIN mv_constituency_second_votes csv
-         ON csv.constituency_id = cw.constituency_id
-         AND csv.year = $1
-         AND csv.party_id = cw.party_id
+       JOIN mv_constituency_elections mce ON mce.constituency_id = cw.constituency_id AND mce.year = $1
+       LEFT JOIN mv_constituency_party_votes cpv2
+         ON cpv2.constituency_id = cw.constituency_id
+         AND cpv2.year = $1
+         AND cpv2.party_id = cw.party_id
+         AND cpv2.vote_type = 2
        LEFT JOIN seat_allocation_cache sac ON sac.person_id = cw.person_id
          AND sac.year = $1
          AND sac.seat_type LIKE '%Direct Mandate%'
@@ -610,11 +606,11 @@ app.get('/api/near-misses', async (req, res) => {
            rc.rank,
            w.first_votes AS winner_votes,
            (w.first_votes - rc.first_votes) AS margin_votes,
-           ((w.first_votes - rc.first_votes) * 100.0 / NULLIF(vt.valid_first, 0))::double precision AS margin_percent
+           ((w.first_votes - rc.first_votes) * 100.0 / NULLIF(mce.valid_first, 0))::double precision AS margin_percent
          FROM RankedCandidates rc
          JOIN PartiesWithoutWins pww ON pww.party_id = rc.party_id
          JOIN Winners w ON w.constituency_id = rc.constituency_id
-         JOIN mv_constituency_vote_totals vt ON vt.constituency_id = rc.constituency_id AND vt.year = $1
+         JOIN mv_constituency_elections mce ON mce.constituency_id = rc.constituency_id AND mce.year = $1
          WHERE rc.rank > 1
        )
        SELECT
@@ -687,14 +683,14 @@ app.get('/api/closest-winners', async (req, res) => {
          rparty.short_name AS runner_up_party,
          r.first_votes AS runner_up_votes,
          (w.first_votes - r.first_votes) AS margin_votes,
-         ((w.first_votes - r.first_votes) * 100.0 / NULLIF(vt.valid_first, 0))::double precision AS margin_percent
+         ((w.first_votes - r.first_votes) * 100.0 / NULLIF(mce.valid_first, 0))::double precision AS margin_percent
        FROM Winners w
        JOIN RunnersUp r ON r.constituency_id = w.constituency_id
        JOIN persons wp ON wp.id = w.person_id
        JOIN persons rp ON rp.id = r.person_id
        JOIN parties wparty ON wparty.id = w.party_id
        JOIN parties rparty ON rparty.id = r.party_id
-       JOIN mv_constituency_vote_totals vt ON vt.constituency_id = w.constituency_id AND vt.year = $1
+       JOIN mv_constituency_elections mce ON mce.constituency_id = w.constituency_id AND mce.year = $1
        ORDER BY margin_votes ASC
        LIMIT $2`,
       [year, limit]
@@ -1077,10 +1073,10 @@ app.get('/api/election-results', async (req, res) => {
         return result.rows;
       } else {
         // For first/second votes - only state and party filters apply
-        const viewName = type === 'first' ? 'mv_constituency_first_votes' : 'mv_constituency_second_votes';
-        const voteColumn = type === 'first' ? 'first_votes' : 'second_votes';
-
-        const conditions: string[] = ['pv.year = $1'];
+        const voteType = type === 'first' ? 1 : 2;
+        const conditions: string[] = ['pv.year = $1', `pv.vote_type = $2`];
+        params.push(voteType);
+        paramIdx++;
         if (stateIds.length > 0) {
           const placeholders = stateIds.map(() => `$${paramIdx++}`).join(', ');
           conditions.push(`c.state_id IN (${placeholders})`);
@@ -1103,8 +1099,8 @@ app.get('/api/election-results', async (req, res) => {
               WHEN p.short_name IN ('CDU', 'CSU') THEN 'CDU/CSU' 
               ELSE p.long_name 
             END as long_name,
-            SUM(pv.${voteColumn}) as votes
-          FROM ${viewName} pv
+            SUM(pv.votes) as votes
+          FROM mv_constituency_party_votes pv
           JOIN constituencies c ON c.id = pv.constituency_id
           JOIN parties p ON p.id = pv.party_id
           WHERE ${conditions.join(' AND ')}
@@ -1167,7 +1163,7 @@ app.get('/api/election-results', async (req, res) => {
   }
 });
 
-// Bulk Constituency Vote Distribution - returns top 5 parties per constituency for map coloring/tooltips
+// Bulk Constituency Vote Distribution - returns all parties per constituency for map coloring/tooltips + accurate legend totals
 app.get('/api/constituency-votes-bulk', async (req, res) => {
   const year = req.query.year ? Number(req.query.year) : 2025;
 
@@ -1176,25 +1172,17 @@ app.get('/api/constituency-votes-bulk', async (req, res) => {
     const result = await pool.query(
       `WITH totals AS (
          SELECT constituency_id, valid_first, valid_second
-         FROM mv_constituency_vote_totals
-         WHERE year = $1
-       ),
-       votes AS (
-         SELECT constituency_id, party_id, first_votes, 0::bigint AS second_votes
-         FROM mv_constituency_first_votes
-         WHERE year = $1
-         UNION ALL
-         SELECT constituency_id, party_id, 0::bigint AS first_votes, second_votes
-         FROM mv_constituency_second_votes
+         FROM mv_constituency_elections
          WHERE year = $1
        ),
        combined_votes AS (
          SELECT
            constituency_id,
            party_id,
-           SUM(first_votes) AS first_votes,
-           SUM(second_votes) AS second_votes
-         FROM votes
+           COALESCE(SUM(CASE WHEN vote_type = 1 THEN votes ELSE 0 END), 0) AS first_votes,
+           COALESCE(SUM(CASE WHEN vote_type = 2 THEN votes ELSE 0 END), 0) AS second_votes
+         FROM mv_constituency_party_votes
+         WHERE year = $1
          GROUP BY constituency_id, party_id
        ),
        Combined AS (
@@ -1243,7 +1231,6 @@ app.get('/api/constituency-votes-bulk', async (req, res) => {
          rs.rank_second
        FROM RankedFirst rf
        JOIN RankedSecond rs ON rf.constituency_number = rs.constituency_number AND rf.party_name = rs.party_name
-       WHERE rf.rank_first <= 5 OR rs.rank_second <= 5
        ORDER BY rf.constituency_number, rf.first_votes DESC`,
       [year]
     );
@@ -1321,38 +1308,48 @@ app.get('/api/party-constituency-strength', async (req, res) => {
          FROM elections
          WHERE year < $1
        ),
-       current_votes AS (
-         SELECT constituency_id, party_id, 1 AS vote_type, first_votes AS votes
-         FROM mv_constituency_first_votes
-         WHERE year = $1
-         UNION ALL
-         SELECT constituency_id, party_id, 2 AS vote_type, second_votes AS votes
-         FROM mv_constituency_second_votes
-         WHERE year = $1
+       current_constituencies AS (
+         SELECT ce.constituency_id, c.number, c.name, c.state_id
+         FROM constituency_elections ce
+         JOIN constituencies c ON c.id = ce.constituency_id
+         WHERE ce.year = $1
        ),
-       prev_votes AS (
-         SELECT constituency_id, party_id, 1 AS vote_type, first_votes AS votes
-         FROM mv_constituency_first_votes
-         WHERE year = (SELECT year FROM prev_year)
-         UNION ALL
-         SELECT constituency_id, party_id, 2 AS vote_type, second_votes AS votes
-         FROM mv_constituency_second_votes
-         WHERE year = (SELECT year FROM prev_year)
+       prev_constituencies AS (
+         SELECT ce.constituency_id, c.number, c.name, c.state_id
+         FROM constituency_elections ce
+         JOIN constituencies c ON c.id = ce.constituency_id
+         WHERE ce.year = (SELECT year FROM prev_year)
+       ),
+       constituency_match AS (
+         SELECT
+           curr.constituency_id AS current_id,
+           COALESCE(prev_num.constituency_id, prev_name.constituency_id) AS prev_id
+         FROM current_constituencies curr
+         LEFT JOIN prev_constituencies prev_num
+           ON prev_num.number = curr.number
+          AND prev_num.state_id = curr.state_id
+         LEFT JOIN prev_constituencies prev_name
+           ON prev_name.name = curr.name
+          AND prev_name.state_id = curr.state_id
+       ),
+       current_votes AS (
+         SELECT constituency_id, party_id, vote_type, votes
+         FROM mv_constituency_party_votes
+         WHERE year = $1
        ),
        current_totals AS (
-         SELECT constituency_id, valid_first, valid_second
-         FROM mv_constituency_vote_totals
+         SELECT constituency_id, valid_first, valid_second, invalid_first
+         FROM mv_constituency_elections
          WHERE year = $1
        ),
        prev_totals AS (
-         SELECT constituency_id, valid_first, valid_second
-         FROM mv_constituency_vote_totals
-         WHERE year = (SELECT year FROM prev_year)
-       ),
-       invalids AS (
-         SELECT constituency_id, invalid_first
-         FROM mv_constituency_invalid_votes
-         WHERE year = $1
+         SELECT
+           cm.current_id AS constituency_id,
+           pt.valid_first,
+           pt.valid_second
+         FROM mv_constituency_elections pt
+         JOIN constituency_match cm ON cm.prev_id = pt.constituency_id
+         WHERE pt.year = (SELECT year FROM prev_year)
        ),
        selected_current AS (
          SELECT cv.constituency_id, cv.vote_type, SUM(cv.votes) AS votes
@@ -1361,10 +1358,15 @@ app.get('/api/party-constituency-strength', async (req, res) => {
          GROUP BY cv.constituency_id, cv.vote_type
        ),
        selected_prev AS (
-         SELECT pv.constituency_id, pv.vote_type, SUM(pv.votes) AS votes
-         FROM prev_votes pv
+         SELECT
+           cm.current_id AS constituency_id,
+           pv.vote_type,
+           SUM(pv.votes) AS votes
+         FROM mv_constituency_party_votes pv
+         JOIN constituency_match cm ON cm.prev_id = pv.constituency_id
          JOIN party_filter pf ON pf.id = pv.party_id
-         GROUP BY pv.constituency_id, pv.vote_type
+         WHERE pv.year = (SELECT year FROM prev_year)
+         GROUP BY cm.current_id, pv.vote_type
        )
        SELECT
          c.number AS constituency_number,
@@ -1388,7 +1390,7 @@ app.get('/api/party-constituency-strength', async (req, res) => {
          END AS diff_percent_pts,
          ct.valid_first,
          ct.valid_second,
-         (COALESCE(ct.valid_first, 0) + COALESCE(iv.invalid_first, 0)) AS total_voters
+         (COALESCE(ct.valid_first, 0) + COALESCE(ct.invalid_first, 0)) AS total_voters
        FROM selected_current sc
        JOIN constituencies c ON c.id = sc.constituency_id
        JOIN states s ON s.id = c.state_id
@@ -1397,7 +1399,6 @@ app.get('/api/party-constituency-strength', async (req, res) => {
          ON sp.constituency_id = sc.constituency_id
         AND sp.vote_type = sc.vote_type
        LEFT JOIN prev_totals pt ON pt.constituency_id = sc.constituency_id
-       LEFT JOIN invalids iv ON iv.constituency_id = sc.constituency_id
        WHERE sc.vote_type = $2
        ORDER BY c.number`,
       [year, voteType, parties.map((p) => p.toUpperCase())]
@@ -1475,18 +1476,10 @@ app.get('/api/parties', async (req, res) => {
   const year = req.query.year ? Number(req.query.year) : 2025;
   try {
     const result = await pool.query(
-      `WITH party_ids AS (
-         SELECT party_id
-         FROM mv_constituency_second_votes
-         WHERE year = $1
-         UNION
-         SELECT party_id
-         FROM mv_constituency_first_votes
-         WHERE year = $1
-       )
-       SELECT DISTINCT p.short_name, p.long_name
-       FROM party_ids pi
-       JOIN parties p ON p.id = pi.party_id
+      `SELECT DISTINCT p.short_name, p.long_name
+       FROM mv_constituency_party_votes cpv
+       JOIN parties p ON p.id = cpv.party_id
+       WHERE cpv.year = $1
        ORDER BY p.short_name`,
       [year]
     );

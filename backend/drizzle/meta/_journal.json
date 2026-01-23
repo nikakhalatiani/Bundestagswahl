@@ -99,6 +99,13 @@
       "when": 1769161336333,
       "tag": "0013_real_masked_marvel",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1769173904582,
+      "tag": "0014_solid_solo",
+      "breakpoints": true
     }
   ]
 }

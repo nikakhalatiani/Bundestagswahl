@@ -159,23 +159,16 @@ async function main() {
   // 1️⃣1️⃣ Constituency Party Votes
   console.log("\n→ Constituency Party Votes:");
   const constVotes = await pool.query<ConstituencyPartyVotesRow>(`
-    WITH votes AS (
-      SELECT constituency_id, year, party_id, 1 AS vote_type, first_votes AS votes
-      FROM mv_constituency_first_votes
-      UNION ALL
-      SELECT constituency_id, year, party_id, 2 AS vote_type, second_votes AS votes
-      FROM mv_constituency_second_votes
-    )
     SELECT 
       e.year, s.abbr AS state, pa.short_name AS party,
-      v.vote_type, SUM(v.votes) AS votes
-    FROM votes v
-      JOIN constituencies co ON v.constituency_id = co.id
+      cpv.vote_type, SUM(cpv.votes) AS votes
+    FROM mv_constituency_party_votes cpv
+      JOIN constituencies co ON cpv.constituency_id = co.id
       JOIN states s ON co.state_id = s.id
-      JOIN parties pa ON v.party_id = pa.id
-      JOIN elections e ON v.year = e.year
-    GROUP BY e.year, s.abbr, pa.short_name, v.vote_type
-    ORDER BY e.year, s.abbr, pa.short_name, v.vote_type
+      JOIN parties pa ON cpv.party_id = pa.id
+      JOIN elections e ON cpv.year = e.year
+    GROUP BY e.year, s.abbr, pa.short_name, cpv.vote_type
+    ORDER BY e.year, s.abbr, pa.short_name, cpv.vote_type
     LIMIT 10
   `);
   if (constVotes.rowCount === 0) console.log("  (No rows)");

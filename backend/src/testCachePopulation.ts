@@ -15,11 +15,9 @@ async function test() {
 
     const queries = [
       { name: 'mv_direct_candidacy_votes', query: 'SELECT COUNT(*) FROM mv_direct_candidacy_votes WHERE year = 2025' },
+      { name: 'mv_constituency_party_votes', query: 'SELECT COUNT(*) FROM mv_constituency_party_votes WHERE year = 2025' },
+      { name: 'mv_constituency_elections', query: 'SELECT COUNT(*) FROM mv_constituency_elections WHERE year = 2025' },
       { name: 'mv_party_list_votes', query: 'SELECT COUNT(*) FROM mv_party_list_votes WHERE year = 2025' },
-      { name: 'mv_constituency_first_votes', query: 'SELECT COUNT(*) FROM mv_constituency_first_votes WHERE year = 2025' },
-      { name: 'mv_constituency_second_votes', query: 'SELECT COUNT(*) FROM mv_constituency_second_votes WHERE year = 2025' },
-      { name: 'mv_constituency_invalid_votes', query: 'SELECT COUNT(*) FROM mv_constituency_invalid_votes WHERE year = 2025' },
-      { name: 'mv_constituency_vote_totals', query: 'SELECT COUNT(*) FROM mv_constituency_vote_totals WHERE year = 2025' },
       { name: 'seat_allocation_cache', query: 'SELECT COUNT(*) FROM seat_allocation_cache WHERE year = 2025' },
     ];
 

@@ -143,7 +143,7 @@ The schema supports multi-year election data with proper foreign key relationshi
 - **Constituency Elections**: Election statistics per constituency
 - **First Votes**: Generated individual first vote ballots
 - **Second Votes**: Generated individual second vote ballots
-- **Materialized Views**: Base vote counters (`mv_direct_candidacy_votes`, `mv_party_list_votes`, `mv_constituency_first_votes`, `mv_constituency_second_votes`, `mv_constituency_invalid_votes`, `mv_constituency_vote_totals`) and the seat cache (`seat_allocation_cache`)
+- **Materialized Views**: Base vote counters (`mv_direct_candidacy_votes`, `mv_constituency_party_votes`, `mv_constituency_elections`, `mv_party_list_votes`) and the seat cache (`seat_allocation_cache`)
 
 ## Running Seat Allocation Algorithm
 
