@@ -12,7 +12,6 @@ export function Stimmzettel() {
     const [submitting, setSubmitting] = useState(false)
     const [submitResult, setSubmitResult] = useState<string | null>(null)
     const [authorized, setAuthorized] = useState(false)
-    const [submitted, setSubmitted] = useState(false)
 
     // 16 single-char code inputs (displayed as 4x4 with dashes)
     const [codeParts, setCodeParts] = useState<string[]>(Array.from({ length: 16 }, () => ''))
@@ -102,14 +101,18 @@ export function Stimmzettel() {
                 constituencyId: 1,
                 year: 2025,
                 first: selectedFirst === 'invalid' || selectedFirst === null ? { type: 'invalid' } : { type: 'candidate', person_id: selectedFirst },
-                second: selectedSecond === 'invalid' || selectedSecond === null ? { type: 'invalid' } : { type: 'party', party_id: selectedSecond }
+                second: selectedSecond === 'invalid' || selectedSecond === null ? { type: 'invalid' } : { type: 'party', party_id: selectedSecond },
+                voteCode: fullCode()
             }
             const res = await fetch('/api/ballot', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
             const json = await res.json()
             if (res.ok) {
                 alert('Ballot submitted! Thank you for voting.');
-                setSubmitted(true)
                 setAuthorized(false)
+                setCodeParts(Array.from({ length: 16 }, () => ''))
+                setSelectedFirst(null)
+                setSelectedSecond(null)
+                if (inputRefs.current[0]) inputRefs.current[0].focus()
             } else {
                 alert('Submission failed, try again.');
                 console.error('Submission error', json);
@@ -119,16 +122,11 @@ export function Stimmzettel() {
             setSubmitResult(String(err))
         } finally {
             setSubmitting(false)
-            // Clear code inputs
-            setCodeParts(Array.from({ length: 16 }, () => ''))
-            // Clear votes
-            setSelectedFirst(null)
-            setSelectedSecond(null)
         }
     }
 
     // If not authorized (pre-vote), show code entry screen
-    if (!authorized && !submitted) {
+    if (!authorized) {
         return (
             <div style={{ padding: 20 }}>
                 <h1 className="text-2xl font-bold mb-4">Wahlcode eingeben</h1>
@@ -155,40 +153,6 @@ export function Stimmzettel() {
                         onClick={() => setAuthorized(true)}
                     >
                         Weiter zur Wahl
-                    </button>
-                </div>
-            </div>
-        )
-    }
-
-    // After submission: require code again (post-vote screen)
-    if (submitted && !authorized) {
-        return (
-            <div style={{ padding: 20 }}>
-                <h1 className="text-2xl font-bold mb-4">Wahlcode eingeben</h1>
-                <p className="mb-4">Ihre Stimme wurde abgegeben. Geben Sie den Wahlcode erneut ein, um die Bestätigung zu sehen.</p>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    {codeParts.map((part, idx) => (
-                        <React.Fragment key={idx}>
-                            <input
-                                ref={(el) => (inputRefs.current[idx] = el!)}
-                                value={part}
-                                onChange={(e) => handleCodeChange(idx, e.target.value)}
-                                onKeyDown={(e) => handleKeyDown(idx, e)}
-                                onPaste={(e) => handlePaste(idx, e)}
-                                style={{ width: 30, padding: 8, fontSize: 18, textTransform: 'uppercase', letterSpacing: 2, textAlign: 'center', border: '1px solid #ccc' }}
-                            />
-                            {(idx % 4 === 3) && idx !== 15 ? <span style={{ padding: '0 6px' }}>-</span> : null}
-                        </React.Fragment>
-                    ))}
-                </div>
-                <div style={{ marginTop: 12 }}>
-                    <button
-                        className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
-                        disabled={!validateFullCode()}
-                        onClick={() => setAuthorized(true)}
-                    >
-                        Bestätigung anzeigen
                     </button>
                 </div>
             </div>
