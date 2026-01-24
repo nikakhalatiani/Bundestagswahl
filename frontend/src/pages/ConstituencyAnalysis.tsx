@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { TrendingUp, TrendingDown, Award, AlertTriangle, ChevronLeft, ChevronRight, X, UserPlus, Check, Target } from 'lucide-react';
+import { TrendingUp, TrendingDown, Award, AlertTriangle, ChevronLeft, ChevronRight, ChevronDown, X, UserPlus, Check, Target } from 'lucide-react';
 import { Autocomplete } from '../components/Autocomplete';
 import { ConstituencyMap } from '../components/ConstituencyMap';
 import {
@@ -68,6 +68,7 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
   const [strongholdView, setStrongholdView] = useState<'strength' | 'change'>('strength');
   const [strongholdParty, setStrongholdParty] = useState<string | null>(null);
   const [opacityMetricKey, setOpacityMetricKey] = useState('vote_share');
+  const [expandedNearMiss, setExpandedNearMiss] = useState<Set<string>>(new Set());
 
   // State filter
   const [selectedStates, setSelectedStates] = useState<Set<string>>(new Set());
@@ -783,52 +784,80 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
               Near Misses — Parties Without Constituency Wins
             </CardTitle>
             <CardSubtitle>
-              Closest losses for parties that did not win any direct mandates
+              Closest losses for parties that did not win any direct mandates • Click to expand
             </CardSubtitle>
           </CardHeader>
-          <div className="columns-1 gap-4 sm:columns-2 lg:columns-3">
-            {Object.entries(nearMisses.data).map(([partyName, items]) => (
-              <div key={partyName} className="mb-4 break-inside-avoid rounded-[14px] border border-line bg-surface p-4 shadow-sm">
-                <div className="mb-3 flex items-center justify-between">
-                  <PartyBadge party={partyName} combineCduCsu className="truncate">
-                    {truncatePartyName(getPartyDisplayName(partyName, partyOpts))}
-                  </PartyBadge>
-                  <span className="text-[0.8rem] text-ink-faint">{items.length} closest</span>
+          <div className="overflow-hidden rounded-[14px] border border-line bg-surface shadow-sm">
+            {Object.entries(nearMisses.data).map(([partyName, items], partyIdx) => {
+              const isExpanded = expandedNearMiss.has(partyName);
+              const bestItem = items[0];
+              return (
+                <div key={partyName} className={cn(partyIdx > 0 && 'border-t border-line')}>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-surface-muted"
+                    onClick={() => {
+                      setExpandedNearMiss(prev => {
+                        const next = new Set(prev);
+                        if (next.has(partyName)) next.delete(partyName);
+                        else next.add(partyName);
+                        return next;
+                      });
+                    }}
+                  >
+                    <ChevronDown
+                      size={16}
+                      className={cn('shrink-0 text-ink-faint transition-transform', isExpanded && 'rotate-180')}
+                    />
+                    <PartyBadge party={partyName} combineCduCsu size="sm">
+                      {truncatePartyName(getPartyDisplayName(partyName, partyOpts), 16)}
+                    </PartyBadge>
+                    <span className="ml-auto flex items-center gap-4 text-[0.8rem] text-ink-muted">
+                      <span className="hidden sm:inline">
+                        Best: <span className="text-ink-faint">{bestItem.constituency_number}</span> {bestItem.constituency_name.length > 20 ? bestItem.constituency_name.slice(0, 20) + '...' : bestItem.constituency_name}
+                        <span className="ml-2 font-semibold text-ink">−{bestItem.margin_votes?.toLocaleString()}</span>
+                      </span>
+                      <span className="whitespace-nowrap rounded bg-surface-accent px-2 py-0.5 text-[0.75rem] font-medium">
+                        {items.length} {items.length === 1 ? 'race' : 'races'}
+                      </span>
+                    </span>
+                  </button>
+                  {isExpanded && (
+                    <div className="border-t border-line bg-surface-muted/30">
+                      <div className="overflow-x-auto">
+                        <Table variant="compact">
+                          <TableHead>
+                            <TableRow>
+                              <TableHeaderCell>Constituency</TableHeaderCell>
+                              <TableHeaderCell>Candidate</TableHeaderCell>
+                              <TableHeaderCell className="text-right">Margin</TableHeaderCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {items.map((item: NearMissItem, idx: number) => (
+                              <TableRow
+                                key={idx}
+                                className="cursor-pointer transition-colors hover:bg-surface-muted"
+                                onClick={() => handleMapSelect(item.constituency_number)}
+                              >
+                                <TableCell>
+                                  <span className="text-ink-faint">{item.constituency_number}</span> {item.constituency_name}
+                                </TableCell>
+                                <TableCell>{item.candidate_name}</TableCell>
+                                <TableCell className="text-right">
+                                  <strong>{item.margin_votes?.toLocaleString()}</strong>
+                                  <span className="ml-1 text-ink-faint">({item.margin_percent?.toFixed(2)}%)</span>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="overflow-hidden rounded-lg border border-line bg-surface">
-                  <div className="overflow-x-auto">
-                    <Table variant="compact">
-                      <TableHead>
-                        <TableRow>
-                          <TableHeaderCell>Constituency</TableHeaderCell>
-                          <TableHeaderCell>Candidate</TableHeaderCell>
-                          <TableHeaderCell className="text-right">Margin</TableHeaderCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {items.map((item: NearMissItem, idx: number) => (
-                          <TableRow
-                            key={idx}
-                            className="cursor-pointer transition-colors hover:bg-surface-muted"
-                            onClick={() => handleMapSelect(item.constituency_number)}
-                          >
-                            <TableCell>
-                              <span className="text-ink-faint">{item.constituency_number}</span> {item.constituency_name}
-                            </TableCell>
-                            <TableCell>{item.candidate_name}</TableCell>
-                            <TableCell className="text-right">
-                              <strong>{item.margin_votes?.toLocaleString()}</strong>
-                              <br />
-                              <span className="text-ink-faint">({item.margin_percent?.toFixed(2)}%)</span>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </Card>
       )}
