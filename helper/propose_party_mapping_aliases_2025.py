@@ -24,7 +24,7 @@ def norm(s: str) -> str:
         return ""
     s = str(s).strip()
     s = unicodedata.normalize("NFKC", s)
-    s = s.replace("–", "-").replace("—", "-")
+    s = s.replace("–", "-").replace("-", "-")
     s = re.sub(r"\s+", " ", s)
     return s.casefold()
 

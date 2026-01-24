@@ -152,7 +152,7 @@ async function main() {
   if (constElect.rowCount === 0) console.log("  (No rows)");
   constElect.rows.forEach((r) =>
     console.log(
-      `  ${r.year} – ${r.constituency}: eligible voters ${r.eligible_voters ?? '—'}`
+      `  ${r.year} – ${r.constituency}: eligible voters ${r.eligible_voters ?? '-'}`
     )
   );
 

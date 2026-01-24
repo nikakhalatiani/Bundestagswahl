@@ -18,7 +18,7 @@ out_constituencies = OUTPUT_DIR / "constituencies.csv"
 out_elections = OUTPUT_DIR / "elections.csv"
 out_bridge = OUTPUT_DIR / "constituency_elections.csv"
 
-# NEW — year-specific outputs
+# NEW - year-specific outputs
 out_const_2021 = OUTPUT_DIR / "constituencies_2021.csv"
 out_const_2025 = OUTPUT_DIR / "constituencies_2025.csv"
 # ----------------------------------------------------------------------
@@ -29,7 +29,7 @@ def normalize_name(name: str) -> str:
         return ""
     n = name.strip()
     n = unicodedata.normalize("NFKC", n)
-    n = re.sub(r"[–—]", "-", n)
+    n = re.sub(r"[–-]", "-", n)
     n = re.sub(r"\s*-\s*", " - ", n)
     n = re.sub(r"[\s\u00A0]+", " ", n).strip()
     return n.lower()

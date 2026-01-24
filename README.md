@@ -17,9 +17,9 @@ Goals:
 - Simple frontend (Vite + React + TypeScript) that talks to the backend API.
 
 Structure
-- `frontend/` — Vite + React + TypeScript app
-- `backend/` — Express + TypeScript backend with Drizzle ORM
-- `docker-compose.yml` — starts Postgres and the backend for local development
+- `frontend/` - Vite + React + TypeScript app
+- `backend/` - Express + TypeScript backend with Drizzle ORM
+- `docker-compose.yml` - starts Postgres and the backend for local development
 
 Quick start (Windows PowerShell)
 1. Install Node.js (LTS) and Docker Desktop.

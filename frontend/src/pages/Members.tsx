@@ -611,9 +611,9 @@ export function Members({ year }: MembersProps) {
                                 {isDirect ? 'Direct' : 'List'}
                               </span>
                             </TableCell>
-                            <TableCell>{member.constituency_name || '—'}</TableCell>
+                            <TableCell>{member.constituency_name || '-'}</TableCell>
                             <TableCell className="text-center">
-                              {member.birth_year ? year - member.birth_year : '—'}
+                              {member.birth_year ? year - member.birth_year : '-'}
                             </TableCell>
                           </TableRow>
                           {isSelected && (
@@ -666,7 +666,7 @@ export function Members({ year }: MembersProps) {
                                       </div>
                                       <div>
                                         <div className="text-xs uppercase tracking-[0.5px] text-ink-muted">Constituency / State</div>
-                                        <div className="font-medium text-ink">{member.constituency_name || '—'}</div>
+                                        <div className="font-medium text-ink">{member.constituency_name || '-'}</div>
                                         <div className="text-[0.8rem] text-ink-faint">{member.state_name}</div>
                                       </div>
                                     </div>
@@ -691,7 +691,7 @@ export function Members({ year }: MembersProps) {
                                         <div>
                                           <div className="text-xs uppercase tracking-[0.5px] text-ink-muted">Personal Details</div>
                                           <div className="font-medium text-ink">
-                                            {member.gender ? `${member.gender.toLowerCase() === 'm' ? 'Male' : member.gender.toLowerCase() === 'w' ? 'Female' : member.gender}` : '—'}
+                                            {member.gender ? `${member.gender.toLowerCase() === 'm' ? 'Male' : member.gender.toLowerCase() === 'w' ? 'Female' : member.gender}` : '-'}
                                             {member.birth_year ? ` · Born ${member.birth_year} (${year - member.birth_year})` : ''}
                                           </div>
                                         </div>

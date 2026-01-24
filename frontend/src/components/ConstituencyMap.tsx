@@ -465,7 +465,7 @@ export function ConstituencyMap({
 
     const hoveredWinner = hoveredNumber ? winnerMap.get(hoveredNumber) : null;
     const formatMetricValue = (value: number | null | undefined, unit?: string | null) => {
-        if (value === null || value === undefined) return '—';
+        if (value === null || value === undefined) return '-';
         const isPercent = unit?.includes('%');
         const formatted = value.toLocaleString(undefined, { maximumFractionDigits: isPercent ? 1 : 2 });
         return unit ? `${formatted} ${unit}` : formatted;
@@ -863,7 +863,7 @@ export function ConstituencyMap({
                             <div className="flex flex-col items-center gap-2 text-[0.8rem] text-ink-muted">
                                 <div className="grid w-full max-w-[320px] grid-cols-[56px_160px_56px] items-center gap-3">
                                     <span className="text-left">
-                                    {maxStrongholdAbsDiff ? `-${maxStrongholdAbsDiff.toFixed(1)} pt.` : '-0.0 pt.'}
+                                        {maxStrongholdAbsDiff ? `-${maxStrongholdAbsDiff.toFixed(1)} pt.` : '-0.0 pt.'}
                                     </span>
                                     <div className="flex h-[42px] w-[160px] items-center justify-center">
                                         <svg className="h-[75px] w-[160px]" viewBox="0 0 170 100" aria-hidden="true">
@@ -882,7 +882,7 @@ export function ConstituencyMap({
                                         </svg>
                                     </div>
                                     <span className="text-right">
-                                    {maxStrongholdAbsDiff ? `+${maxStrongholdAbsDiff.toFixed(1)} pt.` : '+0.0 pt.'}
+                                        {maxStrongholdAbsDiff ? `+${maxStrongholdAbsDiff.toFixed(1)} pt.` : '+0.0 pt.'}
                                     </span>
                                 </div>
                             </div>
