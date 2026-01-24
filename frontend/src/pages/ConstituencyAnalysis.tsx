@@ -99,7 +99,7 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
 
   const constituencyItems: ConstituencyListItem[] = constituencyList?.data ?? [];
   const winnersData = winners?.data ?? [];
-  const getConstituencyLabel = (c: ConstituencyListItem) => `${c.number} — ${c.name} (${c.state_name})`;
+  const getConstituencyLabel = (c: ConstituencyListItem) => `${c.number} - ${c.name} (${c.state_name})`;
 
   // Extract unique states from constituency list
   const uniqueStates = useMemo(() => {
@@ -344,7 +344,7 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                     return (
                       <>
                         <div className="flex flex-col items-center justify-center gap-1 rounded border border-line bg-surface px-2 py-3 text-center">
-                          <span className="text-base font-bold text-ink">{Number.isFinite(turnout) ? turnout.toFixed(1) : '—'}%</span>
+                          <span className="text-base font-bold text-ink">{Number.isFinite(turnout) ? turnout.toFixed(1) : '-'}%</span>
                           <span className="text-[0.65rem] uppercase tracking-[0.03em] text-ink-faint">Turnout</span>
                           {overview.comparison_to_2021 && (
                             <span
@@ -355,7 +355,7 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                                   : 'bg-[#c628281a] text-[#c62828]'
                               )}
                             >
-                              {turnoutDiff != null && Number.isFinite(turnoutDiff) ? `${turnoutDiff > 0 ? '+' : ''}${turnoutDiff.toFixed(1)}pp` : '—'}
+                              {turnoutDiff != null && Number.isFinite(turnoutDiff) ? `${turnoutDiff > 0 ? '+' : ''}${turnoutDiff.toFixed(1)}pp` : '-'}
                             </span>
                           )}
                         </div>
@@ -364,11 +364,11 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                           <span className="text-[0.65rem] uppercase tracking-[0.03em] text-ink-faint">Voters</span>
                         </div>
                         <div className="flex flex-col items-center justify-center gap-1 rounded border border-line bg-surface px-2 py-3 text-center">
-                          <span className="text-base font-bold text-ink">{overview.election_stats.valid_first?.toLocaleString() ?? '—'}</span>
+                          <span className="text-base font-bold text-ink">{overview.election_stats.valid_first?.toLocaleString() ?? '-'}</span>
                           <span className="text-[0.65rem] uppercase tracking-[0.03em] text-ink-faint">Valid 1st</span>
                         </div>
                         <div className="flex flex-col items-center justify-center gap-1 rounded border border-line bg-surface px-2 py-3 text-center">
-                          <span className="text-base font-bold text-ink">{overview.election_stats.valid_second?.toLocaleString() ?? '—'}</span>
+                          <span className="text-base font-bold text-ink">{overview.election_stats.valid_second?.toLocaleString() ?? '-'}</span>
                           <span className="text-[0.65rem] uppercase tracking-[0.03em] text-ink-faint">Valid 2nd</span>
                         </div>
                       </>
@@ -394,7 +394,7 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                         <span className="text-[0.85rem] text-ink-muted">
                           <strong>{overview.winner.first_votes?.toLocaleString()}</strong> votes ({(() => {
                             const percent = Number(overview.winner.percent_of_valid);
-                            return Number.isFinite(percent) ? percent.toFixed(1) : '—';
+                            return Number.isFinite(percent) ? percent.toFixed(1) : '-';
                           })()}%)
                         </span>
                         <span
@@ -665,11 +665,11 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                                         ) : party.second_diff_pts < 0 ? (
                                           <><TrendingDown size={12} /> {party.second_diff_pts.toFixed(1)}pp</>
                                         ) : (
-                                          <span className="text-ink-faint">—</span>
+                                          <span className="text-ink-faint">-</span>
                                         )}
                                       </span>
                                     ) : (
-                                      <span className="text-ink-faint">—</span>
+                                      <span className="text-ink-faint">-</span>
                                     )}
                                   </TableCell>
                                 )}
@@ -691,7 +691,6 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
         <Card>
           <CardHeader>
             <CardTitle>
-              <Award size={20} className="mr-2 inline-block align-middle" />
               Closest Races
             </CardTitle>
             <CardSubtitle>
@@ -780,8 +779,7 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
         <Card>
           <CardHeader>
             <CardTitle>
-              <Target size={20} className="mr-2 inline-block align-middle" />
-              Near Misses — Parties Without Constituency Wins
+              Near Misses - Parties Without Constituency Wins
             </CardTitle>
             <CardSubtitle>
               Closest losses for parties that did not win any direct mandates • Click to expand
@@ -867,7 +865,6 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
         <Card>
           <CardHeader>
             <CardTitle>
-              <AlertTriangle size={20} className="mr-2 inline-block align-middle" />
               Direct Winners Without Second-Vote Coverage
             </CardTitle>
             <CardSubtitle>
