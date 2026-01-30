@@ -1,6 +1,6 @@
-1. Behörden erstellen cryptographische Wahlcodes, die nur mit dem staatlichen Private Key erstellt und verifiziert werden können. Jeder Wahlcode ist an einen Wahlkreis gebunden.
-1. Behörden senden mit jeder Wahlbenachrichtigung einen Wahlcode.
-1. Wähler gehen mit Wahlcodes in Wahllokale und geben ihre Wahlcodes in das System ein.
-1. Das System verifiziert den eingegebenen Wahlcode und zeigt den Stimmzettel für den Wahlkreis des Wahlcodes an.
-1. Der Wähler gibt seine Erst- und Zweitstimme an (oder wählt "Ungültige Stimme") und drückt "Submit Ballot".
-1. Das System speichert Erst- und Zweitstimme sowieso den Wahlcode in der Datenbank, um ihn zu invalidieren.
+1. Person identifies themselves in the voting booth
+1. Person gets crossed off in the voter list
+1. Election worker generates a new voting code for the person which is stored in the database, printed, and given to the person
+1. Person goes to voting booth and enters their voting code
+1. Person casts their vote
+1. The casted vote is stored in the database and the voting code is invalidated in the database
