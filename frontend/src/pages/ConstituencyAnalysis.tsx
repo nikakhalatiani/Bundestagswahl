@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { TrendingUp, TrendingDown, Award, AlertTriangle, ChevronLeft, ChevronRight, X, UserPlus, Check } from 'lucide-react';
+import { TrendingUp, TrendingDown, Award, AlertTriangle, ChevronLeft, ChevronRight, ChevronDown, X, UserPlus, Check, Target } from 'lucide-react';
 import { Autocomplete } from '../components/Autocomplete';
 import { ConstituencyMap } from '../components/ConstituencyMap';
 import {
@@ -12,8 +12,9 @@ import {
   useConstituencyVotesBulk,
   usePartyConstituencyStrength,
   useStructuralData,
+  useNearMisses,
 } from '../hooks/useQueries';
-import type { ClosestWinnerItem, ConstituencyListItem, VoteDistributionItem } from '../types/api';
+import type { ClosestWinnerItem, ConstituencyListItem, VoteDistributionItem, NearMissItem } from '../types/api';
 import { getPartyDisplayName, getPartyColor } from '../utils/party';
 import { cn } from '../utils/cn';
 import { Card, CardHeader, CardSubtitle, CardTitle } from '../components/ui/Card';
@@ -52,6 +53,11 @@ function toStrongholdParty(raw: string): string {
   return raw.trim();
 }
 
+function truncatePartyName(text: string, maxLength: number = 12): string {
+  if (text.length <= maxLength) return text;
+  return text.slice(0, maxLength - 3) + '...';
+}
+
 export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
   const [constituencyId, setConstituencyId] = useState(1);
   const [constituencyNumber, setConstituencyNumber] = useState<number | null>(null);
@@ -62,6 +68,7 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
   const [strongholdView, setStrongholdView] = useState<'strength' | 'change'>('strength');
   const [strongholdParty, setStrongholdParty] = useState<string | null>(null);
   const [opacityMetricKey, setOpacityMetricKey] = useState('vote_share');
+  const [expandedNearMiss, setExpandedNearMiss] = useState<Set<string>>(new Set());
 
   // State filter
   const [selectedStates, setSelectedStates] = useState<Set<string>>(new Set());
@@ -75,6 +82,7 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
   const { data: votesBulk } = useConstituencyVotesBulk(year);
   const { data: closest } = useClosestWinners(year, CLOSEST_WINNERS_LIMIT);
   const { data: lostMandates } = useDirectWithoutCoverage(year);
+  const { data: nearMisses } = useNearMisses(year, 10);
   const { data: strongholdData, isLoading: loadingStronghold, error: strongholdError } = usePartyConstituencyStrength(
     year,
     strongholdParty ?? undefined,
@@ -91,7 +99,7 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
 
   const constituencyItems: ConstituencyListItem[] = constituencyList?.data ?? [];
   const winnersData = winners?.data ?? [];
-  const getConstituencyLabel = (c: ConstituencyListItem) => `${c.number} — ${c.name} (${c.state_name})`;
+  const getConstituencyLabel = (c: ConstituencyListItem) => `${c.number} - ${c.name} (${c.state_name})`;
 
   // Extract unique states from constituency list
   const uniqueStates = useMemo(() => {
@@ -335,34 +343,34 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                       : null;
                     return (
                       <>
-                  <div className="flex flex-col items-center justify-center gap-1 rounded border border-line bg-surface px-2 py-3 text-center">
-                    <span className="text-base font-bold text-ink">{Number.isFinite(turnout) ? turnout.toFixed(1) : '—'}%</span>
-                    <span className="text-[0.65rem] uppercase tracking-[0.03em] text-ink-faint">Turnout</span>
-                    {overview.comparison_to_2021 && (
-                      <span
-                        className={cn(
-                          'rounded px-1 py-0.5 text-[0.7rem] font-semibold',
-                          (turnoutDiff ?? 0) >= 0
-                            ? 'bg-[#2e7d321a] text-[#2e7d32]'
-                            : 'bg-[#c628281a] text-[#c62828]'
-                        )}
-                      >
-                        {Number.isFinite(turnoutDiff) ? `${turnoutDiff > 0 ? '+' : ''}${turnoutDiff.toFixed(1)}pp` : '—'}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex flex-col items-center justify-center gap-1 rounded border border-line bg-surface px-2 py-3 text-center">
-                    <span className="text-base font-bold text-ink">{overview.election_stats.total_voters?.toLocaleString()}</span>
-                    <span className="text-[0.65rem] uppercase tracking-[0.03em] text-ink-faint">Voters</span>
-                  </div>
-                  <div className="flex flex-col items-center justify-center gap-1 rounded border border-line bg-surface px-2 py-3 text-center">
-                    <span className="text-base font-bold text-ink">{overview.election_stats.valid_first?.toLocaleString() ?? '—'}</span>
-                    <span className="text-[0.65rem] uppercase tracking-[0.03em] text-ink-faint">Valid 1st</span>
-                  </div>
-                  <div className="flex flex-col items-center justify-center gap-1 rounded border border-line bg-surface px-2 py-3 text-center">
-                    <span className="text-base font-bold text-ink">{overview.election_stats.valid_second?.toLocaleString() ?? '—'}</span>
-                    <span className="text-[0.65rem] uppercase tracking-[0.03em] text-ink-faint">Valid 2nd</span>
-                  </div>
+                        <div className="flex flex-col items-center justify-center gap-1 rounded border border-line bg-surface px-2 py-3 text-center">
+                          <span className="text-base font-bold text-ink">{Number.isFinite(turnout) ? turnout.toFixed(1) : '-'}%</span>
+                          <span className="text-[0.65rem] uppercase tracking-[0.03em] text-ink-faint">Turnout</span>
+                          {overview.comparison_to_2021 && (
+                            <span
+                              className={cn(
+                                'rounded px-1 py-0.5 text-[0.7rem] font-semibold',
+                                (turnoutDiff ?? 0) >= 0
+                                  ? 'bg-[#2e7d321a] text-[#2e7d32]'
+                                  : 'bg-[#c628281a] text-[#c62828]'
+                              )}
+                            >
+                              {turnoutDiff != null && Number.isFinite(turnoutDiff) ? `${turnoutDiff > 0 ? '+' : ''}${turnoutDiff.toFixed(1)}pp` : '-'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-center justify-center gap-1 rounded border border-line bg-surface px-2 py-3 text-center">
+                          <span className="text-base font-bold text-ink">{overview.election_stats.total_voters?.toLocaleString()}</span>
+                          <span className="text-[0.65rem] uppercase tracking-[0.03em] text-ink-faint">Voters</span>
+                        </div>
+                        <div className="flex flex-col items-center justify-center gap-1 rounded border border-line bg-surface px-2 py-3 text-center">
+                          <span className="text-base font-bold text-ink">{overview.election_stats.valid_first?.toLocaleString() ?? '-'}</span>
+                          <span className="text-[0.65rem] uppercase tracking-[0.03em] text-ink-faint">Valid 1st</span>
+                        </div>
+                        <div className="flex flex-col items-center justify-center gap-1 rounded border border-line bg-surface px-2 py-3 text-center">
+                          <span className="text-base font-bold text-ink">{overview.election_stats.valid_second?.toLocaleString() ?? '-'}</span>
+                          <span className="text-[0.65rem] uppercase tracking-[0.03em] text-ink-faint">Valid 2nd</span>
+                        </div>
                       </>
                     );
                   })()}
@@ -386,7 +394,7 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                         <span className="text-[0.85rem] text-ink-muted">
                           <strong>{overview.winner.first_votes?.toLocaleString()}</strong> votes ({(() => {
                             const percent = Number(overview.winner.percent_of_valid);
-                            return Number.isFinite(percent) ? percent.toFixed(1) : '—';
+                            return Number.isFinite(percent) ? percent.toFixed(1) : '-';
                           })()}%)
                         </span>
                         <span
@@ -455,31 +463,31 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
               </div>
             )}
             <div className="mt-3 border-t border-line pt-3">
-  <div className="flex items-center gap-3">
-    <span className="shrink-0 text-[0.7rem] font-semibold uppercase tracking-[0.05em] text-ink-muted">
-      Map opacity
-    </span>
+              <div className="flex items-center gap-3">
+                <span className="shrink-0 text-[0.7rem] font-semibold uppercase tracking-[0.05em] text-ink-muted">
+                  Map opacity
+                </span>
 
-    <Select
-      containerClassName="flex-1 min-w-0"
-      className="w-full text-[0.85rem]"
-      value={opacityMetricKey}
-      onChange={(e) => setOpacityMetricKey(e.target.value)}
-      disabled={opacityDisabled}
-    >
-      {opacityOptions.map(option => (
-        <option key={option.key} value={option.key}>
-          {option.label}
-        </option>
-      ))}
-    </Select>
-  </div>
-  {opacityDisabled && opacityStatus && (
-    <span className="mt-1 block text-[0.75rem] text-ink-faint">
-      {opacityStatus}
-    </span>
-  )}
-</div>
+                <Select
+                  containerClassName="flex-1 min-w-0"
+                  className="w-full text-[0.85rem]"
+                  value={opacityMetricKey}
+                  onChange={(e) => setOpacityMetricKey(e.target.value)}
+                  disabled={opacityDisabled}
+                >
+                  {opacityOptions.map(option => (
+                    <option key={option.key} value={option.key}>
+                      {option.label}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              {opacityDisabled && opacityStatus && (
+                <span className="mt-1 block text-[0.75rem] text-ink-faint">
+                  {opacityStatus}
+                </span>
+              )}
+            </div>
           </Card>
 
           {/* Vote Distribution with Toggle */}
@@ -657,11 +665,11 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                                         ) : party.second_diff_pts < 0 ? (
                                           <><TrendingDown size={12} /> {party.second_diff_pts.toFixed(1)}pp</>
                                         ) : (
-                                          <span className="text-ink-faint">—</span>
+                                          <span className="text-ink-faint">-</span>
                                         )}
                                       </span>
                                     ) : (
-                                      <span className="text-ink-faint">—</span>
+                                      <span className="text-ink-faint">-</span>
                                     )}
                                   </TableCell>
                                 )}
@@ -683,7 +691,6 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
         <Card>
           <CardHeader>
             <CardTitle>
-              <Award size={20} className="mr-2 inline-block align-middle" />
               Closest Races
             </CardTitle>
             <CardSubtitle>
@@ -767,12 +774,97 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
         </Card>
       )}
 
+      {/* Near Misses - Parties Without Constituency Wins (Q6 Extension) */}
+      {nearMisses && Object.keys(nearMisses.data || {}).length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              Near Misses - Parties Without Constituency Wins
+            </CardTitle>
+            <CardSubtitle>
+              Closest losses for parties that did not win any direct mandates • Click to expand
+            </CardSubtitle>
+          </CardHeader>
+          <div className="overflow-hidden rounded-[14px] border border-line bg-surface shadow-sm">
+            {Object.entries(nearMisses.data).map(([partyName, items], partyIdx) => {
+              const isExpanded = expandedNearMiss.has(partyName);
+              const bestItem = items[0];
+              return (
+                <div key={partyName} className={cn(partyIdx > 0 && 'border-t border-line')}>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-surface-muted"
+                    onClick={() => {
+                      setExpandedNearMiss(prev => {
+                        const next = new Set(prev);
+                        if (next.has(partyName)) next.delete(partyName);
+                        else next.add(partyName);
+                        return next;
+                      });
+                    }}
+                  >
+                    <ChevronDown
+                      size={16}
+                      className={cn('shrink-0 text-ink-faint transition-transform', isExpanded && 'rotate-180')}
+                    />
+                    <PartyBadge party={partyName} combineCduCsu size="sm">
+                      {truncatePartyName(getPartyDisplayName(partyName, partyOpts), 16)}
+                    </PartyBadge>
+                    <span className="ml-auto flex items-center gap-4 text-[0.8rem] text-ink-muted">
+                      <span className="hidden sm:inline">
+                        Best: <span className="text-ink-faint">{bestItem.constituency_number}</span> {bestItem.constituency_name.length > 20 ? bestItem.constituency_name.slice(0, 20) + '...' : bestItem.constituency_name}
+                        <span className="ml-2 font-semibold text-ink">−{bestItem.margin_votes?.toLocaleString()}</span>
+                      </span>
+                      <span className="whitespace-nowrap rounded bg-surface-accent px-2 py-0.5 text-[0.75rem] font-medium">
+                        {items.length} {items.length === 1 ? 'race' : 'races'}
+                      </span>
+                    </span>
+                  </button>
+                  {isExpanded && (
+                    <div className="border-t border-line bg-surface-muted/30">
+                      <div className="overflow-x-auto">
+                        <Table variant="compact">
+                          <TableHead>
+                            <TableRow>
+                              <TableHeaderCell>Constituency</TableHeaderCell>
+                              <TableHeaderCell>Candidate</TableHeaderCell>
+                              <TableHeaderCell className="text-right">Margin</TableHeaderCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {items.map((item: NearMissItem, idx: number) => (
+                              <TableRow
+                                key={idx}
+                                className="cursor-pointer transition-colors hover:bg-surface-muted"
+                                onClick={() => handleMapSelect(item.constituency_number)}
+                              >
+                                <TableCell>
+                                  <span className="text-ink-faint">{item.constituency_number}</span> {item.constituency_name}
+                                </TableCell>
+                                <TableCell>{item.candidate_name}</TableCell>
+                                <TableCell className="text-right">
+                                  <strong>{item.margin_votes?.toLocaleString()}</strong>
+                                  <span className="ml-1 text-ink-faint">({item.margin_percent?.toFixed(2)}%)</span>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
       {/* Direct Winners Without Coverage (Q5) */}
       {lostMandates && lostMandates.total_lost_mandates > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>
-              <AlertTriangle size={20} className="mr-2 inline-block align-middle" />
               Direct Winners Without Second-Vote Coverage
             </CardTitle>
             <CardSubtitle>

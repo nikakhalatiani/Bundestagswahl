@@ -306,6 +306,62 @@ app.get('/api/constituency/:id/overview', ensureCache, async (req, res) => {
          FROM elections
          WHERE year < $2
        ),
+       current_constituency AS (
+         SELECT
+           ce.constituency_id,
+           c.number,
+           c.name,
+           c.state_id,
+           replace(
+             replace(
+               replace(
+                 lower(regexp_replace(translate(replace(c.name, 'ß', 'ss'), 'ÄÖÜäöü', 'AOUaou'), '[^A-Za-z0-9]+', '', 'g')),
+                 'ae', 'a'),
+               'oe', 'o'),
+             'ue', 'u') AS norm_name
+         FROM constituency_elections ce
+         JOIN constituencies c ON c.id = ce.constituency_id
+         WHERE ce.constituency_id = $1 AND ce.year = $2
+       ),
+       prev_constituencies AS (
+         SELECT
+           ce.constituency_id,
+           c.number,
+           c.name,
+           c.state_id,
+           replace(
+             replace(
+               replace(
+                 lower(regexp_replace(translate(replace(c.name, 'ß', 'ss'), 'ÄÖÜäöü', 'AOUaou'), '[^A-Za-z0-9]+', '', 'g')),
+                 'ae', 'a'),
+               'oe', 'o'),
+             'ue', 'u') AS norm_name
+         FROM constituency_elections ce
+         JOIN constituencies c ON c.id = ce.constituency_id
+         WHERE ce.year = (SELECT year FROM prev_year)
+       ),
+      matched_prev AS (
+        SELECT COALESCE(prev_name.constituency_id, prev_num.constituency_id, prev_any.constituency_id) AS prev_id
+         FROM current_constituency curr
+         LEFT JOIN LATERAL (
+           SELECT constituency_id
+           FROM prev_constituencies
+           WHERE norm_name = curr.norm_name AND state_id = curr.state_id
+           LIMIT 1
+         ) prev_name ON true
+         LEFT JOIN LATERAL (
+           SELECT constituency_id
+           FROM prev_constituencies
+           WHERE number = curr.number AND state_id = curr.state_id
+           LIMIT 1
+         ) prev_num ON true
+         LEFT JOIN LATERAL (
+           SELECT constituency_id
+           FROM prev_constituencies
+           WHERE norm_name = curr.norm_name
+           LIMIT 1
+         ) prev_any ON true
+       ),
        current_totals AS (
          SELECT valid_first, valid_second
          FROM mv_03_constituency_elections
@@ -314,7 +370,8 @@ app.get('/api/constituency/:id/overview', ensureCache, async (req, res) => {
        prev_totals AS (
          SELECT valid_first, valid_second
          FROM mv_03_constituency_elections
-         WHERE constituency_id = $1 AND year = (SELECT year FROM prev_year)
+         WHERE constituency_id = (SELECT prev_id FROM matched_prev)
+           AND year = (SELECT year FROM prev_year)
        ),
        current_first AS (
          SELECT party_id, votes
@@ -329,12 +386,16 @@ app.get('/api/constituency/:id/overview', ensureCache, async (req, res) => {
        prev_first AS (
          SELECT party_id, votes
          FROM mv_01_constituency_party_votes
-         WHERE constituency_id = $1 AND year = (SELECT year FROM prev_year) AND vote_type = 1
+         WHERE constituency_id = (SELECT prev_id FROM matched_prev)
+           AND year = (SELECT year FROM prev_year)
+           AND vote_type = 1
        ),
        prev_second AS (
          SELECT party_id, votes
          FROM mv_01_constituency_party_votes
-         WHERE constituency_id = $1 AND year = (SELECT year FROM prev_year) AND vote_type = 2
+         WHERE constituency_id = (SELECT prev_id FROM matched_prev)
+           AND year = (SELECT year FROM prev_year)
+           AND vote_type = 2
        )
        SELECT
          p.short_name AS party_name,
@@ -369,33 +430,63 @@ app.get('/api/constituency/:id/overview', ensureCache, async (req, res) => {
     // 5. Comparison to 2021 (if available) - match by number first, then by name
     let comparison = null;
     if (year === 2025) {
-      const currentConstituency = constRes.rows[0];
-
-      // Try to find matching 2021 constituency by number first, then by name similarity
+      // Match 2021 constituency by name+state, then number+state, then name fallback
       const prevRes = await pool.query(
-        `WITH matching_2021_constituency AS (
-           SELECT c2021.id as constituency_id, 1 as match_priority
+        `WITH current_constituency AS (
+           SELECT
+             c.id AS constituency_id,
+             c.number,
+             c.name,
+             c.state_id,
+             replace(
+               replace(
+                 replace(
+                   lower(regexp_replace(translate(replace(c.name, 'ß', 'ss'), 'ÄÖÜäöü', 'AOUaou'), '[^A-Za-z0-9]+', '', 'g')),
+                   'ae', 'a'),
+                 'oe', 'o'),
+               'ue', 'u') AS norm_name
+           FROM constituencies c
+           WHERE c.id = $1
+         ),
+         prev_constituencies AS (
+           SELECT
+             c2021.id AS constituency_id,
+             c2021.number,
+             c2021.name,
+             c2021.state_id,
+             replace(
+               replace(
+                 replace(
+                   lower(regexp_replace(translate(replace(c2021.name, 'ß', 'ss'), 'ÄÖÜäöü', 'AOUaou'), '[^A-Za-z0-9]+', '', 'g')),
+                   'ae', 'a'),
+                 'oe', 'o'),
+               'ue', 'u') AS norm_name
            FROM constituencies c2021
            JOIN constituency_elections ce2021
              ON ce2021.constituency_id = c2021.id
             AND ce2021.year = 2021
-           WHERE c2021.number = $1
-           UNION ALL
-           SELECT c2021.id as constituency_id, 2 as match_priority
-           FROM constituencies c2021
-           JOIN constituency_elections ce2021
-             ON ce2021.constituency_id = c2021.id
-            AND ce2021.year = 2021
-           WHERE c2021.name = $2
-             AND NOT EXISTS (
-               SELECT 1 FROM constituencies cx
-               JOIN constituency_elections cex
-                 ON cex.constituency_id = cx.id
-                AND cex.year = 2021
-               WHERE cx.number = $1
-             )
-           ORDER BY match_priority
-           LIMIT 1
+         ),
+         matching_2021_constituency AS (
+           SELECT COALESCE(prev_name.constituency_id, prev_num.constituency_id, prev_any.constituency_id) AS constituency_id
+           FROM current_constituency curr
+           LEFT JOIN LATERAL (
+             SELECT constituency_id
+             FROM prev_constituencies
+             WHERE norm_name = curr.norm_name AND state_id = curr.state_id
+             LIMIT 1
+           ) prev_name ON true
+           LEFT JOIN LATERAL (
+             SELECT constituency_id
+             FROM prev_constituencies
+             WHERE number = curr.number AND state_id = curr.state_id
+             LIMIT 1
+           ) prev_num ON true
+           LEFT JOIN LATERAL (
+             SELECT constituency_id
+             FROM prev_constituencies
+             WHERE norm_name = curr.norm_name
+             LIMIT 1
+           ) prev_any ON true
          ),
          stats_2021 AS (
            SELECT
@@ -425,7 +516,7 @@ app.get('/api/constituency/:id/overview', ensureCache, async (req, res) => {
          JOIN persons p2021 ON p2021.id = dcv2021.person_id
          ORDER BY dcv2021.first_votes DESC
          LIMIT 1`,
-        [currentConstituency.number, currentConstituency.name]
+        [constituencyId]
       );
 
       if (prevRes.rows.length > 0) {
@@ -1350,28 +1441,62 @@ app.get('/api/party-constituency-strength', async (req, res) => {
          WHERE year < $1
        ),
        current_constituencies AS (
-         SELECT ce.constituency_id, c.number, c.name, c.state_id
+         SELECT
+           ce.constituency_id,
+           c.number,
+           c.name,
+           c.state_id,
+           replace(
+             replace(
+               replace(
+                 lower(regexp_replace(translate(replace(c.name, 'ß', 'ss'), 'ÄÖÜäöü', 'AOUaou'), '[^A-Za-z0-9]+', '', 'g')),
+                 'ae', 'a'),
+               'oe', 'o'),
+             'ue', 'u') AS norm_name
          FROM constituency_elections ce
          JOIN constituencies c ON c.id = ce.constituency_id
          WHERE ce.year = $1
        ),
        prev_constituencies AS (
-         SELECT ce.constituency_id, c.number, c.name, c.state_id
+         SELECT
+           ce.constituency_id,
+           c.number,
+           c.name,
+           c.state_id,
+           replace(
+             replace(
+               replace(
+                 lower(regexp_replace(translate(replace(c.name, 'ß', 'ss'), 'ÄÖÜäöü', 'AOUaou'), '[^A-Za-z0-9]+', '', 'g')),
+                 'ae', 'a'),
+               'oe', 'o'),
+             'ue', 'u') AS norm_name
          FROM constituency_elections ce
          JOIN constituencies c ON c.id = ce.constituency_id
          WHERE ce.year = (SELECT year FROM prev_year)
        ),
-       constituency_match AS (
-         SELECT
-           curr.constituency_id AS current_id,
-           COALESCE(prev_num.constituency_id, prev_name.constituency_id) AS prev_id
-         FROM current_constituencies curr
-         LEFT JOIN prev_constituencies prev_num
-           ON prev_num.number = curr.number
-          AND prev_num.state_id = curr.state_id
-         LEFT JOIN prev_constituencies prev_name
-           ON prev_name.name = curr.name
-          AND prev_name.state_id = curr.state_id
+      constituency_match AS (
+        SELECT
+          curr.constituency_id AS current_id,
+          COALESCE(prev_name.constituency_id, prev_num.constituency_id, prev_any.constituency_id) AS prev_id
+        FROM current_constituencies curr
+        LEFT JOIN LATERAL (
+          SELECT constituency_id
+          FROM prev_constituencies
+          WHERE norm_name = curr.norm_name AND state_id = curr.state_id
+          LIMIT 1
+        ) prev_name ON true
+        LEFT JOIN LATERAL (
+          SELECT constituency_id
+          FROM prev_constituencies
+          WHERE number = curr.number AND state_id = curr.state_id
+          LIMIT 1
+        ) prev_num ON true
+        LEFT JOIN LATERAL (
+          SELECT constituency_id
+          FROM prev_constituencies
+          WHERE norm_name = curr.norm_name
+           LIMIT 1
+         ) prev_any ON true
        ),
        current_votes AS (
          SELECT constituency_id, party_id, vote_type, votes

@@ -87,7 +87,7 @@ async function listTableSnapshot() {
     table_name: t,
     column_count: cols[t] ?? 0,
     row_count: rowCounts[t] ?? 0,
-    pk_columns: pks[t] ?? "—",
+    pk_columns: pks[t] ?? "-",
     fk_count: fks[t] ?? 0,
     index_count: idxs[t] ?? 0, // <--- New Column
   }));

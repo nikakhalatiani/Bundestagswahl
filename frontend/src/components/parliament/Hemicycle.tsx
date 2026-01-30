@@ -103,7 +103,7 @@ export function Hemicycle({
         const seatTypeLabel = hovered.seatType === 'direct' ? 'Direct mandate' : 'List mandate';
         return {
             title: hovered.memberName,
-            lines: [partyLabel, `${seatTypeLabel} — ${hovered.region}`],
+            lines: [partyLabel, `${seatTypeLabel} - ${hovered.region}`],
         };
     }, [hovered, partyOpts]);
 
