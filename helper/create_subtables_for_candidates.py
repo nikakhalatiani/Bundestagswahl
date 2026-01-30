@@ -44,7 +44,7 @@ def normalize_party(s: str) -> str:
     if not isinstance(s, str):
         return ""
     s = unicodedata.normalize("NFKC", s.strip())
-    s = re.sub(r"[–—]", "-", s)
+    s = re.sub(r"[–-]", "-", s)
     s = re.sub(r"\s*-\s*", " - ", s)
     s = re.sub(r"[\s\u00A0]+", " ", s)
     return s.lower()

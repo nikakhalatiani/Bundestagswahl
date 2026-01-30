@@ -60,12 +60,12 @@ try:
         df.columns = [c.strip() for c in df.columns]
 
         if "VorpGewaehlt" not in df.columns:
-            print(f"⚠ {path.name} lacks 'VorpGewaehlt' column — skipping.")
+            print(f"⚠ {path.name} lacks 'VorpGewaehlt' column - skipping.")
             continue
 
         required = ["Nachname", "Vornamen", "Geschlecht", "Geburtsjahr"]
         if not all(c in df.columns for c in required):
-            print(f"⚠ {path.name} is missing some of {required} — skipping.")
+            print(f"⚠ {path.name} is missing some of {required} - skipping.")
             continue
 
         df["key"] = build_person_key(df)
@@ -104,7 +104,7 @@ try:
 
         cand = pd.read_csv(infile, sep=";", encoding="utf-8-sig")
         if "PersonID" not in cand.columns or "Year" not in cand.columns:
-            print(f"⚠ {infile.name} missing required columns PersonID/Year — skipping.")
+            print(f"⚠ {infile.name} missing required columns PersonID/Year - skipping.")
             return
 
         # Attach person key
