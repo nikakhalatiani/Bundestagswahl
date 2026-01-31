@@ -200,6 +200,13 @@ export const secondVotes = pgTable("second_votes", {
   ]
 );
 
+// ---------- Voting Codes ----------
+// This table is intentionally not connected to votes to preserve voter anonymity.
+export const votingCodes = pgTable("voting_codes", {
+  code: varchar("code", { length: 64 }).primaryKey(),
+  is_used: boolean("is_used").default(false).notNull(),
+});
+
 // ---------- Materialized Views ----------
 
 export const mv00DirectCandidacyVotes = pgMaterializedView("mv_00_direct_candidacy_votes", {

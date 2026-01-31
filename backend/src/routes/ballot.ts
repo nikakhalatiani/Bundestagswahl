@@ -11,12 +11,31 @@ const router = Router();
 /**
  * POST /api/ballot - Submit a ballot (erst + zweit vote)
  */
+// POST: submit a ballot (erst + zweit)
 router.post('/ballot', async (req, res) => {
     const body = req.body || {};
     const constituencyId = Number(body.constituencyId || 1);
     const year = body.year ? Number(body.year) : 2025;
+    const votingCode = body.votingCode as string | undefined;
 
     try {
+        // Validate voting code
+        if (!votingCode || typeof votingCode !== 'string' || votingCode.trim() === '') {
+            return res.status(400).json({ error: 'voting_code_required' });
+        }
+
+        // Check if voting code exists and is not used
+        const codeRes = await pool.query(
+            `SELECT code, is_used FROM voting_codes WHERE code = $1`,
+            [votingCode.trim()]
+        );
+        if (!codeRes.rows || codeRes.rows.length === 0) {
+            return res.status(400).json({ error: 'invalid_voting_code' });
+        }
+        if (codeRes.rows[0].is_used) {
+            return res.status(400).json({ error: 'voting_code_already_used' });
+        }
+
         // Find constituency and state
         const constRes = await pool.query(
             `SELECT id, number, name, state_id FROM constituencies WHERE id = $1`,
@@ -98,10 +117,68 @@ router.post('/ballot', async (req, res) => {
             [partyListId, constituencyId, secondIsValid]
         );
 
+        // Mark voting code as used
+        await pool.query(
+            `UPDATE voting_codes SET is_used = true WHERE code = $1`,
+            [votingCode.trim()]
+        );
+
         res.json({ status: 'ok' });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'db_error' });
+    }
+});
+
+// POST: generate a new voting code
+router.post('/codes/generate', async (_req, res) => {
+    try {
+        // Generate a random 16-character alphanumeric code
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let code = '';
+        for (let i = 0; i < 16; i++) {
+            code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+
+        // Insert into database
+        await pool.query(
+            `INSERT INTO voting_codes (code, is_used) VALUES ($1, false)`,
+            [code]
+        );
+
+        res.json({ code });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'code_generation_failed' });
+    }
+});
+
+// POST: validate a voting code (check if it exists and is unused)
+router.post('/codes/validate', async (req, res) => {
+    const { code } = req.body || {};
+
+    if (!code || typeof code !== 'string' || code.trim() === '') {
+        return res.status(400).json({ valid: false, error: 'code_required' });
+    }
+
+    try {
+        const result = await pool.query(
+            `SELECT code, is_used FROM voting_codes WHERE code = $1`,
+            [code.trim()]
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            return res.json({ valid: false, error: 'invalid_code' });
+        }
+
+        if (result.rows[0].is_used) {
+            return res.json({ valid: false, error: 'code_already_used' });
+        }
+
+        res.json({ valid: true });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ valid: false, error: 'validation_failed' });
     }
 });
 

@@ -102,7 +102,7 @@ export function Stimmzettel() {
                 year: 2025,
                 first: selectedFirst === 'invalid' || selectedFirst === null ? { type: 'invalid' } : { type: 'candidate', person_id: selectedFirst },
                 second: selectedSecond === 'invalid' || selectedSecond === null ? { type: 'invalid' } : { type: 'party', party_id: selectedSecond },
-                voteCode: fullCode()
+                votingCode: fullCode()
             }
             const res = await fetch('/api/ballot', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
             const json = await res.json()
@@ -122,6 +122,37 @@ export function Stimmzettel() {
             setSubmitResult(String(err))
         } finally {
             setSubmitting(false)
+        }
+    }
+
+    const [validating, setValidating] = useState(false)
+    const [codeError, setCodeError] = useState<string | null>(null)
+
+    async function validateAndProceed() {
+        setValidating(true)
+        setCodeError(null)
+        try {
+            const res = await fetch('/api/codes/validate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: fullCode() })
+            })
+            const json = await res.json()
+            if (json.valid) {
+                setAuthorized(true)
+            } else {
+                if (json.error === 'invalid_code') {
+                    setCodeError('Ungültiger Wahlcode. Bitte überprüfen Sie Ihre Eingabe.')
+                } else if (json.error === 'code_already_used') {
+                    setCodeError('Dieser Wahlcode wurde bereits verwendet.')
+                } else {
+                    setCodeError('Fehler bei der Validierung des Codes.')
+                }
+            }
+        } catch (err: any) {
+            setCodeError('Verbindungsfehler. Bitte versuchen Sie es erneut.')
+        } finally {
+            setValidating(false)
         }
     }
 
@@ -146,13 +177,16 @@ export function Stimmzettel() {
                         </React.Fragment>
                     ))}
                 </div>
+                {codeError && (
+                    <div className="text-red-600 mt-3">{codeError}</div>
+                )}
                 <div style={{ marginTop: 12 }}>
                     <button
                         className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
-                        disabled={!validateFullCode()}
-                        onClick={() => setAuthorized(true)}
+                        disabled={!validateFullCode() || validating}
+                        onClick={validateAndProceed}
                     >
-                        Weiter zur Wahl
+                        {validating ? 'Prüfe...' : 'Weiter zur Wahl'}
                     </button>
                 </div>
             </div>

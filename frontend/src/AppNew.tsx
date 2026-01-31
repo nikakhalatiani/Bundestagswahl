@@ -20,6 +20,7 @@ const queryClient = new QueryClient({
 
 
 import { Stimmzettel } from './pages/Stimmzettel';
+import { Codes } from './pages/Codes';
 
 function Navigation({ year, setYear }: { year: number; setYear: (y: number) => void }) {
   const location = useLocation();
@@ -121,6 +122,7 @@ function AppContent() {
           <Route path="/analysis" element={<ConstituencyAnalysis year={year} />} />
           <Route path="/foreigner-afd" element={<ForeignerAfdScatterPage year={year} />} />
           <Route path="/stimmzettel" element={<Stimmzettel />} />
+          <Route path="/codes" element={<Codes />} />
         </Routes>
       </main>
     </>
