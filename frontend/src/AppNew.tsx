@@ -6,8 +6,11 @@ import { Dashboard } from './pages/Dashboard';
 import { Members } from './pages/Members';
 import { ConstituencyAnalysis } from './pages/ConstituencyAnalysis';
 import { ForeignerAfdScatterPage } from './pages/ForeignerAfdScatterPage';
+import { Admin } from './pages/Admin';
+import { Stimmzettel } from './pages/Stimmzettel';
 import { cn } from './utils/cn';
 import { Select } from './components/ui/Select';
+import { Codes } from './pages/Codes';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -17,10 +20,6 @@ const queryClient = new QueryClient({
     },
   },
 });
-
-
-import { Stimmzettel } from './pages/Stimmzettel';
-import { Codes } from './pages/Codes';
 
 function Navigation({ year, setYear }: { year: number; setYear: (y: number) => void }) {
   const location = useLocation();
@@ -93,13 +92,13 @@ function Navigation({ year, setYear }: { year: number; setYear: (y: number) => v
             </li>
             <li>
               <Link
-                to="/stimmzettel"
+                to="/admin"
                 className={cn(
                   'block whitespace-nowrap border-b-[3px] border-transparent px-6 py-4 font-medium text-ink-muted transition hover:bg-surface-muted hover:text-ink',
-                  location.pathname === '/stimmzettel' && 'border-brand-gold bg-surface-muted font-semibold text-ink'
+                  location.pathname === '/admin' && 'border-brand-gold bg-surface-muted font-semibold text-ink'
                 )}
               >
-                🗳️ Stimmabgabe
+                Admin
               </Link>
             </li>
           </ul>
@@ -121,8 +120,7 @@ function AppContent() {
           <Route path="/members" element={<Members year={year} />} />
           <Route path="/analysis" element={<ConstituencyAnalysis year={year} />} />
           <Route path="/foreigner-afd" element={<ForeignerAfdScatterPage year={year} />} />
-          <Route path="/stimmzettel" element={<Stimmzettel />} />
-          <Route path="/codes" element={<Codes />} />
+          <Route path="/admin" element={<Admin year={year} />} />
         </Routes>
       </main>
     </>
@@ -133,7 +131,11 @@ export default function AppNew() {
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
-        <AppContent />
+        <Routes>
+          <Route path="/ballot" element={<Stimmzettel />} />
+          <Route path="/codes" element={<Codes />} />
+          <Route path="/*" element={<AppContent />} />
+        </Routes>
       </Router>
     </QueryClientProvider>
   );

@@ -9,12 +9,28 @@ const { pool } = dbModule;
 const router = Router();
 
 /**
+ * Helper: Resolve constituency number to ID for a given year.
+ * Returns { id, state_id, name } or null if not found.
+ */
+async function resolveConstituency(number: number, year: number) {
+    const res = await pool.query(
+        `SELECT c.id, c.state_id, c.name
+         FROM constituencies c
+         JOIN constituency_elections ce ON ce.constituency_id = c.id
+         WHERE c.number = $1 AND ce.year = $2
+         LIMIT 1`,
+        [number, year]
+    );
+    return res.rows[0] || null;
+}
+
+/**
  * POST /api/ballot - Submit a ballot (erst + zweit vote)
  */
 // POST: submit a ballot (erst + zweit)
 router.post('/ballot', async (req, res) => {
     const body = req.body || {};
-    const constituencyId = Number(body.constituencyId || 1);
+    const constituencyNumber = Number(body.constituencyNumber || body.constituencyId || 1);
     const year = body.year ? Number(body.year) : 2025;
     const votingCode = body.votingCode as string | undefined;
 
@@ -36,15 +52,13 @@ router.post('/ballot', async (req, res) => {
             return res.status(400).json({ error: 'voting_code_already_used' });
         }
 
-        // Find constituency and state
-        const constRes = await pool.query(
-            `SELECT id, number, name, state_id FROM constituencies WHERE id = $1`,
-            [constituencyId]
-        );
-        if (!constRes.rows || constRes.rows.length === 0) {
+        // Find constituency by number and year
+        const constituency = await resolveConstituency(constituencyNumber, year);
+        if (!constituency) {
             return res.status(404).json({ error: 'constituency_not_found' });
         }
-        const stateId = constRes.rows[0].state_id;
+        const constituencyId = constituency.id;
+        const stateId = constituency.state_id;
 
         // FIRST VOTE handling
         let firstPersonId: number | null = null;
@@ -182,24 +196,81 @@ router.post('/codes/validate', async (req, res) => {
     }
 });
 
+// POST: generate a new voting code
+router.post('/codes/generate', async (_req, res) => {
+    try {
+        // Generate a random 16-character alphanumeric code
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let code = '';
+        for (let i = 0; i < 16; i++) {
+            code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+
+        // Insert into database
+        await pool.query(
+            `INSERT INTO voting_codes (code, is_used) VALUES ($1, false)`,
+            [code]
+        );
+
+        res.json({ code });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'code_generation_failed' });
+    }
+});
+
+// POST: validate a voting code (check if it exists and is unused)
+router.post('/codes/validate', async (req, res) => {
+    const { code } = req.body || {};
+
+    if (!code || typeof code !== 'string' || code.trim() === '') {
+        return res.status(400).json({ valid: false, error: 'code_required' });
+    }
+
+    try {
+        const result = await pool.query(
+            `SELECT code, is_used FROM voting_codes WHERE code = $1`,
+            [code.trim()]
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            return res.json({ valid: false, error: 'invalid_code' });
+        }
+
+        if (result.rows[0].is_used) {
+            return res.json({ valid: false, error: 'code_already_used' });
+        }
+
+        res.json({ valid: true });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ valid: false, error: 'validation_failed' });
+    }
+});
+
 /**
- * GET /api/constituency/:id/parties - Get all parties available for second vote in a constituency.
- * Uses base tables to work before materialized views are refreshed.
+ * GET /api/constituency/:number/parties - Get all parties available for second vote in a constituency.
+ * Uses constituency number + year to find the correct constituency.
  */
-router.get('/constituency/:id/parties', async (req, res) => {
-    const constituencyId = Number(req.params.id);
+router.get('/constituency/:number/parties', async (req, res) => {
+    const constituencyNumber = Number(req.params.number);
     const year = req.query.year ? Number(req.query.year) : 2025;
 
     try {
+        // Resolve constituency number to ID for this year
+        const constituency = await resolveConstituency(constituencyNumber, year);
+        if (!constituency) {
+            return res.status(404).json({ error: 'constituency_not_found' });
+        }
+
         // Use base tables to show ALL parties with party lists in the constituency's state
         const result = await pool.query(
             `SELECT DISTINCT p.id, p.short_name, p.long_name
        FROM party_lists pl
        JOIN parties p ON p.id = pl.party_id
-       JOIN constituencies c ON c.state_id = pl.state_id
-       WHERE c.id = $1 AND pl.year = $2
+       WHERE pl.state_id = $1 AND pl.year = $2
        ORDER BY p.short_name`,
-            [constituencyId, year]
+            [constituency.state_id, year]
         );
 
         res.json({ data: result.rows });
@@ -210,14 +281,20 @@ router.get('/constituency/:id/parties', async (req, res) => {
 });
 
 /**
- * GET /api/constituency/:id/candidates - Get all direct candidates for first vote in a constituency.
- * Uses base tables to work before materialized views are refreshed.
+ * GET /api/constituency/:number/candidates - Get all direct candidates for first vote in a constituency.
+ * Uses constituency number + year to find the correct constituency.
  */
-router.get('/constituency/:id/candidates', async (req, res) => {
-    const constituencyId = Number(req.params.id);
+router.get('/constituency/:number/candidates', async (req, res) => {
+    const constituencyNumber = Number(req.params.number);
     const year = req.query.year ? Number(req.query.year) : 2025;
 
     try {
+        // Resolve constituency number to ID for this year
+        const constituency = await resolveConstituency(constituencyNumber, year);
+        if (!constituency) {
+            return res.status(404).json({ error: 'constituency_not_found' });
+        }
+
         // Simple query without slow lateral joins - vote counts not needed for ballot display
         const result = await pool.query(
             `SELECT
@@ -233,7 +310,7 @@ router.get('/constituency/:id/candidates', async (req, res) => {
              JOIN parties p ON p.id = dc.party_id
              WHERE dc.constituency_id = $1 AND dc.year = $2
              ORDER BY p.short_name, per.last_name, per.first_name`,
-            [constituencyId, year]
+            [constituency.id, year]
         );
 
         res.json({ data: result.rows });

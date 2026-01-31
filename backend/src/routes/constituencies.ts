@@ -1,24 +1,12 @@
 /**
  * Constituency-related routes - overview, winners, details.
  */
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router } from 'express';
 import dbModule from '../db';
-import { ensureCacheExists } from '../services/cacheSeats';
+import { ensureCacheMiddleware } from '../services/cacheSeats';
 const { pool } = dbModule;
 
 const router = Router();
-
-// Middleware: ensure cache exists for requested year
-async function ensureCache(req: Request, res: Response, next: NextFunction) {
-  const year = req.query.year ? Number(req.query.year) : 2025;
-  try {
-    await ensureCacheExists(year);
-    next();
-  } catch (err) {
-    console.error('Cache population failed:', err);
-    res.status(500).json({ error: 'cache_error' });
-  }
-}
 
 /**
  * GET /api/constituencies - List all constituencies for selection/autocomplete.
@@ -75,7 +63,7 @@ router.get('/constituency/:id', async (req, res) => {
  * GET /api/constituency/:id/overview - Detailed constituency overview (Q3).
  * Requires cache for seat information.
  */
-router.get('/constituency/:id/overview', ensureCache, async (req, res) => {
+router.get('/constituency/:id/overview', ensureCacheMiddleware, async (req, res) => {
   const constituencyId = Number(req.params.id);
   const year = req.query.year ? Number(req.query.year) : 2025;
 
@@ -269,7 +257,7 @@ router.get('/constituency/:id/overview', ensureCache, async (req, res) => {
 /**
  * GET /api/constituency-winners - Winners per constituency (Q4).
  */
-router.get('/constituency-winners', ensureCache, async (req, res) => {
+router.get('/constituency-winners', ensureCacheMiddleware, async (req, res) => {
   const year = req.query.year ? Number(req.query.year) : 2025;
   const stateId = req.query.state_id ? Number(req.query.state_id) : null;
 

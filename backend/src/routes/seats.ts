@@ -1,33 +1,21 @@
 /**
  * Seat allocation and member-related routes.
  */
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router } from 'express';
 import dbModule from '../db';
-import { ensureCacheExists, refreshSeatCaches } from '../services/cacheSeats';
+import { ensureCacheMiddleware, refreshSeatCaches } from '../services/cacheSeats';
 const { pool } = dbModule;
 
 const router = Router();
 
-// Middleware: ensure cache exists for requested year
-async function ensureCache(req: Request, res: Response, next: NextFunction) {
-    const year = req.query.year ? Number(req.query.year) : 2025;
-    try {
-        await ensureCacheExists(year);
-        next();
-    } catch (err) {
-        console.error('Cache population failed:', err);
-        res.status(500).json({ error: 'cache_error' });
-    }
-}
-
 /**
  * GET /api/seats - Seat distribution by party (Q1).
  */
-router.get('/seats', ensureCache, async (req, res) => {
-    const year = req.query.year ? Number(req.query.year) : 2025;
+router.get('/seats', ensureCacheMiddleware, async (req, res) => {
+  const year = req.query.year ? Number(req.query.year) : 2025;
 
-    try {
-        const result = await pool.query(`
+  try {
+    const result = await pool.query(`
       SELECT
         p.id as party_id,
         p.short_name as party_name,
@@ -39,27 +27,42 @@ router.get('/seats', ensureCache, async (req, res) => {
       ORDER BY seats DESC
     `, [year]);
 
-        res.json({
-            data: result.rows.map(r => ({
-                party_id: r.party_id,
-                party_name: r.party_name,
-                seats: parseInt(r.seats)
-            }))
-        });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'db_error' });
-    }
+    res.json({
+      data: result.rows.map(r => ({
+        party_id: r.party_id,
+        party_name: r.party_name,
+        seats: parseInt(r.seats)
+      }))
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'db_error' });
+  }
 });
 
 /**
  * GET /api/members - All Bundestag members (Q2).
  */
-router.get('/members', ensureCache, async (req, res) => {
-    const year = req.query.year ? Number(req.query.year) : 2025;
+router.get('/members', ensureCacheMiddleware, async (req, res) => {
+  const year = req.query.year ? Number(req.query.year) : 2025;
 
-    try {
-        const result = await pool.query(`
+  try {
+    // Pre-compute previous year once
+    const prevYearRes = await pool.query(`SELECT MAX(year) AS prev_year FROM elections WHERE year < $1`, [year]);
+    const prevYear = prevYearRes.rows[0]?.prev_year;
+
+    const result = await pool.query(`
+      WITH prev_members AS (
+        SELECT DISTINCT person_id FROM seat_allocation_cache WHERE year = $2
+      ),
+      top_constituencies AS (
+        SELECT DISTINCT ON (cpv.party_id, c.state_id)
+          cpv.party_id, c.state_id, c.name AS constituency_name
+        FROM mv_01_constituency_party_votes cpv
+        JOIN constituencies c ON c.id = cpv.constituency_id
+        WHERE cpv.year = $1 AND cpv.vote_type = 2
+        ORDER BY cpv.party_id, c.state_id, cpv.votes DESC
+      )
       SELECT
         sac.person_id,
         p.title,
@@ -74,62 +77,36 @@ router.get('/members', ensureCache, async (req, res) => {
         s.id as state_id,
         s.name as state_name,
         sac.seat_type,
-        COALESCE(
-          sac.constituency_name,
-          top_second_votes.constituency_name
-        ) AS constituency_name,
+        COALESCE(sac.constituency_name, tc.constituency_name) AS constituency_name,
         sac.list_position,
         sac.percent_first_votes,
-        COALESCE(prev_seat.is_prev, false) as previously_elected
+        (pm.person_id IS NOT NULL) as previously_elected
       FROM seat_allocation_cache sac
       JOIN persons p ON p.id = sac.person_id
       JOIN parties pt ON pt.id = sac.party_id
       JOIN states s ON s.id = sac.state_id
-      LEFT JOIN LATERAL (
-        SELECT e2.year AS prev_year
-        FROM elections e2
-        WHERE e2.year < $1
-        ORDER BY e2.year DESC
-        LIMIT 1
-      ) prev_year ON true
-      LEFT JOIN LATERAL (
-        SELECT true AS is_prev
-        FROM seat_allocation_cache prev
-        WHERE prev.person_id = sac.person_id
-          AND prev.year = prev_year.prev_year
-        LIMIT 1
-      ) prev_seat ON true
-      LEFT JOIN LATERAL (
-        SELECT c2.name AS constituency_name
-        FROM mv_01_constituency_party_votes cpv2
-        JOIN constituencies c2 ON c2.id = cpv2.constituency_id
-        WHERE cpv2.year = $1
-          AND c2.state_id = sac.state_id
-          AND cpv2.vote_type = 2
-          AND cpv2.party_id = sac.party_id
-        ORDER BY cpv2.votes DESC
-        LIMIT 1
-      ) top_second_votes ON true
+      LEFT JOIN prev_members pm ON pm.person_id = sac.person_id
+      LEFT JOIN top_constituencies tc ON tc.party_id = sac.party_id AND tc.state_id = sac.state_id
       WHERE sac.year = $1
       ORDER BY pt.short_name, s.name, p.last_name, p.first_name
-    `, [year]);
+    `, [year, prevYear]);
 
-        res.json({ data: result.rows });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'db_error' });
-    }
+    res.json({ data: result.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'db_error' });
+  }
 });
 
 /**
  * GET /api/direct-without-coverage - Direct mandate winners who didn't get seats (Q5).
  */
-router.get('/direct-without-coverage', ensureCache, async (req, res) => {
-    const year = req.query.year ? Number(req.query.year) : 2025;
+router.get('/direct-without-coverage', ensureCacheMiddleware, async (req, res) => {
+  const year = req.query.year ? Number(req.query.year) : 2025;
 
-    try {
-        const result = await pool.query(
-            `WITH ConstituencyWinners AS (
+  try {
+    const result = await pool.query(
+      `WITH ConstituencyWinners AS (
          SELECT dcv.constituency_id, dcv.person_id, dcv.party_id, dcv.first_votes,
            ROW_NUMBER() OVER (PARTITION BY dcv.constituency_id ORDER BY dcv.first_votes DESC) AS rank
          FROM mv_00_direct_candidacy_votes dcv
@@ -155,40 +132,40 @@ router.get('/direct-without-coverage', ensureCache, async (req, res) => {
          ON sac.person_id = cw.person_id AND sac.year = $1 AND sac.seat_type LIKE '%Direct Mandate%'
        WHERE cw.rank = 1 AND sac.id IS NULL
        ORDER BY cw.first_votes DESC`,
-            [year]
-        );
+      [year]
+    );
 
-        res.json({ data: result.rows, total_lost_mandates: result.rows.length });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'db_error' });
-    }
+    res.json({ data: result.rows, total_lost_mandates: result.rows.length });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'db_error' });
+  }
 });
 
 /**
  * POST /api/admin/calculate-seats - Regenerate seat allocation cache.
  */
 router.post('/admin/calculate-seats', async (req, res) => {
-    const year = req.query.year ? Number(req.query.year) : 2025;
+  const year = req.query.year ? Number(req.query.year) : 2025;
 
-    try {
-        await refreshSeatCaches();
-        const statsRes = await pool.query(
-            `SELECT COUNT(*)::int AS seats, COUNT(DISTINCT party_id)::int AS parties
+  try {
+    await refreshSeatCaches();
+    const statsRes = await pool.query(
+      `SELECT COUNT(*)::int AS seats, COUNT(DISTINCT party_id)::int AS parties
        FROM seat_allocation_cache WHERE year = $1`,
-            [year]
-        );
-        const statsRow = statsRes.rows[0] || { seats: 0, parties: 0 };
+      [year]
+    );
+    const statsRow = statsRes.rows[0] || { seats: 0, parties: 0 };
 
-        res.json({
-            message: 'Cache regenerated successfully',
-            year,
-            stats: { seats: Number(statsRow.seats) || 0, parties: Number(statsRow.parties) || 0 }
-        });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'cache_regeneration_failed', details: String(err) });
-    }
+    res.json({
+      message: 'Cache regenerated successfully',
+      year,
+      stats: { seats: Number(statsRow.seats) || 0, parties: Number(statsRow.parties) || 0 }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'cache_regeneration_failed', details: String(err) });
+  }
 });
 
 export default router;
