@@ -92,13 +92,13 @@ function Navigation({ year, setYear }: { year: number; setYear: (y: number) => v
             </li>
             <li>
               <Link
-                to="/stimmzettel"
+                to="/ballot"
                 className={cn(
                   'block whitespace-nowrap border-b-[3px] border-transparent px-6 py-4 font-medium text-ink-muted transition hover:bg-surface-muted hover:text-ink',
-                  location.pathname === '/stimmzettel' && 'border-brand-gold bg-surface-muted font-semibold text-ink'
+                  location.pathname === '/ballot' && 'border-brand-gold bg-surface-muted font-semibold text-ink'
                 )}
               >
-                🗳️ Stimmabgabe
+                Cast Vote
               </Link>
             </li>
           </ul>
@@ -120,7 +120,7 @@ function AppContent() {
           <Route path="/members" element={<Members year={year} />} />
           <Route path="/analysis" element={<ConstituencyAnalysis year={year} />} />
           <Route path="/foreigner-afd" element={<ForeignerAfdScatterPage year={year} />} />
-          <Route path="/stimmzettel" element={<Stimmzettel />} />
+          <Route path="/ballot" element={<Stimmzettel />} />
         </Routes>
       </main>
     </>

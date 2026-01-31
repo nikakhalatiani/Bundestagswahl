@@ -9,23 +9,37 @@ const { pool } = dbModule;
 const router = Router();
 
 /**
+ * Helper: Resolve constituency number to ID for a given year.
+ * Returns { id, state_id, name } or null if not found.
+ */
+async function resolveConstituency(number: number, year: number) {
+    const res = await pool.query(
+        `SELECT c.id, c.state_id, c.name
+         FROM constituencies c
+         JOIN constituency_elections ce ON ce.constituency_id = c.id
+         WHERE c.number = $1 AND ce.year = $2
+         LIMIT 1`,
+        [number, year]
+    );
+    return res.rows[0] || null;
+}
+
+/**
  * POST /api/ballot - Submit a ballot (erst + zweit vote)
  */
 router.post('/ballot', async (req, res) => {
     const body = req.body || {};
-    const constituencyId = Number(body.constituencyId || 1);
+    const constituencyNumber = Number(body.constituencyNumber || body.constituencyId || 1);
     const year = body.year ? Number(body.year) : 2025;
 
     try {
-        // Find constituency and state
-        const constRes = await pool.query(
-            `SELECT id, number, name, state_id FROM constituencies WHERE id = $1`,
-            [constituencyId]
-        );
-        if (!constRes.rows || constRes.rows.length === 0) {
+        // Find constituency by number and year
+        const constituency = await resolveConstituency(constituencyNumber, year);
+        if (!constituency) {
             return res.status(404).json({ error: 'constituency_not_found' });
         }
-        const stateId = constRes.rows[0].state_id;
+        const constituencyId = constituency.id;
+        const stateId = constituency.state_id;
 
         // FIRST VOTE handling
         let firstPersonId: number | null = null;
@@ -106,23 +120,28 @@ router.post('/ballot', async (req, res) => {
 });
 
 /**
- * GET /api/constituency/:id/parties - Get all parties available for second vote in a constituency.
- * Uses base tables to work before materialized views are refreshed.
+ * GET /api/constituency/:number/parties - Get all parties available for second vote in a constituency.
+ * Uses constituency number + year to find the correct constituency.
  */
-router.get('/constituency/:id/parties', async (req, res) => {
-    const constituencyId = Number(req.params.id);
+router.get('/constituency/:number/parties', async (req, res) => {
+    const constituencyNumber = Number(req.params.number);
     const year = req.query.year ? Number(req.query.year) : 2025;
 
     try {
+        // Resolve constituency number to ID for this year
+        const constituency = await resolveConstituency(constituencyNumber, year);
+        if (!constituency) {
+            return res.status(404).json({ error: 'constituency_not_found' });
+        }
+
         // Use base tables to show ALL parties with party lists in the constituency's state
         const result = await pool.query(
             `SELECT DISTINCT p.id, p.short_name, p.long_name
        FROM party_lists pl
        JOIN parties p ON p.id = pl.party_id
-       JOIN constituencies c ON c.state_id = pl.state_id
-       WHERE c.id = $1 AND pl.year = $2
+       WHERE pl.state_id = $1 AND pl.year = $2
        ORDER BY p.short_name`,
-            [constituencyId, year]
+            [constituency.state_id, year]
         );
 
         res.json({ data: result.rows });
@@ -133,14 +152,20 @@ router.get('/constituency/:id/parties', async (req, res) => {
 });
 
 /**
- * GET /api/constituency/:id/candidates - Get all direct candidates for first vote in a constituency.
- * Uses base tables to work before materialized views are refreshed.
+ * GET /api/constituency/:number/candidates - Get all direct candidates for first vote in a constituency.
+ * Uses constituency number + year to find the correct constituency.
  */
-router.get('/constituency/:id/candidates', async (req, res) => {
-    const constituencyId = Number(req.params.id);
+router.get('/constituency/:number/candidates', async (req, res) => {
+    const constituencyNumber = Number(req.params.number);
     const year = req.query.year ? Number(req.query.year) : 2025;
 
     try {
+        // Resolve constituency number to ID for this year
+        const constituency = await resolveConstituency(constituencyNumber, year);
+        if (!constituency) {
+            return res.status(404).json({ error: 'constituency_not_found' });
+        }
+
         // Simple query without slow lateral joins - vote counts not needed for ballot display
         const result = await pool.query(
             `SELECT
@@ -156,7 +181,7 @@ router.get('/constituency/:id/candidates', async (req, res) => {
              JOIN parties p ON p.id = dc.party_id
              WHERE dc.constituency_id = $1 AND dc.year = $2
              ORDER BY p.short_name, per.last_name, per.first_name`,
-            [constituencyId, year]
+            [constituency.id, year]
         );
 
         res.json({ data: result.rows });

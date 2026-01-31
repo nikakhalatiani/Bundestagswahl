@@ -403,7 +403,7 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                             overview.winner.got_seat ? 'bg-[#2e7d321f] text-[#2e7d32]' : 'bg-[#c628281f] text-[#c62828]'
                           )}
                         >
-                          {overview.winner.got_seat ? '✓ Seat' : '✗ No seat'}
+                          {overview.winner.got_seat ? 'Seat' : 'No seat'}
                         </span>
                       </div>
                     </div>
