@@ -6,6 +6,8 @@ import { Dashboard } from './pages/Dashboard';
 import { Members } from './pages/Members';
 import { ConstituencyAnalysis } from './pages/ConstituencyAnalysis';
 import { ForeignerAfdScatterPage } from './pages/ForeignerAfdScatterPage';
+import { Admin } from './pages/Admin';
+import { Stimmzettel } from './pages/Stimmzettel';
 import { cn } from './utils/cn';
 import { Select } from './components/ui/Select';
 
@@ -17,9 +19,6 @@ const queryClient = new QueryClient({
     },
   },
 });
-
-
-import { Stimmzettel } from './pages/Stimmzettel';
 
 function Navigation({ year, setYear }: { year: number; setYear: (y: number) => void }) {
   const location = useLocation();
@@ -92,13 +91,13 @@ function Navigation({ year, setYear }: { year: number; setYear: (y: number) => v
             </li>
             <li>
               <Link
-                to="/ballot"
+                to="/admin"
                 className={cn(
                   'block whitespace-nowrap border-b-[3px] border-transparent px-6 py-4 font-medium text-ink-muted transition hover:bg-surface-muted hover:text-ink',
-                  location.pathname === '/ballot' && 'border-brand-gold bg-surface-muted font-semibold text-ink'
+                  location.pathname === '/admin' && 'border-brand-gold bg-surface-muted font-semibold text-ink'
                 )}
               >
-                Cast Vote
+                Admin
               </Link>
             </li>
           </ul>
@@ -120,7 +119,7 @@ function AppContent() {
           <Route path="/members" element={<Members year={year} />} />
           <Route path="/analysis" element={<ConstituencyAnalysis year={year} />} />
           <Route path="/foreigner-afd" element={<ForeignerAfdScatterPage year={year} />} />
-          <Route path="/ballot" element={<Stimmzettel />} />
+          <Route path="/admin" element={<Admin year={year} />} />
         </Routes>
       </main>
     </>
@@ -131,7 +130,10 @@ export default function AppNew() {
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
-        <AppContent />
+        <Routes>
+          <Route path="/ballot" element={<Stimmzettel />} />
+          <Route path="/*" element={<AppContent />} />
+        </Routes>
       </Router>
     </QueryClientProvider>
   );
