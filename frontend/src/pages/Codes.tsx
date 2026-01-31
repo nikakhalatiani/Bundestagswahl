@@ -36,9 +36,9 @@ export function Codes() {
 
     return (
         <div style={{ padding: 20 }}>
-            <h1 className="text-2xl font-bold mb-4">Wahlcode-Generator</h1>
+            <h1 className="text-2xl font-bold mb-4">Voting Code Generator</h1>
             <p className="mb-4 text-gray-600">
-                Generieren Sie neue 16-stellige Wahlcodes für die Stimmabgabe.
+                Generate new 16-character voting codes for casting test votes.
             </p>
 
             <div className="mb-6">
@@ -47,19 +47,19 @@ export function Codes() {
                     onClick={generateCode}
                     disabled={loading}
                 >
-                    {loading ? 'Generiere...' : 'Neuen Code generieren'}
+                    {loading ? 'Generating...' : 'Generate new code'}
                 </button>
             </div>
 
             {error && (
                 <div className="text-red-600 mb-4">
-                    Fehler: {error}
+                    Error: {error}
                 </div>
             )}
 
             {generatedCode && (
                 <div className="bg-gray-100 p-6 rounded-lg inline-block">
-                    <p className="text-sm text-gray-500 mb-2">Generierter Code:</p>
+                    <p className="text-sm text-gray-500 mb-2">Generated code:</p>
                     <div className="flex items-center gap-4">
                         <code className="text-3xl font-mono tracking-widest bg-white px-4 py-2 rounded border">
                             {formatCode(generatedCode)}
@@ -67,13 +67,13 @@ export function Codes() {
                         <button
                             className="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded transition"
                             onClick={copyToClipboard}
-                            title="In Zwischenablage kopieren"
+                            title="Copy to clipboard"
                         >
-                            📋 Kopieren
+                            📋 Copy
                         </button>
                     </div>
                     <p className="text-sm text-gray-500 mt-3">
-                        Dieser Code kann einmalig zur Stimmabgabe verwendet werden.
+                        This code can be used once to cast a vote.
                     </p>
                 </div>
             )}

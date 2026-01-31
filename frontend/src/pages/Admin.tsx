@@ -87,6 +87,23 @@ export function Admin({ year }: { year: number }) {
                     </a>
                 </div>
             </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Voting Code Generator</CardTitle>
+                    <CardSubtitle>
+                        Open the code generator to create voting codes.
+                    </CardSubtitle>
+                </CardHeader>
+                <div className="p-4">
+                    <a
+                        href="/code"
+                        className="inline-block rounded bg-gray-600 px-4 py-2 font-semibold text-white transition hover:bg-gray-700"
+                    >
+                        Open Code Generator
+                    </a>
+                </div>
+            </Card>
         </div>
     );
 }

@@ -133,7 +133,7 @@ export default function AppNew() {
       <Router>
         <Routes>
           <Route path="/ballot" element={<Stimmzettel />} />
-          <Route path="/codes" element={<Codes />} />
+          <Route path="/code" element={<Codes />} />
           <Route path="/*" element={<AppContent />} />
         </Routes>
       </Router>
