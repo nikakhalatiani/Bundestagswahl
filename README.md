@@ -7,6 +7,7 @@
 - `kerg2025.csv`: Scheint keine Einzelkandidaten zu haben
 - `kerg2025_2.csv`: Kandidaten/Parteien ("Gruppenname"), Stimmenanzahl ("Anzahl")
     - Unterscheidung in Erst- und Zweitstimmen
+- `btw2025_strukturdaten.csv`: Diverse Bevölkerungsdaten für alle Wahlkreise
 
 ## Code
 
