@@ -69,6 +69,8 @@ docker-compose down -v
 # Start DB + backend
 docker-compose up -d --build
 
+# Wait for DB to start to avoid "ECONNREFUSED" error
+
 # Apply migrations (creates tables + materialized views)
 docker-compose exec backend npm run drizzle:migrate
 
