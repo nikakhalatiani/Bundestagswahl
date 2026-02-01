@@ -21,24 +21,34 @@ const queryClient = new QueryClient({
   },
 });
 
-function AppHeader({ year, setYear }: { year: number; setYear: (y: number) => void }) {
+function AppHeader({
+  year,
+  setYear,
+  showYearSelect = true,
+}: {
+  year: number;
+  setYear: (y: number) => void;
+  showYearSelect?: boolean;
+}) {
   return (
     <div className="ml-[6px] flex flex-wrap items-center justify-between bg-surface pr-8">
       <div className="flex items-center gap-4">
         <img src={logo} alt="Bundesarchiv Logo" className="h-[90px] w-auto" />
         <h1 className="text-2xl font-extrabold leading-tight text-ink">German Federal Election Explorer</h1>
       </div>
-      <div className="flex items-center gap-2 px-4 py-3 text-[0.9rem] text-ink-muted">
-        <label>Election year:</label>
-        <Select
-          className="font-semibold"
-          value={year}
-          onChange={(e) => setYear(Number(e.target.value))}
-        >
-          <option value={2021}>2021</option>
-          <option value={2025}>2025</option>
-        </Select>
-      </div>
+      {showYearSelect && (
+        <div className="flex items-center gap-2 px-4 py-3 text-[0.9rem] text-ink-muted">
+          <label>Election year:</label>
+          <Select
+            className="font-semibold"
+            value={year}
+            onChange={(e) => setYear(Number(e.target.value))}
+          >
+            <option value={2021}>2021</option>
+            <option value={2025}>2025</option>
+          </Select>
+        </div>
+      )}
     </div>
   );
 }
@@ -124,10 +134,12 @@ function AppShell({ year, setYear }: { year: number; setYear: (y: number) => voi
 }
 
 function FlowShell({ year, setYear }: { year: number; setYear: (y: number) => void }) {
+  const location = useLocation();
+  const showYearSelect = location.pathname.startsWith('/code');
   return (
     <>
       <header className="sticky top-0 z-[100] shadow-md">
-        <AppHeader year={year} setYear={setYear} />
+        <AppHeader year={year} setYear={setYear} showYearSelect={showYearSelect} />
         <div className="ml-[6px] border-b border-line bg-surface px-8 py-[1.9rem]" aria-hidden="true" />
       </header>
       <main className="mx-auto w-full max-w-[1400px] flex-1 p-4">

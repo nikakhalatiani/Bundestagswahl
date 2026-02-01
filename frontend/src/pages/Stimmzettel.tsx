@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Card, CardHeader, CardSectionTitle, CardSubtitle, CardTitle } from '../components/ui/Card';
 import { PartyBadge } from '../components/ui/PartyBadge';
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from '../components/ui/Table';
+import { QrScanner } from '../components/QrScanner';
 import { cn } from '../utils/cn';
 import { getPartyColor, getPartyDisplayName } from '../utils/party';
+import qrHint from '../assets/qr-code.png';
 
 type VoteSelectionStep = 'select' | 'review' | 'done';
 
@@ -15,7 +16,6 @@ function truncatePartyName(text: string, maxLength: number = 16): string {
 }
 
 export function Stimmzettel({ year, setYear }: { year: number; setYear: (y: number) => void }) {
-    const navigate = useNavigate();
     const [parties, setParties] = useState<any[]>([]);
     const [candidates, setCandidates] = useState<any[]>([]);
     const [constituencyName, setConstituencyName] = useState<string | null>(null);
@@ -33,6 +33,9 @@ export function Stimmzettel({ year, setYear }: { year: number; setYear: (y: numb
 
     const [codeParts, setCodeParts] = useState<string[]>(Array.from({ length: 16 }, () => ''));
     const inputRefs = useRef<HTMLInputElement[]>([]);
+    const [entryMode, setEntryMode] = useState<'manual' | 'scan'>('scan');
+    const [scanError, setScanError] = useState<string | null>(null);
+    const [scanProcessing, setScanProcessing] = useState(false);
 
     function normalizeChar(s: string) {
         return s.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 1);
@@ -74,6 +77,18 @@ export function Stimmzettel({ year, setYear }: { year: number; setYear: (y: numb
 
     function fullCode() {
         return codeParts.join('');
+    }
+
+    function setCodeFromString(code: string) {
+        const cleaned = code.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 16);
+        const next = Array.from({ length: 16 }, (_, idx) => cleaned[idx] ?? '');
+        setCodeParts(next);
+    }
+
+    function extractCodeFromQr(raw: string): string | null {
+        const normalized = raw.toUpperCase();
+        const match = normalized.match(/[A-Z0-9]{16}/);
+        return match ? match[0] : null;
     }
 
     function validateFullCode() {
@@ -152,20 +167,21 @@ export function Stimmzettel({ year, setYear }: { year: number; setYear: (y: numb
     const [validating, setValidating] = useState(false);
     const [codeError, setCodeError] = useState<string | null>(null);
 
-    async function validateAndProceed() {
+    async function validateAndProceed(overrideCode?: string): Promise<boolean> {
         setValidating(true);
         setCodeError(null);
         try {
+            const codeValue = overrideCode ?? fullCode();
             const res = await fetch('/api/codes/validate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ code: fullCode() })
+                body: JSON.stringify({ code: codeValue })
             });
             const json = await res.json();
             if (json.valid) {
                 if (!json.constituency || !json.year || !json.constituency_election_id) {
                     setCodeError('This voting code is missing constituency information.');
-                    return;
+                    return false;
                 }
                 const nextYear = Number(json.year);
                 const nextNumber = Number(json.constituency.number);
@@ -177,6 +193,7 @@ export function Stimmzettel({ year, setYear }: { year: number; setYear: (y: numb
                 setAuthorized(true);
                 setStep('select');
                 setSubmitResult(null);
+                return true;
             } else {
                 if (json.error === 'invalid_code') {
                     setCodeError('Invalid voting code. Please check your entry.');
@@ -189,12 +206,41 @@ export function Stimmzettel({ year, setYear }: { year: number; setYear: (y: numb
                 } else {
                     setCodeError('Unable to validate the code.');
                 }
+                return false;
             }
         } catch (err: any) {
             setCodeError('Network error. Please try again.');
+            return false;
         } finally {
             setValidating(false);
         }
+    }
+
+    async function handleScanSuccess(raw: string) {
+        if (scanProcessing || validating) return;
+        const extracted = extractCodeFromQr(raw);
+        if (!extracted) {
+            setScanError('No valid voting code found in the QR scan.');
+            setCodeError('No valid voting code found in the QR scan. Please enter it manually.');
+            setEntryMode('manual');
+            return;
+        }
+        setScanError(null);
+        setScanProcessing(true);
+        setCodeFromString(extracted);
+        setEntryMode('scan');
+        try {
+            const ok = await validateAndProceed(extracted);
+            if (!ok) {
+                setEntryMode('manual');
+            }
+        } finally {
+            setScanProcessing(false);
+        }
+    }
+
+    function handleScanError(message: string) {
+        setScanError(message);
     }
 
     function resetForNextVoter() {
@@ -208,6 +254,9 @@ export function Stimmzettel({ year, setYear }: { year: number; setYear: (y: numb
         setConstituencyElectionId(null);
         setSubmitResult(null);
         setCodeError(null);
+        setEntryMode('manual');
+        setScanError(null);
+        setScanProcessing(false);
         setTimeout(() => {
             inputRefs.current[0]?.focus();
         }, 0);
@@ -228,44 +277,105 @@ export function Stimmzettel({ year, setYear }: { year: number; setYear: (y: numb
                     <CardHeader>
                         <CardTitle>Enter voting code</CardTitle>
                         <CardSubtitle>
-                            Use the 16-character code provided to you to unlock the ballot.
+                            Use the 16-character code provided to you to unlock the ballot
                         </CardSubtitle>
                     </CardHeader>
                     <div className="space-y-4">
-                        <div className="flex flex-wrap items-center gap-2">
-                            {codeParts.map((part, idx) => (
-                                <React.Fragment key={idx}>
-                                    <input
-                                        ref={(el) => { inputRefs.current[idx] = el!; }}
-                                        value={part}
-                                        onChange={(e) => handleCodeChange(idx, e.target.value)}
-                                        onKeyDown={(e) => handleKeyDown(idx, e)}
-                                        onPaste={(e) => handlePaste(idx, e)}
-                                        className="h-12 w-[2.157rem] rounded-md border border-line bg-surface text-center text-lg font-semibold uppercase text-ink shadow-sm transition focus:border-ink-faint focus:outline-none focus:ring-2 focus:ring-black/5"
-                                    />
-                                    {(idx % 4 === 3) && idx !== 15 ? (
-                                        <span className="text-ink-faint">-</span>
-                                    ) : null}
-                                </React.Fragment>
-                            ))}
-                        </div>
-                        <p className="text-sm text-ink-muted">
-                            You can paste the full code into a box.
-                        </p>
-                        {codeError && (
-                            <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-                                {codeError}
+                        {entryMode === 'manual' ? (
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between gap-3">
+                                    <div>
+                                        <div className="text-xs font-semibold uppercase tracking-[0.3em] text-ink-faint">Manual entry</div>
+                                        <div className="text-sm text-ink-muted">Type or paste the code to continue</div>
+                                    </div>
+                                    <Button
+                                        variant="secondary"
+                                        size="md"
+                                        className="h-10"
+                                        onClick={() => {
+                                            setEntryMode('scan');
+                                            setScanError(null);
+                                            setCodeError(null);
+                                        }}
+                                    >
+                                        Scan QR code
+                                    </Button>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    {codeParts.map((part, idx) => (
+                                        <React.Fragment key={idx}>
+                                            <input
+                                                ref={(el) => { inputRefs.current[idx] = el!; }}
+                                                value={part}
+                                                onChange={(e) => handleCodeChange(idx, e.target.value)}
+                                                onKeyDown={(e) => handleKeyDown(idx, e)}
+                                                onPaste={(e) => handlePaste(idx, e)}
+                                                className="h-12 w-[2.157rem] rounded-md border border-line bg-surface text-center text-lg font-semibold uppercase text-ink shadow-sm transition focus:border-ink-faint focus:outline-none focus:ring-2 focus:ring-black/5"
+                                            />
+                                            {(idx % 4 === 3) && idx !== 15 ? (
+                                                <span className="text-ink-faint">-</span>
+                                            ) : null}
+                                        </React.Fragment>
+                                    ))}
+                                </div>
+                                <p className="text-sm text-ink-muted">
+                                    You can paste the full code into a box.
+                                </p>
+                                {codeError && (
+                                    <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                                        {codeError}
+                                    </div>
+                                )}
+                                <Button
+                                    variant="primary"
+                                    size="md"
+                                    className="h-10"
+                                    disabled={!validateFullCode() || validating}
+                                    onClick={() => validateAndProceed()}
+                                >
+                                    {validating ? 'Validating...' : 'Continue to ballot'}
+                                </Button>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center gap-5">
+                                <QrScanner
+                                    className="w-full max-w-[360px]"
+                                    onScanSuccess={handleScanSuccess}
+                                    onScanError={handleScanError}
+                                    onCameraLoaded={() => setScanError(null)}
+                                    showHint
+                                    hintSrc={qrHint}
+                                />
+                                <div className="flex w-full max-w-[360px] flex-col items-center gap-3">
+                                    <p className="text-center text-sm text-ink-muted">
+                                        Point your camera at the QR code to capture the voting code automatically
+                                    </p>
+                                    {scanProcessing && (
+                                        <div className="w-full rounded-md border border-line bg-surface-muted px-4 py-3 text-center text-sm text-ink-muted">
+                                            Validating scanned code...
+                                        </div>
+                                    )}
+                                    {scanError && (
+                                        <div className="w-full rounded-md border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-800">
+                                            {scanError}
+                                        </div>
+                                    )}
+                                    {codeError && (
+                                        <div className="w-full rounded-md border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-800">
+                                            {codeError}
+                                        </div>
+                                    )}
+                                    <Button
+                                        variant="secondary"
+                                        size="md"
+                                        className="h-10"
+                                        onClick={() => setEntryMode('manual')}
+                                    >
+                                        Enter code manually
+                                    </Button>
+                                </div>
                             </div>
                         )}
-                        <Button
-                            variant="primary"
-                            size="md"
-                            className="h-10"
-                            disabled={!validateFullCode() || validating}
-                            onClick={validateAndProceed}
-                        >
-                            {validating ? 'Validating...' : 'Continue to ballot'}
-                        </Button>
                     </div>
                 </Card>
 

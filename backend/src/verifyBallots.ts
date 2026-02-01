@@ -102,14 +102,14 @@ async function verifyBallots(options: VerificationOptions = {}) {
   let totalFirstVoteMismatches = 0;
   let totalSecondVoteMismatches = 0;
 
-  // Precompute: second-vote ballot counts per party (year-filtered)
-  // Compare against expected from mv_02_party_list_votes (year-filtered)
+  // Precompute: second-vote VALID ballot counts per party (year-filtered)
+  // Compare against expected from mv_02_party_list_votes (valid votes only)
   const secondBallotsByPartyRes = await pool.query(
     `
     SELECT pl.party_id, COUNT(*)::bigint AS cnt
     FROM second_votes sv
     JOIN party_lists pl ON pl.id = sv.party_list_id
-    WHERE pl.year = $1
+    WHERE pl.year = $1 AND sv.is_valid = true
     GROUP BY pl.party_id
   `,
     [year]
@@ -187,6 +187,7 @@ async function verifyBallots(options: VerificationOptions = {}) {
         ON ce.bridge_id = fv.constituency_election_id
       WHERE ce.constituency_id = $1
         AND ce.year = $2
+        AND fv.is_valid = true
     `,
       [constituency.id, year]
     );
@@ -200,7 +201,7 @@ async function verifyBallots(options: VerificationOptions = {}) {
     }
 
     console.log(
-      `Total first votes (ballots): ${Number(firstVotesCount).toLocaleString()}`
+      `Total first votes (valid ballots): ${Number(firstVotesCount).toLocaleString()}`
     );
 
     // Candidate expected votes for this constituency/year
@@ -249,6 +250,7 @@ async function verifyBallots(options: VerificationOptions = {}) {
       JOIN top_candidates tc ON tc.person_id = fv.direct_person_id
       WHERE ce.constituency_id = $1
         AND ce.year = $2
+        AND fv.is_valid = true
       GROUP BY fv.direct_person_id
     `,
       [constituency.id, year, topN]
@@ -298,6 +300,7 @@ async function verifyBallots(options: VerificationOptions = {}) {
           ON ce.bridge_id = fv.constituency_election_id
         WHERE ce.constituency_id = $1
           AND ce.year = $2
+          AND fv.is_valid = true
         GROUP BY fv.direct_person_id
       )
       SELECT COUNT(*)::int AS mismatches

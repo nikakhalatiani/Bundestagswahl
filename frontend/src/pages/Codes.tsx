@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { Autocomplete } from '../components/Autocomplete';
 import { Card, CardHeader, CardTitle, CardSubtitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -131,21 +132,30 @@ export function Codes({ year }: CodesProps) {
                 <Card>
                     <CardHeader>
                         <CardTitle>Generated code</CardTitle>
-                        <CardSubtitle>Use this code once to cast a ballot.</CardSubtitle>
+                        <CardSubtitle>Use this code once to cast a ballot</CardSubtitle>
                     </CardHeader>
-                    <div className="space-y-3">
-                        {generatedContext && (
-                            <div className="rounded-md border border-line bg-surface-muted px-4 py-2 text-sm text-ink-muted">
-                                {formatConstituencyLabel(generatedContext)} · {year}
+                    <div className="flex flex-col items-center gap-5">
+                        <div className="rounded-lg border border-line bg-surface-muted p-4">
+                            <QRCodeSVG
+                                value={generatedCode}
+                                size={180}
+                                level="H"
+                                fgColor="#111111"
+                                bgColor="#f8f8f8"
+                            />
+                        </div>
+                        <div className="flex flex-col items-center gap-3">
+                            <div className="flex items-center gap-3">
+                                <code className="flex h-11 items-center rounded-md border border-line bg-surface px-4 font-mono text-lg tracking-[0.3em] text-ink">
+                                    {formatCode(generatedCode)}
+                                </code>
+                                <Button variant="secondary" size="md" className="h-11" onClick={copyToClipboard}>
+                                    Copy code
+                                </Button>
                             </div>
-                        )}
-                        <div className="flex flex-wrap items-center gap-3">
-                            <code className="flex h-11 items-center rounded-md border border-line bg-surface px-4 font-mono text-lg tracking-[0.3em] text-ink">
-                                {formatCode(generatedCode)}
-                            </code>
-                            <Button variant="secondary" size="md" className="h-11" onClick={copyToClipboard}>
-                                Copy code
-                            </Button>
+                            <p className="text-sm text-ink-muted">
+                                Scan the QR code to quickly enter the voting code on the ballot screen
+                            </p>
                         </div>
                     </div>
                 </Card>
