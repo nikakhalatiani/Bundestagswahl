@@ -50,7 +50,7 @@ def try_match(val, name_to_ids):
     if ids:
         if len(ids) == 1:
             return list(ids)[0]
-        print(f"⚠️  Ambiguous mapping for '{val}' → {sorted(ids)} (skipped)")
+        print(f"Ambiguous mapping for '{val}' → {sorted(ids)} (skipped)")
         return None
 
     # Fallback for EB: with space
@@ -60,7 +60,7 @@ def try_match(val, name_to_ids):
         if ids:
             if len(ids) == 1:
                 return list(ids)[0]
-            print(f"⚠️  Ambiguous mapping for '{val}' via EB-fix → {sorted(ids)} (skipped)")
+            print(f"Ambiguous mapping for '{val}' via EB-fix → {sorted(ids)} (skipped)")
             return None
 
     # No match at all
@@ -68,7 +68,7 @@ def try_match(val, name_to_ids):
 
 
 def main():
-    print("🧭 Loading files ...")
+    print("Loading files ...")
     cpv = load_csv(CPV_FILE)
     mapping = load_csv(PARTY_MAP_FILE)
 
@@ -78,7 +78,7 @@ def main():
     mask_non_num = ~cpv["PartyID"].apply(is_number)
     non_num_rows = cpv.loc[mask_non_num].copy()
 
-    print(f"🔍 Found {len(non_num_rows)} non‑numeric PartyID entries to verify.")
+    print(f"Found {len(non_num_rows)} non‑numeric PartyID entries to verify.")
 
     changes = []
     for i, r in non_num_rows.iterrows():
@@ -89,15 +89,14 @@ def main():
             changes.append((old_val, new_id))
 
     cpv.to_csv(OUT_FILE, sep=";", index=False, encoding="utf-8-sig")
-    print(f"💾 Saved → {OUT_FILE}")
+    print(f"Saved → {OUT_FILE}")
 
     if changes:
-        print("\n✅ Updated PartyIDs:")
+        print("\nUpdated PartyIDs:")
         for old, new in changes:
             print(f"  {old} → {new}")
     else:
-        print("\nℹ️ No automatic updates performed (ambiguous or unmatched names were skipped).")
-
+        print("\nNo automatic updates performed (ambiguous or unmatched names were skipped).")
 
 if __name__ == "__main__":
     main()

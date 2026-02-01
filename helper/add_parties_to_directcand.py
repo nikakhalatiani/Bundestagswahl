@@ -44,7 +44,7 @@ try:
     # ------------------------------------------------------------------
     # 1. Load data
     # ------------------------------------------------------------------
-    print("🧭 Loading CSVs ...")
+    print("Loading CSVs ...")
 
     direct = pd.read_csv(DIRECT_CANDIDACY, sep=";", encoding="utf-8-sig")
     persons = pd.read_csv(PERSONS_CSV, sep=";", encoding="utf-8-sig")
@@ -73,7 +73,7 @@ try:
     all_candidates = []
     for path in CANDIDATE_FILES:
         if not path.exists():
-            print(f"⚠ {path.name} not found, skipping that year.")
+            print(f"Missing {path.name}, skipping that year.")
             continue
         year = int(path.stem[-4:])
         df = pd.read_csv(path, sep=";", encoding="utf-8-sig")
@@ -88,14 +88,14 @@ try:
         ]
         missing = [c for c in required if c not in df.columns]
         if missing:
-            print(f"⚠ {path.name} missing {missing}, skipping.")
+            print(f"Missing some of {required} columns in {path.name} - skipping.")
             continue
 
         df["key"] = build_person_key(df)
         df["Year"] = year
         all_candidates.append(df[["Year", "key", "GruppennameKurz"]])
 
-        print(f"✅ Loaded {len(df)} candidates for {year}.")
+        print(f"Loaded {len(df)} candidates for {year}.")
 
     cand_all = pd.concat(all_candidates, ignore_index=True) if all_candidates else pd.DataFrame()
 
@@ -113,9 +113,9 @@ try:
     # Some small parties may not be found
     missing_pids = cand_party["PartyID"].isna().sum()
     if missing_pids:
-        print(f"⚠ {missing_pids} candidate rows have no PartyID mapping.")
+        print(f"Missing {missing_pids} candidate rows have no PartyID mapping.")
 
-    print(f"✅ Combined candidate-party info: {len(cand_party)} rows.")
+    print(f"Combined candidate-party info: {len(cand_party)} rows.")
 
     # ------------------------------------------------------------------
     # 3. Link direct_candidacy → persons → candidates → PartyID
@@ -135,14 +135,14 @@ try:
 
     missing_party = direct_party["PartyID"].isna().sum()
     if missing_party:
-        print(f"⚠ {missing_party} direct candidates lack matching PartyID.")
+        print(f"Missing {missing_party} direct candidates lack matching PartyID.")
 
     # ------------------------------------------------------------------
     # 4. Save updated CSV
     # ------------------------------------------------------------------
     direct_party.to_csv(OUT_FILE, sep=";", index=False, encoding="utf-8-sig")
-    print(f"💾 Saved updated direct_candidacy_with_party.csv with {len(direct_party)} rows.")
+    print(f"Saved updated direct_candidacy_with_party.csv with {len(direct_party)} rows.")
     print("   Columns:", ", ".join(direct_party.columns))
 
 except Exception as e:
-    print(f"❌ Unexpected error: {type(e).__name__}: {e}")
+    print(f"Unexpected error: {type(e).__name__}: {e}")

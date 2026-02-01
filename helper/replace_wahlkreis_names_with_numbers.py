@@ -34,12 +34,12 @@ try:
     # --- Summary ---
     total = len(merged)
     mapped = merged["Wahlkreis"].apply(lambda x: str(x).isdigit()).sum()
-    print(f"✅ Created '{output_candidates.name}' with {total} candidates.")
+    print(f"Created '{output_candidates.name}' with {total} candidates.")
     print(f"   {mapped}/{total} Wahlkreis names successfully replaced with numbers.")
 
 except FileNotFoundError as e:
-    print(f"❌ Error: Missing file -> {e.filename}")
+    print(f"Error: Missing file -> {e.filename}")
 except KeyError as e:
-    print(f"❌ Missing expected column: {e}")
+    print(f"Missing expected column: {e}")
 except Exception as e:
-    print(f"❌ Unexpected error: {e}")
+    print(f"Unexpected error: {e}")

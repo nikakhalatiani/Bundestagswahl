@@ -46,11 +46,11 @@ try:
                             index=False, encoding="utf-8")
 
     print(
-        f"✅ Created '{output_filename.name}' with {len(state_parties_df)} unique state/party combinations.")
+        f"Created '{output_filename.name}' with {len(state_parties_df)} unique state/party combinations.")
 
 except FileNotFoundError:
-    print(f"❌ Error: '{input_filename}' not found.")
+    print(f"Error: '{input_filename}' not found.")
 except KeyError as e:
-    print(f"❌ Missing expected column: {e}")
+    print(f"Missing expected column: {e}")
 except Exception as e:
-    print(f"❌ Unexpected error: {e}")
+    print(f"Unexpected error: {e}")

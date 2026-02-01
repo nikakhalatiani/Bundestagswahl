@@ -62,13 +62,13 @@ try:
     # --- Summary ---
     total_pairs = len(merged)
     matched_pairs = merged["Anzahl"].notna().sum()
-    print(f"✅ Updated '{output_filename.name}' with vote counts.")
+    print(f"Updated '{output_filename.name}' with vote counts.")
     print(
         f"   {matched_pairs}/{total_pairs} state/party combinations have vote data.")
 
 except FileNotFoundError as e:
-    print(f"❌ Error: Missing file -> {e.filename}")
+    print(f"Error: Missing file -> {e.filename}")
 except KeyError as e:
-    print(f"❌ Missing expected column: {e}")
+    print(f"Missing expected column: {e}")
 except Exception as e:
-    print(f"❌ Unexpected error: {e}")
+    print(f"Unexpected error: {e}")

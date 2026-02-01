@@ -51,21 +51,21 @@ try:
 
     for path in KAND_FILES:
         year = int(re.search(r"\d{4}", path.stem).group())
-        print(f"🗂 Reading {path.name} for {year} ...")
+        print(f"Reading {path.name} for {year} ...")
         if not path.exists():
-            print(f"⚠ Missing file {path}, skipping.")
+            print(f"Missing file {path}, skipping.")
             continue
 
         df = pd.read_csv(path, sep=";", encoding="utf-8-sig")
         df.columns = [c.strip() for c in df.columns]
 
         if "VorpGewaehlt" not in df.columns:
-            print(f"⚠ {path.name} lacks 'VorpGewaehlt' column - skipping.")
+            print(f"Missing 'VorpGewaehlt' column in {path.name} - skipping.")
             continue
 
         required = ["Nachname", "Vornamen", "Geschlecht", "Geburtsjahr"]
         if not all(c in df.columns for c in required):
-            print(f"⚠ {path.name} is missing some of {required} - skipping.")
+            print(f"Missing some of {required} columns in {path.name} - skipping.")
             continue
 
         df["key"] = build_person_key(df)
@@ -81,7 +81,7 @@ try:
         raise ValueError("No kand files with VorpGewaehlt data.")
 
     flag_df = pd.concat(all_flags, ignore_index=True).drop_duplicates(subset=["Year", "key"])
-    print(f"✅ Built lookup for {len(flag_df)} person–year rows from kand data.")
+    print(f"Built lookup for {len(flag_df)} person–year rows from kand data.")
 
     # -----------------------------------------------------------------
     # 2) Prepare persons master (for name/gender/year mapping)
@@ -96,15 +96,15 @@ try:
     # 3) Helper function to enrich a candidacy file
     # -----------------------------------------------------------------
     def enrich_candidacy(label: str, infile: Path, outfile: Path):
-        print(f"\n🧭 Enriching {label} ...")
+        print(f"\nEnriching {label} ...")
 
         if not infile.exists():
-            print(f"⚠ Missing {infile}, skipping this file.")
+            print(f"Missing {infile}, skipping this file.")
             return
 
         cand = pd.read_csv(infile, sep=";", encoding="utf-8-sig")
         if "PersonID" not in cand.columns or "Year" not in cand.columns:
-            print(f"⚠ {infile.name} missing required columns PersonID/Year - skipping.")
+            print(f"Missing required columns PersonID/Year in {infile.name} - skipping.")
             return
 
         # Attach person key
@@ -116,7 +116,7 @@ try:
 
         cand.to_csv(outfile, sep=";", index=False, encoding="utf-8-sig")
         n_true = cand["PreviouslyElected"].sum()
-        print(f"💾 Saved {outfile.name}   {n_true} incumbents marked TRUE")
+        print(f"Saved {outfile.name}   {n_true} incumbents marked TRUE")
 
     # -----------------------------------------------------------------
     # 4) Apply enrichment to both direct and party‑list
@@ -124,7 +124,7 @@ try:
     enrich_candidacy("Direct candidacies", DIRECT_CANDIDACY, OUT_DIRECT)
     enrich_candidacy("Party list candidacies", PARTY_LIST_CANDIDACY, OUT_LIST)
 
-    print("\n🎉 Done.\n")
+    print("\nDone.\n")
 
 except Exception as e:
-    print(f"❌ Unexpected error: {type(e).__name__}: {e}")
+    print(f"Unexpected error: {type(e).__name__}: {e}")

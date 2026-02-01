@@ -94,7 +94,7 @@ try:
     # -----------------------------------------------------------------
     # 1) Load and combine KERG_2
     # -----------------------------------------------------------------
-    print("🧾 Loading KERG _2 files ...")
+    print("Loading KERG _2 files ...")
     k21 = load_kerg(KERG_2021, 2021)
     k25 = load_kerg(KERG_2025, 2025)
     kerg = pd.concat([k21, k25], ignore_index=True)
@@ -142,7 +142,7 @@ try:
     # -----------------------------------------------------------------
     # 2) Constituency‑party votes enrichment
     # -----------------------------------------------------------------
-    print("\n🧭 Enriching constituency_party_votes ...")
+    print("\nEnriching constituency_party_votes ...")
     cp = pd.read_csv(CONST_PARTY_VOTES_CSV, sep=";", encoding="utf-8-sig")
     cp.columns = [c.strip() for c in cp.columns]
 
@@ -181,12 +181,12 @@ try:
     )
     cp_en.to_csv(OUT_CONST_PARTY_VOTES, sep=";",
                  index=False, encoding="utf-8-sig")
-    print(f"💾 Saved {OUT_CONST_PARTY_VOTES.name} ({len(cp_en)} rows).")
+    print(f"Saved {OUT_CONST_PARTY_VOTES.name} ({len(cp_en)} rows).")
 
     # -----------------------------------------------------------------
     # 3) party_list enrichment
     # -----------------------------------------------------------------
-    print("\n🧭 Enriching party_list ...")
+    print("\nEnriching party_list ...")
     pl = pd.read_csv(PARTY_LIST_CSV, sep=";", encoding="utf-8-sig")
     pl.columns = [c.strip() for c in pl.columns]
 
@@ -227,21 +227,21 @@ try:
 
     pl_en = pl.merge(agg_land, on=["Year", "StateID", "PartyID"], how="left")
     pl_en.to_csv(OUT_PARTY_LIST, sep=";", index=False, encoding="utf-8-sig")
-    print(f"💾 Saved {OUT_PARTY_LIST.name} ({len(pl_en)} rows).")
+    print(f"Saved {OUT_PARTY_LIST.name} ({len(pl_en)} rows).")
 
     # -----------------------------------------------------------------
     # 4) direct_candidacy enrichment stub
     # -----------------------------------------------------------------
-    print("\n🧭 Copying direct_candidacy (placeholder for future deltas) ...")
+    print("\nCopying direct_candidacy (placeholder for future deltas) ...")
     dc = pd.read_csv(DIRECT_CANDIDACY_CSV, sep=";", encoding="utf-8-sig")
     dc.to_csv(OUT_DIRECT, sep=";", index=False, encoding="utf-8-sig")
-    print(f"💾 Saved {OUT_DIRECT.name} ({len(dc)} rows).")
+    print(f"Saved {OUT_DIRECT.name} ({len(dc)} rows).")
 
-    print("\n🎉 Done.\n")
+    print("\nDone.\n")
 
 except FileNotFoundError as e:
-    print(f"❌ Missing file: {e.filename}")
+    print(f"Missing file: {e.filename}")
 except KeyError as e:
-    print(f"❌ Missing expected column: {e}")
+    print(f"Missing expected column: {e}")
 except Exception as e:
-    print(f"❌ Unexpected error: {type(e).__name__}: {e}")
+    print(f"Unexpected error: {type(e).__name__}: {e}")
