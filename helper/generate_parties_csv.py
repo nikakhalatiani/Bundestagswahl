@@ -41,7 +41,7 @@ try:
 
     for path in inputs:
         year = int(path.stem[-4:])
-        print(f"\n🗂 Reading {path.name}   (year={year})")
+        print(f"\nReading {path.name}   (year={year})")
 
         df = pd.read_csv(path, sep=";", encoding="utf-8-sig")
         print("   Columns found:", list(df.columns))
@@ -102,8 +102,8 @@ try:
     master.to_csv(out_master, sep=";", index=False, encoding="utf-8")
     mapping.to_csv(out_map, sep=";", index=False, encoding="utf-8")
 
-    print(f"\n✅ Created {out_master.name} ({len(master)} unique parties)")
-    print(f"✅ Created {out_map.name} ({len(mapping)} total rows)\n")
+    print(f"\nCreated {out_master.name} ({len(master)} unique parties)")
+    print(f"Created {out_map.name} ({len(mapping)} total rows)\n")
 
 except Exception as e:
-    print("❌ Unexpected error:", e)
+    print("Unexpected error:", e)

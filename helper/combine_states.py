@@ -33,15 +33,14 @@ try:
 
     # Save the year‑specific file
     df.to_csv(states_filename, sep=";", index=False, encoding="utf-8")
-    print(f"✅ Created '{states_filename.name}' with {len(df)} unique states.")
+    print(f"Created '{states_filename.name}' with {len(df)} unique states.")
 
     # Save / update the shared mapping file (one copy for all years)
     df.to_csv(mapping_filename, sep=";", index=False, encoding="utf-8")
-    print(f"📁 Saved mapping in '{mapping_filename.name}'.")
-
+    print(f"Saved mapping in '{mapping_filename.name}'.")
 except FileNotFoundError:
-    print(f"❌ Error: '{input_filename}' not found.")
+    print(f"Error: '{input_filename}' not found.")
 except KeyError as e:
-    print(f"❌ Missing expected column: {e}")
+    print(f"Missing expected column: {e}")
 except Exception as e:
-    print(f"❌ Unexpected error: {e}")
+    print(f"Unexpected error: {e}")

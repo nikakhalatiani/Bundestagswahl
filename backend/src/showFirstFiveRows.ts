@@ -12,7 +12,7 @@ async function main() {
     { name: "constituencies", pk: "id" },
     { name: "persons", pk: "id" },
     { name: "party_lists", pk: "id" },
-    { name: "direct_candidacy", pk: "person_id, year" },
+    { name: "direct_candidacy", pk: "person_id, constituency_election_id" },
     { name: "party_list_candidacy", pk: "person_id, party_list_id" },
     { name: "constituency_elections", pk: "bridge_id" },
     { name: "first_votes", pk: "id" },
@@ -54,7 +54,7 @@ async function main() {
 }
 
 main()
-  .catch((err) => console.error("❌ Error showing rows:", err))
+  .catch((err) => console.error("Error showing rows:", err))
   .finally(async () => {
     await disconnect();
     console.log("\nDatabase connection closed.");

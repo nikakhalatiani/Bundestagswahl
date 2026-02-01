@@ -341,7 +341,7 @@ def main():
     # ---------------------------------------------------------------
     # Load all needed sources
     # ---------------------------------------------------------------
-    print("🧭 Loading kand files ...")
+    print("Loading kand files ...")
     k21 = load_csv(KAND_2021)
     k25 = load_csv(KAND_2025)
 
@@ -381,7 +381,7 @@ def main():
     # ---------------------------------------------------------------
     # Build/Update persons.csv
     # ---------------------------------------------------------------
-    print("\n🧩 Rebuilding persons from kand (dedupe by composite key) ...")
+    print("\nRebuilding persons from kand (dedupe by composite key) ...")
     p21 = extract_person_fields(k21, y21)
     p25 = extract_person_fields(k25, y25)
     persons_all = pd.concat([p21, p25], ignore_index=True)
@@ -434,7 +434,7 @@ def main():
     ]
     persons_out = persons_new[persons_out_cols].sort_values("PersonID")
     persons_out.to_csv(OUT_PERSONS, sep=";", index=False, encoding="utf-8-sig")
-    print(f"💾 Saved → {OUT_PERSONS.name} ({len(persons_out)} persons, +{n_new} new)")
+    print(f"Saved → {OUT_PERSONS.name} ({len(persons_out)} persons, +{n_new} new)")
 
     # For attaching PersonID back to kand rows we need key per kand row
     # Build a lookup dataframe: key -> PersonID
@@ -443,7 +443,7 @@ def main():
     # ---------------------------------------------------------------
     # Rebuild direct_candidacy from kand
     # ---------------------------------------------------------------
-    print("\n🗳 Rebuilding direct_candidacy from kand ...")
+    print("\nRebuilding direct_candidacy from kand ...")
 
     # Attach person keys onto kand rows (same fields exist in kand)
     def attach_personid(kand: pd.DataFrame) -> pd.DataFrame:
@@ -504,7 +504,7 @@ def main():
     ].drop_duplicates()
 
     if len(unmapped_direct):
-        print("\n⚠ Unmapped parties in direct_candidacy (needs manual mapping):")
+        print("\nUnmapped parties in direct_candidacy (needs manual mapping):")
         print(unmapped_direct.to_string(index=False))
 
     direct = direct_raw.rename(columns={"PartyID_mapped": "PartyID"})[
@@ -549,12 +549,12 @@ def main():
     ].copy()
 
     direct_out.to_csv(OUT_DIRECT, sep=";", index=False, encoding="utf-8-sig")
-    print(f"💾 Saved → {OUT_DIRECT.name} ({len(direct_out)} rows)")
+    print(f"Saved → {OUT_DIRECT.name} ({len(direct_out)} rows)")
 
     # ---------------------------------------------------------------
     # Rebuild party_list_candidacy from kand
     # ---------------------------------------------------------------
-    print("\n📜 Rebuilding party_list_candidacy from kand ...")
+    print("\nRebuilding party_list_candidacy from kand ...")
 
     list_21 = extract_list_rows(k21_pid, y21)
     list_25 = extract_list_rows(k25_pid, y25)
@@ -567,7 +567,7 @@ def main():
 
     unmapped_states = list_raw[list_raw["StateID"].isna()][["Year", "StateAbk"]].drop_duplicates()
     if len(unmapped_states):
-        print("\n⚠ Unmapped StateAbk in list candidacy (check state_id_mapping.csv):")
+        print("\nUnmapped StateAbk in list candidacy (check state_id_mapping.csv):")
         print(unmapped_states.to_string(index=False))
 
     list_raw["PartyID_mapped"] = list_raw.apply(
@@ -585,7 +585,7 @@ def main():
         ["Year", "PartyShortRaw", "PartyLongRaw"]
     ].drop_duplicates()
     if len(unmapped_list):
-        print("\n⚠ Unmapped parties in party_list_candidacy (needs manual mapping):")
+        print("\nUnmapped parties in party_list_candidacy (needs manual mapping):")
         print(unmapped_list.to_string(index=False))
 
     list_raw["PartyID"] = to_int(list_raw["PartyID_mapped"])
@@ -605,13 +605,13 @@ def main():
     ].drop_duplicates()
 
     if len(missing_partylist):
-        print("\n⚠ Missing PartyListID for these (Year,StateID,PartyID):")
+        print("\nMissing PartyListID for these (Year,StateID,PartyID):")
         print(missing_partylist.to_string(index=False))
 
     plc_out = plc.dropna(subset=["PersonID", "Listenplatz"]).copy()
     # keep PartyListID even if NA; we want correct counts and a list to fix mapping
     missing_partylist_rows = plc_out["PartyListID"].isna().sum()
-    print(f"⚠ party_list_candidacy rows with missing PartyListID: {int(missing_partylist_rows):,}")
+    print(f"party_list_candidacy rows with missing PartyListID: {int(missing_partylist_rows):,}")
     plc_out["PartyListID"] = to_int(plc_out["PartyListID"])
     plc_out["PreviouslyElected"] = plc_out["PreviouslyElected"].astype(bool)
 
@@ -623,14 +623,14 @@ def main():
     )
 
     plc_out.to_csv(OUT_PLC, sep=";", index=False, encoding="utf-8-sig")
-    print(f"💾 Saved → {OUT_PLC.name} ({len(plc_out)} rows)")
+    print(f"Saved → {OUT_PLC.name} ({len(plc_out)} rows)")
 
-    print("\n✅ Done.\n"
+    print("\nDone.\n"
           f"- persons: {OUT_PERSONS}\n"
           f"- direct_candidacy: {OUT_DIRECT}\n"
           f"- party_list_candidacy: {OUT_PLC}\n")
     
-    print("\n📊 Sanity checks (expected totals)")
+    print("\nSanity checks (expected totals)")
     print("  Expected direct total: 6025")
     print("  Expected list total  : 8627")
     print(f"  Produced direct rows : {len(direct_out):,}")
@@ -641,8 +641,8 @@ if __name__ == "__main__":
     try:
         main()
     except FileNotFoundError as e:
-        print(f"❌ Missing file: {e.filename}")
+        print(f"Missing file: {e.filename}")
     except KeyError as e:
-        print(f"❌ Missing expected column: {e}")
+        print(f"Missing expected column: {e}")
     except Exception as e:
-        print(f"❌ Unexpected error: {type(e).__name__}: {e}")
+        print(f"Unexpected error: {type(e).__name__}: {e}")

@@ -57,7 +57,7 @@ def main():
     # ------------------------------------------------------------------
     # 1) Load base elections and attach Number via constituency mapping
     # ------------------------------------------------------------------
-    print("🧭 Loading constituency mappings and base elections ...")
+    print("Loading constituency mappings and base elections ...")
 
     const21 = load_constituencies(CONSTITUENCIES_2021, 2021)
     const25 = load_constituencies(CONSTITUENCIES_2025, 2025)
@@ -73,12 +73,12 @@ def main():
     )
     if base_with_num["Number"].isna().any():
         n_miss = base_with_num["Number"].isna().sum()
-        print(f"⚠ {n_miss} rows in constituency_elections lack a Number mapping.")
+        print(f"Warning: {n_miss} rows in constituency_elections lack a Number mapping.")
 
     # ------------------------------------------------------------------
     # 2) Load KERG and normalise numeric columns
     # ------------------------------------------------------------------
-    print("🧾 Loading KERG files (including updated 2025) ...")
+    print("Loading KERG files (including updated 2025) ...")
     kerg21 = load_kerg(KERG_2021, 2021)
     kerg25 = load_kerg(KERG_2025, 2025)
     kerg = pd.concat([kerg21, kerg25], ignore_index=True)
@@ -162,7 +162,7 @@ def main():
 
     sys_df = pd.DataFrame(records)
     print(
-        f"📊 Extracted System‑Gruppe data for {len(sys_df)} (Year, Number) pairs."
+        f"Extracted System‑Gruppe data for {len(sys_df)} (Year, Number) pairs."
     )
 
     # ------------------------------------------------------------------
@@ -188,12 +188,12 @@ def main():
 
     # Keep a temp copy
     enriched.to_csv(ENRICHED_TMP, sep=";", index=False, encoding="utf-8-sig")
-    print(f"💾 Saved temporary enriched file → {ENRICHED_TMP.name}")
+    print(f"Saved temporary enriched file → {ENRICHED_TMP.name}")
 
     # ------------------------------------------------------------------
     # 5) Replace only 2025 rows in constituency_elections.csv
     # ------------------------------------------------------------------
-    print("🔁 Replacing 2025 rows in constituency_elections.csv ...")
+    print("Replacing 2025 rows in constituency_elections.csv ...")
 
     # Reload original base (to avoid any accidental mutations)
     base_orig = pd.read_csv(BASE_CONST_ELEC, sep=";", encoding="utf-8-sig")
@@ -207,7 +207,7 @@ def main():
     # Align columns: keep exactly the columns of base_orig
     missing_cols = [c for c in base_orig.columns if c not in new_2025.columns]
     if missing_cols:
-        print(f"⚠ Enriched 2025 rows missing columns {missing_cols}; "
+        print(f"Warning: Enriched 2025 rows missing columns {missing_cols}; "
               f"they will be filled with NA.")
         for c in missing_cols:
             new_2025[c] = None
@@ -220,16 +220,16 @@ def main():
     updated = pd.concat([base_no_25, new_2025], ignore_index=True)
 
     updated.to_csv(OUT_UPDATED, sep=";", index=False, encoding="utf-8-sig")
-    print(f"💾 Wrote updated elections to {OUT_UPDATED.name}")
-    print("👉 Inspect and, if OK, replace constituency_elections.csv with this file.")
+    print(f"Wrote updated elections to {OUT_UPDATED.name}")
+    print("Inspect and, if OK, replace constituency_elections.csv with this file.")
 
 
 if __name__ == "__main__":
     try:
         main()
     except FileNotFoundError as e:
-        print(f"❌ Missing file: {e.filename}")
+        print(f"Missing file: {e.filename}")
     except KeyError as e:
-        print(f"❌ Missing expected column: {e}")
+        print(f"Missing expected column: {e}")
     except Exception as e:
-        print(f"❌ Unexpected error: {type(e).__name__}: {e}")
+        print(f"Unexpected error: {type(e).__name__}: {e}")

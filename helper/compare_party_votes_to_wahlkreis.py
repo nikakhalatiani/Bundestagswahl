@@ -30,7 +30,7 @@ def main():
     turnout_sum = ce["TotalVoters"].sum()
     turnout_pct = turnout_sum / elig_sum * 100 if elig_sum else 0
 
-    print("📊 Overall Totals")
+    print("Overall Totals")
     print(f"  First votes total  : {first_sum:,.0f}")
     print(f"  Second votes total : {second_sum:,.0f}")
     print(f"  Eligible voters    : {elig_sum:,.0f}")
@@ -65,7 +65,7 @@ def main():
     summary["FirstDiff"] = summary["FirstVotes"] - summary["ValidFirst"]
     summary["SecondDiff"] = summary["SecondVotes"] - summary["ValidSecond"]
 
-    print("\n📆 Yearly Summary (votes + turnout + validity checks):\n")
+    print("\nYearly Summary (votes + turnout + validity checks):\n")
     print(
         summary.to_string(
             index=True,
@@ -75,16 +75,16 @@ def main():
         )
     )
 
-    print("\n✅ Differences (should be 0 if they match):")
+    print("\nDifferences (should be 0 if they match):")
     print(summary[["FirstDiff", "SecondDiff"]])
     
-    print("\n🔎 Checking constituency-level differences for FirstVotes...\n")
+    print("\nChecking constituency-level differences for FirstVotes...\n")
 
     # Get yearly mismatched years dynamically
     mismatched_years = summary.loc[summary["FirstDiff"] != 0].index.tolist()
 
     if not mismatched_years:
-        print("✅ No FirstVote mismatches detected at constituency level.")
+        print("No FirstVote mismatches detected at constituency level.")
     else:
         for year in mismatched_years:
             print(f"--- Year {year} ---")
@@ -106,12 +106,12 @@ def main():
             diff_df = diff_df.loc[diff_df["FirstDiff"].round(0) != 0]
 
             print(diff_df.head(10).to_string(index=False))
-            print(f"➡️ Found {len(diff_df)} constituencies with mismatched FirstVotes.\n")
+            print(f"Found {len(diff_df)} constituencies with mismatched FirstVotes.\n")
 
             # Optionally save for manual fixing
             diff_path = OUT_DIR / f"firstvote_mismatches_{year}.csv"
             diff_df.to_csv(diff_path, index=False, encoding="utf-8-sig", sep=";")
-            print(f"💾 Saved details to {diff_path}\n")
+            print(f"Saved details to {diff_path}\n")
 
 
 if __name__ == "__main__":

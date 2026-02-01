@@ -39,7 +39,7 @@ try:
     # --- Load state mapping ------------------------------------------
     mapping_df = pd.read_csv(mapping_file, sep=";", encoding="utf-8")
     state_map = dict(zip(mapping_df["GebietLandAbk"], mapping_df["StateID"]))
-    print(f"📖 Loaded {len(state_map)} state mappings.\n")
+    print(f"Loaded {len(state_map)} state mappings.\n")
 
     all_dfs = []
     election_rows = []
@@ -47,7 +47,7 @@ try:
 
     for path in wahlkreis_files:
         year = int(path.stem[-4:])
-        print(f"🗂 Reading {path.name} for year {year} ...")
+        print(f"Reading {path.name} for year {year} ...")
 
         df = pd.read_csv(path, sep=";", encoding="utf-8-sig")
         df.columns = [c.strip().lower() for c in df.columns]
@@ -66,7 +66,7 @@ try:
         df["StateID"] = df["StateAbbr"].map(state_map)
         missing = df[df["StateID"].isna()]["StateAbbr"].unique()
         if len(missing) > 0:
-            print(f"⚠ Unknown states in {path.name}: {missing}")
+            print(f"Unknown states in {path.name}: {missing}")
 
         df["Year"] = year
         df["NormalizedName"] = df["Name"].apply(normalize_name)
@@ -120,16 +120,16 @@ try:
         df_year_out = df_year[["ConstituencyID", "Number", "Name", "StateID"]].sort_values("ConstituencyID")
 
         df_year_out.to_csv(path_out, sep=";", index=False, encoding="utf-8")
-        print(f"📄 Wrote {path_out.name} with {len(df_year_out)} rows.")
+        print(f"Wrote {path_out.name} with {len(df_year_out)} rows.")
 
     # --- Logs ---------------------------------------------------------
-    print(f"\n✅ Wrote {len(unique_const)} constituencies → {out_constituencies.name}")
-    print(f"✅ Wrote {len(elections)} elections → {out_elections.name}")
-    print(f"✅ Wrote {len(bridge)} bridge rows → {out_bridge.name}")
+    print(f"\nWrote {len(unique_const)} constituencies → {out_constituencies.name}")
+    print(f"Wrote {len(elections)} elections → {out_elections.name}")
+    print(f"Wrote {len(bridge)} bridge rows → {out_bridge.name}")
 
 except FileNotFoundError as e:
-    print(f"❌ Missing file: {e.filename}")
+    print(f"Missing file: {e.filename}")
 except KeyError as e:
-    print(f"❌ Missing expected column: {e}")
+    print(f"Missing expected column: {e}")
 except Exception as e:
-    print(f"❌ Unexpected error: {e}")
+    print(f"Unexpected error: {e}")

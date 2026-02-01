@@ -36,7 +36,7 @@ def norm(s: str) -> str:
 # ----------------------------------------------------------------------
 try:
     # --- Load both CSVs -------------------------------------------------
-    print("📖 Reading CSV files ...")
+    print("Reading CSV files ...")
     df_small = pd.read_csv(csv_small, sep=";", encoding="utf-8-sig")
     df_large = pd.read_csv(csv_large, sep=";", encoding="utf-8-sig")
 
@@ -65,7 +65,7 @@ try:
         )
 
     # --- Detect which keys are missing ---------------------------------
-    print("🔍 Comparing composite keys ...")
+    print("Comparing composite keys ...")
     small_keys = set(df_small["key"].unique())
     df_missing = df_large[~df_large["key"].isin(small_keys)].copy()
 
@@ -75,14 +75,14 @@ try:
     # --- Output ---------------------------------------------------------
     df_missing.to_csv(out_not_in_small, index=False, sep=";", encoding="utf-8-sig")
     print(
-        f"\n✅ Found {len(df_missing)} rows in the larger CSV "
+        f"\nFound {len(df_missing)} rows in the larger CSV "
         f"that are not present in the smaller CSV."
     )
-    print(f"📁 Saved results to: {out_not_in_small}")
+    print(f"Saved results to: {out_not_in_small}")
 
 except FileNotFoundError as e:
-    print(f"❌ Missing file: {e.filename}")
+    print(f"Missing file: {e.filename}")
 except KeyError as e:
-    print(f"❌ Missing column: {e}")
+    print(f"Missing column: {e}")
 except Exception as e:
-    print(f"❌ Unexpected error: {type(e).__name__}: {e}")
+    print(f"Unexpected error: {type(e).__name__}: {e}")

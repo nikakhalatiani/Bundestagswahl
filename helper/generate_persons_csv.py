@@ -32,7 +32,7 @@ try:
     # Read both election years
     for path in candidate_files:
         year = int(path.stem[-4:])
-        print(f"\n🗂 Reading {path.name} for {year} ...")
+        print(f"\nReading {path.name} for {year} ...")
         df = pd.read_csv(path, sep=";", encoding="utf-8-sig")
         df.columns = [c.strip() for c in df.columns]
 
@@ -60,14 +60,14 @@ try:
         # ---- Detect duplicates within same year ----------------------
         dup_keys = sub["key"][sub["key"].duplicated(keep=False)]
         if not dup_keys.empty:
-            print(f"⚠ Found {dup_keys.nunique()} duplicate person keys within {year}:")
+            print(f"Found {dup_keys.nunique()} duplicate person keys within {year}:")
             grouped = sub[sub["key"].isin(dup_keys)].groupby("key")
             for key, group in grouped:
-                print(f"\n🔹 Composite key: {key}")
+                print(f"\nComposite key: {key}")
                 print(group.to_string(index=False))
             print()  # extra blank line
         else:
-            print(f"✅ No within-year duplicate person keys detected for {year}.")
+            print(f"No within-year duplicate person keys detected for {year}.")
 
         all_rows.append(sub)
 
@@ -86,7 +86,7 @@ try:
     ]
 
     persons_out.to_csv(out_persons, sep=";", index=False, encoding="utf-8")
-    print(f"\n✅ Created '{out_persons.name}' with {len(persons_out)} unique persons.\n")
+    print(f"\nCreated '{out_persons.name}' with {len(persons_out)} unique persons.\n")
 
     # --- Mapping: Candidate → PersonID -------------------------------
     mapping = combined.merge(
@@ -95,7 +95,7 @@ try:
         ["Year","Nachname","Vornamen","Geburtsjahr","Geburtsort","Geschlecht","PersonID"]
     ]
     mapping.to_csv(out_mapping, sep=";", index=False, encoding="utf-8")
-    print(f"✅ Saved '{out_mapping.name}' linking yearly candidates to PersonID.\n")
+    print(f"Saved '{out_mapping.name}' linking yearly candidates to PersonID.\n")
 
     # --- Yearly statistics -------------------------------------------
     total_2021 = mapping.query("Year == 2021")["PersonID"].nunique()
@@ -103,15 +103,15 @@ try:
     both_years = mapping.groupby("PersonID")["Year"].nunique().eq(2).sum()
     total_all  = len(persons_out)
 
-    print("📊 Summary:")
+    print("Summary:")
     print(f"   2021 unique persons  : {total_2021}")
     print(f"   2025 unique persons  : {total_2025}")
     print(f"   In both elections    : {both_years}")
     print(f"   Total persons stored : {total_all}\n")
 
 except FileNotFoundError as e:
-    print(f"❌ Missing file: {e.filename}")
+    print(f"Missing file: {e.filename}")
 except KeyError as e:
-    print(f"❌ Missing expected column: {e}")
+    print(f"Missing expected column: {e}")
 except Exception as e:
-    print(f"❌ Unexpected error: {e}")
+    print(f"Unexpected error: {e}")

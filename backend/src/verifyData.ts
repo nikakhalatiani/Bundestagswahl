@@ -28,7 +28,7 @@ async function main() {
     "constituency_elections",
   ];
 
-  // 1️⃣ Row counts for all tables
+  // Row counts for all tables
   for (const table of tables) {
     const res = await pool.query<CountRow>(`SELECT COUNT(*)::int AS cnt FROM ${table}`);
     console.log(`✓ ${table.padEnd(28)}: ${res.rows[0].cnt.toLocaleString()}`);
@@ -36,24 +36,24 @@ async function main() {
 
   console.log("\n=== Sample Data Snapshots ===\n");
 
-  // 2️⃣ States
+  // States
   console.log("→ States:");
   const states = await pool.query<StateRow>(`SELECT id, abbr, name FROM states ORDER BY id LIMIT 5`);
   if (states.rowCount === 0) console.log("  (No rows)");
   states.rows.forEach((r) => console.log(`  [${r.id}] ${r.abbr} - ${r.name}`));
 
-  // 3️⃣ Parties
+  // Parties
   console.log("\n→ Parties:");
   const parties = await pool.query<PartyRow>(`SELECT id, short_name, long_name FROM parties ORDER BY id LIMIT 5`);
   if (parties.rowCount === 0) console.log("  (No rows)");
   parties.rows.forEach((r) => console.log(`  [${r.id}] ${r.short_name}: ${r.long_name}`));
 
-  // 4️⃣ Elections
+  // Elections
   console.log("\n→ Elections:");
   const elections = await pool.query<ElectionRow>(`SELECT year, date FROM elections ORDER BY year`);
-  elections.rows.forEach((r) => console.log(`  🗳 ${r.year} (${r.date})`));
+  elections.rows.forEach((r) => console.log(`  ${r.year} (${r.date})`));
 
-  // 5️⃣ Constituencies
+  // Constituencies
   console.log("\n→ Constituencies:");
   const constituencies = await pool.query<ConstituencyRow>(`
     SELECT c.id, c.number, c.name, s.abbr AS state
@@ -65,7 +65,7 @@ async function main() {
   if (constituencies.rowCount === 0) console.log("  (No rows)");
   constituencies.rows.forEach((c) => console.log(`  ${c.number}: ${c.name} [${c.state}]`));
 
-  // 6️⃣ Persons (candidates)
+  // Persons (candidates)
   console.log("\n→ Persons:");
   const persons = await pool.query<PersonRow>(`
     SELECT id, first_name, last_name, birth_year, profession
@@ -78,7 +78,7 @@ async function main() {
     console.log(`  [${p.id}] ${p.first_name} ${p.last_name} (${p.birth_year}) – ${p.profession}`)
   );
 
-  // 7️⃣ Party Lists
+  // Party Lists
   console.log("\n→ Party Lists:");
   const partyLists = await pool.query<PartyListRow>(`
     SELECT pl.id, e.year, s.abbr AS state, p.short_name AS party
@@ -94,20 +94,20 @@ async function main() {
     console.log(`  [${r.id}] ${r.year} – ${r.state}/${r.party}`)
   );
 
-  // 8️⃣ Direct Candidacy
+  // Direct Candidacy
   console.log("\n→ Direct Candidacy:");
   const direct = await pool.query<DirectCandidacyRow>(`
     SELECT 
       dc.person_id, p.first_name, p.last_name,
       pa.short_name AS party,
       co.name AS constituency,
-      e.year
+      ce.year
     FROM direct_candidacy dc
+    JOIN constituency_elections ce ON ce.bridge_id = dc.constituency_election_id
     JOIN persons p ON dc.person_id = p.id
     JOIN parties pa ON dc.party_id = pa.id
-    JOIN constituencies co ON dc.constituency_id = co.id
-    JOIN elections e ON dc.year = e.year
-    ORDER BY e.year, dc.constituency_id
+    JOIN constituencies co ON ce.constituency_id = co.id
+    ORDER BY ce.year, ce.constituency_id
     LIMIT 5
   `);
   if (direct.rowCount === 0) console.log("  (No rows)");
@@ -117,7 +117,7 @@ async function main() {
     )
   );
 
-  // 9️⃣ Party List Candidacy
+  // Party List Candidacy
   console.log("\n→ Party List Candidacy:");
   const listCand = await pool.query<PartyListCandidacyRow>(`
     SELECT
@@ -139,7 +139,7 @@ async function main() {
     )
   );
 
-  // 🔟 Constituency Elections
+  // Constituency Elections
   console.log("\n→ Constituency Elections:");
   const constElect = await pool.query<ConstituencyElectionRow>(`
     SELECT ce.bridge_id, e.year, c.name AS constituency, ce.eligible_voters
@@ -156,7 +156,7 @@ async function main() {
     )
   );
 
-  // 1️⃣1️⃣ Constituency Party Votes
+  // Constituency Party Votes
   console.log("\n→ Constituency Party Votes:");
   const constVotes = await pool.query<ConstituencyPartyVotesRow>(`
     SELECT 
@@ -182,7 +182,7 @@ async function main() {
 }
 
 main()
-  .catch((err) => console.error("❌ Error running DB check:", err))
+  .catch((err) => console.error("Error running DB check:", err))
   .finally(async () => {
     await disconnect();
     console.log("\nDatabase connection closed.");

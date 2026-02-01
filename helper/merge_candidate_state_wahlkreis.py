@@ -78,11 +78,11 @@ try:
                          index=False, encoding="utf-8")
 
     print(
-        f"✅ Created '{output_filename}' with {len(candidates_df)} candidates.")
+        f"Created '{output_filename}' with {len(candidates_df)} candidates.")
 
 except FileNotFoundError:
-    print(f"❌ Error: '{input_filename}' not found.")
+    print(f"Error: '{input_filename}' not found.")
 except KeyError as e:
-    print(f"❌ Missing expected column: {e}")
+    print(f"Missing expected column: {e}")
 except Exception as e:
-    print(f"❌ Unexpected error: {e}")
+    print(f"Unexpected error: {e}")

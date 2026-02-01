@@ -46,11 +46,11 @@ try:
     parties_df.to_csv(parties_filename, sep=";", index=False, encoding="utf-8")
 
     print(
-        f"✅ Created '{parties_filename.name}' with {len(parties_df)} unique parties.")
+        f"Created '{parties_filename.name}' with {len(parties_df)} unique parties.")
 
 except FileNotFoundError:
-    print(f"❌ Error: '{input_filename}' not found.")
+    print(f"Error: '{input_filename}' not found.")
 except KeyError as e:
-    print(f"❌ Missing expected column: {e}")
+    print(f"Missing expected column: {e}")
 except Exception as e:
-    print(f"❌ Unexpected error: {e}")
+    print(f"Unexpected error: {e}")

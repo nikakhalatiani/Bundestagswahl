@@ -22,7 +22,7 @@ try:
         (results_df["Stimme"] == 1)
     ].copy()
 
-    print(f"📊 Found {len(wahlkreis_results)} Wahlkreis-level results")
+    print(f"Found {len(wahlkreis_results)} Wahlkreis-level results")
 
     # --- Create mapping from Gebietsnummer to Gebietsname ---
     wahlkreis_map = dict(
@@ -62,13 +62,13 @@ try:
     with_votes = merged["Erststimmen"].notna().sum()
     total_votes = merged["Erststimmen"].sum()
 
-    print(f"✅ Created '{output_candidates.name}' with {total} candidates.")
+    print(f"Created '{output_candidates.name}' with {total} candidates.")
     print(f"   {with_votes}/{total} candidates matched with vote counts.")
     print(f"   Total Erststimmen counted: {int(total_votes):,}")
 
 except FileNotFoundError as e:
-    print(f"❌ Error: Missing file -> {e.filename}")
+    print(f"Error: Missing file -> {e.filename}")
 except KeyError as e:
-    print(f"❌ Missing expected column: {e}")
+    print(f"Missing expected column: {e}")
 except Exception as e:
-    print(f"❌ Unexpected error: {e}")
+    print(f"Unexpected error: {e}")

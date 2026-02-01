@@ -55,7 +55,7 @@ try:
     # ------------------------------------------------------------------
     # 1) Load base elections and attach Number via constituency mapping
     # ------------------------------------------------------------------
-    print("🧭 Loading constituency mappings and elections ...")
+    print("Loading constituency mappings and elections ...")
 
     const21 = load_constituencies(CONSTITUENCIES_2021, 2021)
     const25 = load_constituencies(CONSTITUENCIES_2025, 2025)
@@ -71,12 +71,12 @@ try:
     )
     if base["Number"].isna().any():
         n_miss = base["Number"].isna().sum()
-        print(f"⚠ {n_miss} rows in constituency_elections lack a Number mapping.")
+        print(f"Missing {n_miss} rows in constituency_elections lack a Number mapping.")
 
     # ------------------------------------------------------------------
     # 2) Load KERG and normalise numeric columns
     # ------------------------------------------------------------------
-    print("🧾 Loading KERG files ...")
+    print("Loading KERG files ...")
     kerg21 = load_kerg(KERG_2021, 2021)
     kerg25 = load_kerg(KERG_2025, 2025)
     kerg = pd.concat([kerg21, kerg25], ignore_index=True)
@@ -161,7 +161,7 @@ try:
 
     sys_df = pd.DataFrame(records)
     print(
-        f"📊 Extracted System‑Gruppe data for {len(sys_df)} (Year, Number) pairs."
+        f"Extracted System‑Gruppe data for {len(sys_df)} (Year, Number) pairs."
     )
 
     # ------------------------------------------------------------------
@@ -171,9 +171,9 @@ try:
 
     # Write result (keeping ConstituencyID from base)
     enriched.to_csv(OUT_ENRICHED, sep=";", index=False, encoding="utf-8-sig")
-    print(f"💾 Saved enriched file → {OUT_ENRICHED.name}")
+    print(f"Saved enriched file → {OUT_ENRICHED.name}")
     print(
-        "✅ Added columns: EligibleVoters, TotalVoters, Percent, "
+        "Added columns: EligibleVoters, TotalVoters, Percent, "
         "PrevVotes, PrevPercent, DiffPercentPts, "
         "InvalidFirst, InvalidSecond, ValidFirst, ValidSecond (where present)"
     )
@@ -182,4 +182,4 @@ try:
     
 
 except Exception as e:
-    print(f"❌ Unexpected error: {type(e).__name__}: {e}")
+    print(f"Unexpected error: {type(e).__name__}: {e}")

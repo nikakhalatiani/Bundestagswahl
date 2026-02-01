@@ -63,7 +63,7 @@ try:
     # -----------------------------------------------------------------
     # 1) Read person_mapping to get PersonID per candidate row
     # -----------------------------------------------------------------
-    print("🧭 Reading existing person_mapping.csv ...")
+    print("Reading existing person_mapping.csv ...")
     mapping = pd.read_csv(PERSON_MAPPING_CSV, sep=";", encoding="utf-8-sig")
     mapping.columns = [c.strip() for c in mapping.columns]
 
@@ -87,7 +87,7 @@ try:
 
     for path in candidate_files:
         year = int(path.stem[-4:])
-        print(f"\n🗂 Reading {path.name} for {year} ...")
+        print(f"\nReading {path.name} for {year} ...")
         df = pd.read_csv(path, sep=";", encoding="utf-8-sig")
         df.columns = [c.strip() for c in df.columns]
         df["Year"] = year
@@ -133,7 +133,7 @@ try:
         if df_merged["PersonID"].isna().any():
             n_missing = df_merged["PersonID"].isna().sum()
             print(
-                f"⚠ Warning: {n_missing} candidate rows in {year} "
+                f"Warning: {n_missing} candidate rows in {year} "
                 "could not be matched to a PersonID."
             )
 
@@ -144,7 +144,7 @@ try:
     # -----------------------------------------------------------------
     # 3) Build DirectCandidacy subtable
     # -----------------------------------------------------------------
-    print("\n📦 Building DirectCandidacy subtable ...")
+    print("\nBuilding DirectCandidacy subtable ...")
 
     cons_2021 = pd.read_csv(CONSTITUENCY_2021, sep=";", encoding="utf-8-sig")
     cons_2025 = pd.read_csv(CONSTITUENCY_2025, sep=";", encoding="utf-8-sig")
@@ -182,7 +182,7 @@ try:
     if direct["ConstituencyID"].isna().any():
         n_missing = direct["ConstituencyID"].isna().sum()
         print(
-            f"⚠ Warning: {n_missing} direct candidacy rows "
+            f"Warning: {n_missing} direct candidacy rows "
             f"could not be matched to a ConstituencyID."
         )
 
@@ -203,13 +203,13 @@ try:
 
     direct_out.to_csv(OUT_DIRECT, sep=";", index=False, encoding="utf-8-sig")
     print(
-        f"✅ Saved DirectCandidacy with {len(direct_out)} rows to '{OUT_DIRECT.name}'"
+        f"Saved DirectCandidacy with {len(direct_out)} rows to '{OUT_DIRECT.name}'"
     )
 
     # -----------------------------------------------------------------
     # 4) Build PartyListCandidacy subtable (with full normalization)
     # -----------------------------------------------------------------
-    print("\n📦 Building PartyListCandidacy subtable ...")
+    print("\nBuilding PartyListCandidacy subtable ...")
 
     # Load state mapping and party_list
     state_map = pd.read_csv(STATE_ID_MAPPING, sep=";", encoding="utf-8-sig")
@@ -253,7 +253,7 @@ try:
     if plist["StateID"].isna().any():
         n_missing = plist["StateID"].isna().sum()
         print(
-            f"⚠ Warning: {n_missing} party-list rows could not be matched to a StateID."
+            f"Warning: {n_missing} party-list rows could not be matched to a StateID."
         )
 
     # --- Party normalization and mapping via party_id_mapping --------
@@ -295,7 +295,7 @@ try:
     if plist["PartyID"].isna().any():
         n_missing = plist["PartyID"].isna().sum()
         print(
-            f"⚠ Warning: {n_missing} party-list rows could not be matched to a PartyID."
+            f"Warning: {n_missing} party-list rows could not be matched to a PartyID."
         )
 
     # Join to party_list to get PartyListID
@@ -309,7 +309,7 @@ try:
     if plist["PartyListID"].isna().any():
         n_missing = plist["PartyListID"].isna().sum()
         print(
-            f"⚠ Warning: {n_missing} party-list rows could not be matched "
+            f"Warning: {n_missing} party-list rows could not be matched "
             f"to a PartyListID."
         )
 
@@ -329,14 +329,14 @@ try:
 
     plist_out.to_csv(OUT_LIST, sep=";", index=False, encoding="utf-8-sig")
     print(
-        f"✅ Saved PartyListCandidacy with {len(plist_out)} rows to '{OUT_LIST.name}'"
+        f"Saved PartyListCandidacy with {len(plist_out)} rows to '{OUT_LIST.name}'"
     )
 
-    print("\n🎉 Done.\n")
+    print("\nDone.\n")
 
 except FileNotFoundError as e:
-    print(f"❌ Missing file: {e.filename}")
+    print(f"Missing file: {e.filename}")
 except KeyError as e:
-    print(f"❌ Missing expected column: {e}")
+    print(f"Missing expected column: {e}")
 except Exception as e:
-    print(f"❌ Unexpected error: {type(e).__name__}: {e}")
+    print(f"Unexpected error: {type(e).__name__}: {e}")

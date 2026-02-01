@@ -64,6 +64,22 @@
   }
 }
 
+@keyframes progress-slide {
+  0% {
+    transform: translateX(-60%);
+  }
+  100% {
+    transform: translateX(160%);
+  }
+}
+
+.progress-indeterminate {
+  position: absolute;
+  left: 0;
+  width: 40%;
+  animation: progress-slide 1.2s ease-in-out infinite;
+}
+
 .recharts-wrapper:focus,
 .recharts-wrapper:focus-visible,
 .recharts-wrapper *:focus,

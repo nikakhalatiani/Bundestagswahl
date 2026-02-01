@@ -26,7 +26,7 @@ def parse_num(x):
 # -------------------------------------------------------------------
 # 1) Load base data
 # -------------------------------------------------------------------
-print("🧭 Loading input files ...")
+print("Loading input files ...")
 persons  = pd.read_csv(PERSONS_CSV, sep=";", encoding="utf-8-sig")
 const25  = pd.read_csv(CONST_2025, sep=";", encoding="utf-8-sig")
 party_map = pd.read_csv(PARTY_MAP, sep=";", encoding="utf-8-sig")
@@ -35,7 +35,7 @@ direct   = pd.read_csv(DIRECT_CAND, sep=";", encoding="utf-8-sig")
 # -------------------------------------------------------------------
 # 2) Load and clean KERG 2025
 # -------------------------------------------------------------------
-print("🧾 Loading KERG 2025 (new) ...")
+print("Loading KERG 2025 (new) ...")
 kerg = pd.read_csv(KERG_2025, sep=";", encoding="utf-8-sig")
 kerg.columns = [c.strip() for c in kerg.columns]
 
@@ -77,7 +77,7 @@ kerg = kerg.merge(
 # -------------------------------------------------------------------
 # 4) Aggregate first‑vote totals per (ConstituencyID, PartyID)
 # -------------------------------------------------------------------
-print("🧮 Aggregating first‑votes per constituency and party …")
+print("Aggregating first‑votes per constituency and party ...")
 votes = (
     kerg.groupby(["ConstituencyID", "PartyID"], dropna=False)["Anzahl"]
     .sum()
@@ -90,7 +90,7 @@ print(f"DEBUG: total summed votes → {int(votes['Erststimmen'].sum()):,}")
 # -------------------------------------------------------------------
 # 5) Recreate 2025 direct‑candidacy block
 # -------------------------------------------------------------------
-print("🔗 Building 2025 candidate entries ...")
+print("Building 2025 candidate entries ...")
 
 # build new 2025 rows similar to 2021 structure
 template = ["PersonID", "Year", "ConstituencyID",
@@ -106,7 +106,7 @@ new25 = votes[template]
 # -------------------------------------------------------------------
 # 6) Merge with existing direct_candidacy
 # -------------------------------------------------------------------
-print("🔁 Updating direct_candidacy.csv …")
+print("Updating direct_candidacy.csv …")
 direct_no25 = direct[direct["Year"] != 2025].copy()
 updated = pd.concat([direct_no25, new25], ignore_index=True)
 
@@ -118,11 +118,11 @@ updated.to_csv(OUT_FILE, sep=";", index=False, encoding="utf-8-sig")
 total_votes = updated.loc[updated["Year"] == 2025, "Erststimmen"].sum()
 rowcount     = (updated["Year"] == 2025).sum()
 
-print(f"\n💾 Saved → {OUT_FILE.name}")
-print(f"✅ 2025 total Erststimmen : {int(total_votes):,}")
-print(f"✅ 2025 candidate rows    : {rowcount:,}")
+print(f"\nSaved → {OUT_FILE.name}")
+print(f"2025 total Erststimmen : {int(total_votes):,}")
+print(f"2025 candidate rows    : {rowcount:,}")
 print("Expected total ≈ 49,505,389 and rows = cpv VoteType 1 count.")
-print("🎉 Step 3 complete.")
+print("Step 3 complete.")
 # -------------------------------------------------------------------
 
 if __name__ == "__main__":

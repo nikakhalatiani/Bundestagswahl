@@ -69,7 +69,7 @@ def load_kerg(path: Path, year: int) -> pd.DataFrame:
 # ----------------------------------------------------------------------
 # 1) Load reference data
 # ----------------------------------------------------------------------
-print("🧭 Loading reference CSVs ...")
+print("Loading reference CSVs ...")
 
 cpv_old = pd.read_csv(CURRENT_CPV, sep=";", encoding="utf-8-sig")
 cpv_columns = list(cpv_old.columns)
@@ -94,7 +94,7 @@ party_map_unique = (
 # ----------------------------------------------------------------------
 # 2) Load and clean KERG for both years
 # ----------------------------------------------------------------------
-print("🧾 Loading KERG 2021 + updated 2025 ...")
+print("Loading KERG 2021 + updated 2025 ...")
 
 k21 = load_kerg(KERG_2021, 2021)
 k25 = load_kerg(KERG_2025, 2025)
@@ -115,7 +115,7 @@ kerg["VoteType"] = pd.to_numeric(kerg["Stimme"], errors="coerce").astype("Int64"
 # ----------------------------------------------------------------------
 # 3) Select usable rows: Partei, EB/Wählergruppe
 # ----------------------------------------------------------------------
-print("🔍 Selecting Partei + Einzelbewerber/Wählergruppe")
+print("Selecting Partei + Einzelbewerber/Wählergruppe")
 
 kp = kerg[
     (
@@ -144,7 +144,7 @@ missing_mask = kp["PartyID"].isna()
 if missing_mask.any():
     unmapped = kp.loc[missing_mask, ["Year", "Gruppenname"]].drop_duplicates()
     print(
-        f"⚠ {len(unmapped)} KERG parties/candidates not in mapping; "
+        f"{len(unmapped)} KERG parties/candidates not in mapping; "
         "using original Gruppenname as PartyID string."
     )
     kp.loc[missing_mask, "PartyID"] = kp.loc[missing_mask, "Gruppenname"]
@@ -163,7 +163,7 @@ kp = kp.merge(bridge_map, on=["Year", "ConstituencyID"], how="left")
 # ----------------------------------------------------------------------
 # 6) Aggregate all numeric metrics
 # ----------------------------------------------------------------------
-print("🧮 Aggregating votes + percentages + previous values ...")
+print("Aggregating votes + percentages + previous values ...")
 
 numeric_src_cols = [
     c for c in [
@@ -201,7 +201,7 @@ agg = agg.rename(columns={"Gruppenname": "PartyName"})
 # ----------------------------------------------------------------------
 # 7) Build new CPV with same columns as old
 # ----------------------------------------------------------------------
-print("🔁 Building new constituency_party_votes from KERG for 2021 + 2025 ...")
+print("Building new constituency_party_votes from KERG for 2021 + 2025 ...")
 
 cpv_new = agg.copy()
 
@@ -222,6 +222,6 @@ if "ID" in cpv_columns:
 cpv_new = cpv_new[cpv_columns]
 
 cpv_new.to_csv(OUT_UPDATED, sep=";", index=False, encoding="utf-8-sig")
-print(f"💾 Saved rebuilt file → {OUT_UPDATED.name} ({len(cpv_new)} rows).")
-print("✅ All useful metrics (Percent, PrevVotes, PrevPercent, DiffPercentPts) restored from KERG.")
-print("✅ Each Einzelbewerber/Wählergruppe is a separate row in 2021 and 2025.")
+print(f"Saved rebuilt file → {OUT_UPDATED.name} ({len(cpv_new)} rows).")
+print("All useful metrics (Percent, PrevVotes, PrevPercent, DiffPercentPts) restored from KERG.")
+print("Each Einzelbewerber/Wählergruppe is a separate row in 2021 and 2025.")

@@ -17,7 +17,7 @@ def load_csv(p: Path) -> pd.DataFrame:
 
 
 def main():
-    print("🧭 Loading files ...")
+    print("Loading files ...")
     dc = load_csv(DIRECT_IN)
     cpv = load_csv(CPV_FILE)
     ce = load_csv(CE_FILE)
@@ -70,19 +70,19 @@ def main():
         ["PersonID", "Year", "ConstituencyID", "PartyID"]
     ].copy()
 
-    print("\n📊 Fill results")
+    print("\nFill results")
     print(f"  total direct rows        : {len(out):,}")
     print(f"  filled Erststimmen rows  : {out['Erststimmen'].notna().sum():,}")
     print(f"  missing Erststimmen rows : {len(unmatched):,}")
 
     if len(unmatched):
-        print("\n⚠️ Unmatched examples (likely PartyID mapping issues):")
+        print("\nUnmatched examples (likely PartyID mapping issues):")
         print(unmatched.head(25).to_string(index=False))
 
         # helpful file for manual review
         unmatched_path = DATA_DIR / "direct_candidacy_unmatched_votes.csv"
         unmatched.to_csv(unmatched_path, sep=";", index=False, encoding="utf-8-sig")
-        print(f"\n💾 Wrote unmatched list → {unmatched_path}")
+        print(f"\nWrote unmatched list → {unmatched_path}")
 
     # Totals by year
     totals = (
@@ -90,12 +90,12 @@ def main():
         .groupby("Year", as_index=False)["Erststimmen"]
         .sum()
     )
-    print("\n📆 Total Erststimmen by year (from direct_candidacy):")
+    print("\nTotal Erststimmen by year (from direct_candidacy):")
     print(totals.to_string(index=False, float_format=lambda x: f"{x:,.0f}"))
 
     # Save final
     out.to_csv(DIRECT_OUT, sep=";", index=False, encoding="utf-8-sig")
-    print(f"\n💾 Saved → {DIRECT_OUT}")
+    print(f"\nSaved → {DIRECT_OUT}")
 
 
 if __name__ == "__main__":

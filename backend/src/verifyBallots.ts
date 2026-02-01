@@ -41,7 +41,8 @@ async function verifyBallots(options: VerificationOptions = {}) {
     `
     SELECT COUNT(*)::bigint AS cnt
     FROM first_votes fv
-    WHERE fv.year = $1
+    JOIN constituency_elections ce ON ce.bridge_id = fv.constituency_election_id
+    WHERE ce.year = $1
   `,
     [year]
   );
@@ -59,8 +60,9 @@ async function verifyBallots(options: VerificationOptions = {}) {
   const invalidFirstRes = await pool.query(
     `
     SELECT COUNT(*)::bigint AS cnt
-    FROM first_votes
-    WHERE year = $1 AND is_valid = false
+    FROM first_votes fv
+    JOIN constituency_elections ce ON ce.bridge_id = fv.constituency_election_id
+    WHERE ce.year = $1 AND fv.is_valid = false
   `,
     [year]
   );
@@ -181,11 +183,10 @@ async function verifyBallots(options: VerificationOptions = {}) {
       `
       SELECT COUNT(*)::bigint AS cnt
       FROM first_votes fv
-      JOIN direct_candidacy dc
-        ON dc.person_id = fv.direct_person_id
-       AND dc.year = fv.year
-      WHERE dc.constituency_id = $1
-        AND fv.year = $2
+      JOIN constituency_elections ce
+        ON ce.bridge_id = fv.constituency_election_id
+      WHERE ce.constituency_id = $1
+        AND ce.year = $2
     `,
       [constituency.id, year]
     );
@@ -243,12 +244,11 @@ async function verifyBallots(options: VerificationOptions = {}) {
         fv.direct_person_id AS person_id,
         COUNT(*)::bigint AS cnt
       FROM first_votes fv
-      JOIN direct_candidacy dc
-        ON dc.person_id = fv.direct_person_id
-       AND dc.year = fv.year
+      JOIN constituency_elections ce
+        ON ce.bridge_id = fv.constituency_election_id
       JOIN top_candidates tc ON tc.person_id = fv.direct_person_id
-      WHERE dc.constituency_id = $1
-        AND fv.year = $2
+      WHERE ce.constituency_id = $1
+        AND ce.year = $2
       GROUP BY fv.direct_person_id
     `,
       [constituency.id, year, topN]
@@ -294,11 +294,10 @@ async function verifyBallots(options: VerificationOptions = {}) {
           fv.direct_person_id AS person_id,
           COUNT(*)::bigint AS got
         FROM first_votes fv
-        JOIN direct_candidacy dc
-          ON dc.person_id = fv.direct_person_id
-         AND dc.year = fv.year
-        WHERE dc.constituency_id = $1
-          AND fv.year = $2
+        JOIN constituency_elections ce
+          ON ce.bridge_id = fv.constituency_election_id
+        WHERE ce.constituency_id = $1
+          AND ce.year = $2
         GROUP BY fv.direct_person_id
       )
       SELECT COUNT(*)::int AS mismatches
@@ -314,7 +313,7 @@ async function verifyBallots(options: VerificationOptions = {}) {
     if (mismatchesFull > 0) {
       totalFirstVoteMismatches += mismatchesFull;
       console.log(
-        `\n⚠ ${mismatchesFull} total first-vote mismatches found in this constituency/year`
+        `\n${mismatchesFull} total first-vote mismatches found in this constituency/year`
       );
     } else {
       console.log("\n✓ All first votes match perfectly in this constituency/year!");
@@ -330,9 +329,9 @@ async function verifyBallots(options: VerificationOptions = {}) {
   );
 
   if (totalFirstVoteMismatches === 0 && totalSecondVoteMismatches === 0) {
-    console.log("✅ All ballots match the original aggregated data!");
+    console.log("All ballots match the original aggregated data!");
   } else {
-    console.log("⚠ Some mismatches found (see above).");
+    console.log("Some mismatches found (see above).");
   }
 }
 
