@@ -1,6 +1,6 @@
 # Bundestagswahl
 
-Documentation atifacts are explained in artifacts/DOCUMENTATION.md.
+Documentation artifacts are explained in artifacts/DOCUMENTATION.md.
 
 ## Data
 
