@@ -70,6 +70,7 @@ export interface ConstituencyInfo {
 }
 
 export interface ConstituencyListItem {
+    bridge_id: number;
     id: number;
     number: number;
     name: string;

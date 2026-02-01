@@ -8,6 +8,20 @@
       "when": 1769181482304,
       "tag": "0000_curved_stick",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1769938854200,
+      "tag": "0001_youthful_the_initiative",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1769948867454,
+      "tag": "0002_jazzy_nomad",
+      "breakpoints": true
     }
   ]
 }

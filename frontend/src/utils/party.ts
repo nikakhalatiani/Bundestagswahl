@@ -63,7 +63,7 @@ export function getPartyColor(displayNameOrRaw: string, opts?: { combineCduCsu?:
     if (normalized === 'FDP') return MAJOR_COLORS.FDP;
     if (normalized === 'BSW' || normalized.includes('WAGENKNECHT')) return MAJOR_COLORS.BSW;
     if (normalized === 'SSW') return MAJOR_COLORS.SSW;
-    if (normalized === 'CDU/CSU') return MAJOR_COLORS['CDU/CSU'];
+    if (normalized === 'CDU/CSU' || normalized === 'CDU' || normalized === 'CSU') return MAJOR_COLORS['CDU/CSU'];
 
     // Greens (German forms + long name)
     if (normalized === 'GRUNE' || normalized === 'GRUENE' || normalized === 'GRUNEN' || normalized.includes('BUNDNIS 90')) {

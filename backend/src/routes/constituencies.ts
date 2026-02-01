@@ -17,6 +17,7 @@ router.get('/constituencies', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT
+         ce.bridge_id,
          c.id,
          c.number,
          c.name,

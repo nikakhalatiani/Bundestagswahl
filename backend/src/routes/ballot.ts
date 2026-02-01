@@ -9,12 +9,54 @@ const { pool } = dbModule;
 const router = Router();
 
 /**
- * Helper: Resolve constituency number to ID for a given year.
- * Returns { id, state_id, name } or null if not found.
+ * Helper: Resolve constituency election for a given year + constituency.
+ * Returns { bridge_id, year, constituency_id, number, name, state_id, state_name } or null.
+ */
+async function resolveConstituencyElectionByNumber(number: number, year: number) {
+    const res = await pool.query(
+        `SELECT ce.bridge_id, ce.year, c.id AS constituency_id, c.number, c.name, c.state_id, s.name AS state_name
+         FROM constituency_elections ce
+         JOIN constituencies c ON c.id = ce.constituency_id
+         JOIN states s ON s.id = c.state_id
+         WHERE c.number = $1 AND ce.year = $2
+         LIMIT 1`,
+        [number, year]
+    );
+    return res.rows[0] || null;
+}
+
+async function resolveConstituencyElectionById(id: number, year: number) {
+    const res = await pool.query(
+        `SELECT ce.bridge_id, ce.year, c.id AS constituency_id, c.number, c.name, c.state_id, s.name AS state_name
+         FROM constituency_elections ce
+         JOIN constituencies c ON c.id = ce.constituency_id
+         JOIN states s ON s.id = c.state_id
+         WHERE c.id = $1 AND ce.year = $2
+         LIMIT 1`,
+        [id, year]
+    );
+    return res.rows[0] || null;
+}
+
+async function resolveConstituencyElectionByBridgeId(bridgeId: number) {
+    const res = await pool.query(
+        `SELECT ce.bridge_id, ce.year, c.id AS constituency_id, c.number, c.name, c.state_id, s.name AS state_name
+         FROM constituency_elections ce
+         JOIN constituencies c ON c.id = ce.constituency_id
+         JOIN states s ON s.id = c.state_id
+         WHERE ce.bridge_id = $1
+         LIMIT 1`,
+        [bridgeId]
+    );
+    return res.rows[0] || null;
+}
+
+/**
+ * Helper: Resolve constituency by number + year for ballot lookups.
  */
 async function resolveConstituency(number: number, year: number) {
     const res = await pool.query(
-        `SELECT c.id, c.state_id, c.name
+        `SELECT c.id, c.state_id, c.number, c.name
          FROM constituencies c
          JOIN constituency_elections ce ON ce.constituency_id = c.id
          WHERE c.number = $1 AND ce.year = $2
@@ -30,8 +72,9 @@ async function resolveConstituency(number: number, year: number) {
 // POST: submit a ballot (erst + zweit)
 router.post('/ballot', async (req, res) => {
     const body = req.body || {};
-    const constituencyNumber = Number(body.constituencyNumber || body.constituencyId || 1);
-    const year = body.year ? Number(body.year) : 2025;
+    const providedConstituencyNumber = body.constituencyNumber ? Number(body.constituencyNumber) : undefined;
+    const providedConstituencyId = body.constituencyId ? Number(body.constituencyId) : undefined;
+    const providedYear = body.year ? Number(body.year) : undefined;
     const votingCode = body.votingCode as string | undefined;
 
     try {
@@ -42,7 +85,21 @@ router.post('/ballot', async (req, res) => {
 
         // Check if voting code exists and is not used
         const codeRes = await pool.query(
-            `SELECT code, is_used FROM voting_codes WHERE code = $1`,
+            `SELECT
+                vc.code,
+                vc.is_used,
+                vc.constituency_election_id,
+                ce.year,
+                c.id AS constituency_id,
+                c.number AS constituency_number,
+                c.name AS constituency_name,
+                c.state_id,
+                s.name AS state_name
+             FROM voting_codes vc
+             JOIN constituency_elections ce ON ce.bridge_id = vc.constituency_election_id
+             JOIN constituencies c ON c.id = ce.constituency_id
+             JOIN states s ON s.id = c.state_id
+             WHERE vc.code = $1`,
             [votingCode.trim()]
         );
         if (!codeRes.rows || codeRes.rows.length === 0) {
@@ -51,14 +108,27 @@ router.post('/ballot', async (req, res) => {
         if (codeRes.rows[0].is_used) {
             return res.status(400).json({ error: 'voting_code_already_used' });
         }
-
-        // Find constituency by number and year
-        const constituency = await resolveConstituency(constituencyNumber, year);
-        if (!constituency) {
-            return res.status(404).json({ error: 'constituency_not_found' });
+        if (!codeRes.rows[0].constituency_election_id) {
+            return res.status(400).json({ error: 'voting_code_missing_context' });
         }
-        const constituencyId = constituency.id;
-        const stateId = constituency.state_id;
+
+        const codeYear = Number(codeRes.rows[0].year);
+        const codeConstituencyId = Number(codeRes.rows[0].constituency_id);
+        const codeConstituencyNumber = Number(codeRes.rows[0].constituency_number);
+
+        if (providedYear && providedYear !== codeYear) {
+            return res.status(400).json({ error: 'voting_code_year_mismatch' });
+        }
+        if (providedConstituencyId && providedConstituencyId !== codeConstituencyId) {
+            return res.status(400).json({ error: 'voting_code_constituency_mismatch' });
+        }
+        if (providedConstituencyNumber && providedConstituencyNumber !== codeConstituencyNumber) {
+            return res.status(400).json({ error: 'voting_code_constituency_mismatch' });
+        }
+
+        const year = codeYear;
+        const constituencyId = codeConstituencyId;
+        const stateId = Number(codeRes.rows[0].state_id);
 
         // FIRST VOTE handling
         let firstPersonId: number | null = null;
@@ -144,9 +214,32 @@ router.post('/ballot', async (req, res) => {
     }
 });
 
-// POST: generate a new voting code
-router.post('/codes/generate', async (_req, res) => {
+// POST: generate a new voting code scoped to constituency + year
+router.post('/codes/generate', async (req, res) => {
+    const { year, constituencyId, constituencyNumber, constituencyElectionId } = req.body || {};
+    const yearNum = year ? Number(year) : NaN;
+
     try {
+        let constituencyElection = null;
+        if (constituencyElectionId) {
+            constituencyElection = await resolveConstituencyElectionByBridgeId(Number(constituencyElectionId));
+        } else {
+            if (!year || Number.isNaN(yearNum)) {
+                return res.status(400).json({ error: 'year_required' });
+            }
+            if (constituencyId) {
+                constituencyElection = await resolveConstituencyElectionById(Number(constituencyId), yearNum);
+            } else if (constituencyNumber) {
+                constituencyElection = await resolveConstituencyElectionByNumber(Number(constituencyNumber), yearNum);
+            } else {
+                return res.status(400).json({ error: 'constituency_required' });
+            }
+        }
+
+        if (!constituencyElection) {
+            return res.status(404).json({ error: 'constituency_not_found' });
+        }
+
         // Generate a random 16-character alphanumeric code
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         let code = '';
@@ -154,13 +247,22 @@ router.post('/codes/generate', async (_req, res) => {
             code += chars.charAt(Math.floor(Math.random() * chars.length));
         }
 
-        // Insert into database
         await pool.query(
-            `INSERT INTO voting_codes (code, is_used) VALUES ($1, false)`,
-            [code]
+            `INSERT INTO voting_codes (code, is_used, constituency_election_id) VALUES ($1, false, $2)`,
+            [code, constituencyElection.bridge_id]
         );
 
-        res.json({ code });
+        res.json({
+            code,
+            year: constituencyElection.year,
+            constituency: {
+                id: constituencyElection.constituency_id,
+                number: constituencyElection.number,
+                name: constituencyElection.name,
+                state_name: constituencyElection.state_name,
+            },
+            constituency_election_id: constituencyElection.bridge_id,
+        });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'code_generation_failed' });
@@ -177,7 +279,7 @@ router.post('/codes/validate', async (req, res) => {
 
     try {
         const result = await pool.query(
-            `SELECT code, is_used FROM voting_codes WHERE code = $1`,
+            `SELECT code, is_used, constituency_election_id FROM voting_codes WHERE code = $1`,
             [code.trim()]
         );
 
@@ -189,59 +291,26 @@ router.post('/codes/validate', async (req, res) => {
             return res.json({ valid: false, error: 'code_already_used' });
         }
 
-        res.json({ valid: true });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ valid: false, error: 'validation_failed' });
-    }
-});
-
-// POST: generate a new voting code
-router.post('/codes/generate', async (_req, res) => {
-    try {
-        // Generate a random 16-character alphanumeric code
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-        let code = '';
-        for (let i = 0; i < 16; i++) {
-            code += chars.charAt(Math.floor(Math.random() * chars.length));
+        if (!result.rows[0].constituency_election_id) {
+            return res.json({ valid: false, error: 'code_missing_context' });
         }
 
-        // Insert into database
-        await pool.query(
-            `INSERT INTO voting_codes (code, is_used) VALUES ($1, false)`,
-            [code]
-        );
-
-        res.json({ code });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'code_generation_failed' });
-    }
-});
-
-// POST: validate a voting code (check if it exists and is unused)
-router.post('/codes/validate', async (req, res) => {
-    const { code } = req.body || {};
-
-    if (!code || typeof code !== 'string' || code.trim() === '') {
-        return res.status(400).json({ valid: false, error: 'code_required' });
-    }
-
-    try {
-        const result = await pool.query(
-            `SELECT code, is_used FROM voting_codes WHERE code = $1`,
-            [code.trim()]
-        );
-
-        if (!result.rows || result.rows.length === 0) {
-            return res.json({ valid: false, error: 'invalid_code' });
+        const constituencyElection = await resolveConstituencyElectionByBridgeId(Number(result.rows[0].constituency_election_id));
+        if (!constituencyElection) {
+            return res.json({ valid: false, error: 'invalid_code_context' });
         }
 
-        if (result.rows[0].is_used) {
-            return res.json({ valid: false, error: 'code_already_used' });
-        }
-
-        res.json({ valid: true });
+        res.json({
+            valid: true,
+            year: constituencyElection.year,
+            constituency: {
+                id: constituencyElection.constituency_id,
+                number: constituencyElection.number,
+                name: constituencyElection.name,
+                state_name: constituencyElection.state_name,
+            },
+            constituency_election_id: constituencyElection.bridge_id,
+        });
     } catch (err) {
         console.error(err);
         res.status(500).json({ valid: false, error: 'validation_failed' });

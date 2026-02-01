@@ -205,7 +205,14 @@ export const secondVotes = pgTable("second_votes", {
 export const votingCodes = pgTable("voting_codes", {
   code: varchar("code", { length: 64 }).primaryKey(),
   is_used: boolean("is_used").default(false).notNull(),
-});
+  constituency_election_id: integer("constituency_election_id")
+    .notNull()
+    .references(() => constituencyElections.bridge_id, { onDelete: "cascade" }),
+},
+  (table) => [
+    index("voting_codes_constituency_election_idx").on(table.constituency_election_id),
+  ]
+);
 
 // ---------- Materialized Views ----------
 

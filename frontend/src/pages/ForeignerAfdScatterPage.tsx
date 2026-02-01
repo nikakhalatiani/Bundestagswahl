@@ -183,7 +183,7 @@ export const ForeignerAfdScatterPage: React.FC<ForeignerAfdScatterPageProps> = (
             <div>
               <CardTitle>Correlation explorer</CardTitle>
               <CardSubtitle>
-                Compare party vote shares against constituency structure metrics.
+                Compare party vote shares against constituency structure metrics
               </CardSubtitle>
             </div>
             <ToggleSwitch

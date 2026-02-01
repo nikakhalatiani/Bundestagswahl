@@ -1,7 +1,10 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardSubtitle } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
 
 export function Admin({ year }: { year: number }) {
+    const navigate = useNavigate();
     const [recalculating, setRecalculating] = useState(false);
     const [recalcResult, setRecalcResult] = useState<{ success: boolean; message: string; stats?: any } | null>(null);
 
@@ -35,31 +38,56 @@ export function Admin({ year }: { year: number }) {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-2xl font-bold text-ink">Admin Panel</h1>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold text-ink">Admin Panel</h1>
+                    <p className="mt-1 text-sm text-ink-muted">
+                        Tools for testing and maintaining the election experience
+                    </p>
+                </div>
+            </div>
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Seat Allocation Cache</CardTitle>
+                    <CardTitle>Recalculate seat results</CardTitle>
                     <CardSubtitle>
-                        Recalculate seat allocation from vote data. This refreshes all materialized views and recomputes seat distribution.
+                        Refresh seat distribution using the latest vote data
                     </CardSubtitle>
                 </CardHeader>
-                <div className="p-4">
-                    <div className="flex items-center gap-4">
-                        <button
-                            className="rounded bg-blue-600 px-4 py-2 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+                <div className="space-y-4">
+                    <div className="flex flex-wrap items-center gap-3">
+                        <Button
+                            variant="primary"
+                            size="md"
                             onClick={handleRecalculateSeats}
                             disabled={recalculating}
                         >
-                            {recalculating ? 'Recalculating...' : `Recalculate Seats (${year})`}
-                        </button>
+                            {recalculating ? 'Recalculating...' : 'Recalculate seats'}
+                        </Button>
                         <span className="text-sm text-ink-muted">
-                            This may take a few seconds.
+                            This usually takes a few seconds
                         </span>
                     </div>
 
+                    {recalculating && (
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between text-xs uppercase tracking-[0.3px] text-ink-faint">
+                                <span>Recalculating seat results</span>
+                                <span>In progress</span>
+                            </div>
+                            <div className="relative h-2 w-full overflow-hidden rounded-full bg-surface-accent">
+                                <div className="progress-indeterminate h-full rounded-full bg-brand-gold" />
+                            </div>
+                        </div>
+                    )}
+
                     {recalcResult && (
-                        <div className={`mt-4 rounded p-3 ${recalcResult.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                        <div
+                            className={`rounded-md border px-4 py-3 text-sm ${recalcResult.success
+                                    ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                                    : 'border-red-200 bg-red-50 text-red-800'
+                                }`}
+                        >
                             <p className="font-semibold">{recalcResult.message}</p>
                             {recalcResult.stats && (
                                 <p className="mt-1 text-sm">
@@ -71,39 +99,47 @@ export function Admin({ year }: { year: number }) {
                 </div>
             </Card>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Vote Casting (Debug)</CardTitle>
-                    <CardSubtitle>
-                        Access the ballot page to cast test votes.
-                    </CardSubtitle>
-                </CardHeader>
-                <div className="p-4">
-                    <a
-                        href="/ballot"
-                        className="inline-block rounded bg-gray-600 px-4 py-2 font-semibold text-white transition hover:bg-gray-700"
-                    >
-                        Open Ballot Page
-                    </a>
-                </div>
-            </Card>
+            <div className="grid gap-6 lg:grid-cols-2">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Ballot kiosk</CardTitle>
+                        <CardSubtitle>
+                            Open the ballot flow to cast a vote
+                        </CardSubtitle>
+                    </CardHeader>
+                    <div className="flex flex-wrap items-center gap-3">
+                        <Button
+                            variant="secondary"
+                            onClick={() => { navigate('/ballot'); }}
+                        >
+                            Open ballot
+                        </Button>
+                        <span className="text-sm text-ink-muted">
+                            Requires a valid voting code
+                        </span>
+                    </div>
+                </Card>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Voting Code Generator</CardTitle>
-                    <CardSubtitle>
-                        Open the code generator to create voting codes.
-                    </CardSubtitle>
-                </CardHeader>
-                <div className="p-4">
-                    <a
-                        href="/code"
-                        className="inline-block rounded bg-gray-600 px-4 py-2 font-semibold text-white transition hover:bg-gray-700"
-                    >
-                        Open Code Generator
-                    </a>
-                </div>
-            </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Voting code generator</CardTitle>
+                        <CardSubtitle>
+                            Create one-time codes for testing the ballot flow
+                        </CardSubtitle>
+                    </CardHeader>
+                    <div className="flex flex-wrap items-center gap-3">
+                        <Button
+                            variant="secondary"
+                            onClick={() => { navigate('/code'); }}
+                        >
+                            Open code generator
+                        </Button>
+                        <span className="text-sm text-ink-muted">
+                            Codes can be used once
+                        </span>
+                    </div>
+                </Card>
+            </div>
         </div>
     );
 }
