@@ -1,182 +1,253 @@
-@startuml
-!define ENTITY class
-!define PK <<PK>>
-!define FK <<FK>>
+// Used on https://dbdiagram.io
 
-' Core Master Data
-ENTITY FederalState {
-  + stateId: Integer PK
-  --
-  stateName: String
-  stateAbbreviation: String
-  population: Integer
+// ---------- Tables ----------
+
+Table "states" {
+  "id" serial [pk, increment]
+  "abbr" varchar(2) [not null, unique]
+  "name" varchar(100) [not null, unique]
 }
 
-ENTITY Party {
-  + partyId: Integer PK
-  --
-  partyName: String
-  partyAbbreviation: String
-  foundedYear: Integer
-  color: String
+Table "parties" {
+  "id" serial [pk, increment]
+  "short_name" varchar(120) [not null, unique]
+  "long_name" varchar(200) [not null]
+  "is_minority" boolean [not null, default: false]
 }
 
-ENTITY Election {
-  + electionId: Integer PK
-  --
-  electionDate: Date
-  electionYear: Integer
-  totalEligibleVoters: Integer
-  totalSeats: Integer
-  thresholdPercentage: Decimal
+Table "elections" {
+  "year" integer [pk]
+  "date" date [not null, unique]
 }
 
-ENTITY Constituency {
-  + constituencyId: Integer PK
-  --
-  electionId: Integer FK
-  constituencyNumber: Integer
-  constituencyName: String
-  stateId: Integer FK
-  eligibleVoters: Integer
-  boundaryDescription: Text
+Table "constituencies" {
+  "id" serial [pk, increment]
+  "number" integer [not null]
+  "name" varchar(150) [not null]
+  "state_id" integer [not null]
+
+  indexes {
+    (number, name) [unique]
+  }
 }
 
-note right of Constituency
-  Election-specific!
-  Same number can exist
-  across elections with
-  different boundaries
-  UNIQUE(electionId, constituencyNumber)
-end note
-
-' Candidates
-ENTITY Candidate {
-  + candidateId: Integer PK
-  --
-  firstName: String
-  lastName: String
-  partyId: Integer FK
-  constituencyId: Integer FK
-  electionId: Integer FK
+Table "structural_metrics" {
+  "key" varchar(120) [pk]
+  "label" varchar(200) [not null]
+  "unit" varchar(80)
 }
 
-ENTITY StatePartyList {
-  + listId: Integer PK
-  --
-  partyId: Integer FK
-  stateId: Integer FK
-  electionId: Integer FK
+Table "constituency_structural_data" {
+  "constituency_election_id" integer [not null]
+  "metric_key" varchar(120) [not null]
+  "value" double
+
+  indexes {
+    (constituency_election_id, metric_key) [pk]
+    (constituency_election_id)
+  }
 }
 
-ENTITY ListPosition {
-  + positionId: Integer PK
-  --
-  listId: Integer FK
-  candidateId: Integer FK
-  position: Integer
+
+Table "persons" {
+  "id" serial [pk, increment]
+  "last_name" text [not null]
+  "first_name" text [not null]
+  "gender" text
+  "birth_year" integer
+  "profession" text
 }
 
-' Vote Results
-ENTITY FirstVoteResult {
-  + firstVoteResultId: Integer PK
-  --
-  electionId: Integer FK
-  constituencyId: Integer FK
-  candidateId: Integer FK
-  votesReceived: Integer
+Table "party_lists" {
+  "id" serial [pk, increment]
+  "year" integer [not null]
+  "state_id" integer [not null]
+  "party_id" integer [not null]
+
+  indexes {
+    (state_id, party_id, year) [unique]
+  }
 }
 
-ENTITY SecondVoteResult {
-  + secondVoteResultId: Integer PK
-  --
-  electionId: Integer FK
-  stateId: Integer FK
-  partyId: Integer FK
-  votesReceived: Integer
+Table "direct_candidacy" {
+  "person_id" integer [not null]
+  "constituency_election_id" integer [not null]
+  "party_id" integer [not null]
+
+  indexes {
+    (person_id, constituency_election_id) [pk]
+    (constituency_election_id)
+  }
 }
 
-ENTITY ConstituencyTurnout {
-  + turnoutId: Integer PK
-  --
-  electionId: Integer FK
-  constituencyId: Integer FK
-  validFirstVotes: Integer
-  invalidFirstVotes: Integer
-  validSecondVotes: Integer
-  invalidSecondVotes: Integer
-  turnoutPercentage: Decimal
+
+Table "party_list_candidacy" {
+  "person_id" integer [not null]
+  "party_list_id" integer [not null]
+  "list_position" double
+
+  indexes {
+    (person_id, party_list_id) [pk]
+  }
 }
 
-' Calculated Results
-ENTITY DirectMandate {
-  + mandateId: Integer PK
-  --
-  electionId: Integer FK
-  constituencyId: Integer FK
-  candidateId: Integer FK
-  partyId: Integer FK
-  votesReceived: Integer
+Table "constituency_elections" {
+  "bridge_id" serial [pk, increment]
+  "year" integer [not null]
+  "constituency_id" integer [not null]
+  "eligible_voters" double
+
+  indexes {
+    (constituency_id, year) [unique]
+  }
 }
 
-ENTITY PartySeatAllocation {
-  + allocationId: Integer PK
-  --
-  electionId: Integer FK
-  partyId: Integer FK
-  stateId: Integer FK
-  secondVotesTotal: Integer
-  secondVotesPercentage: Decimal
-  directMandates: Integer
-  proportionalSeats: Integer
-  overhangSeats: Integer
-  levelingSeats: Integer
-  totalSeats: Integer
+Table "first_votes" {
+  "id" serial [pk, increment]
+  "constituency_election_id" integer [not null]
+  "direct_person_id" integer [not null]
+  "is_valid" boolean [not null, default: true]
+  "created_at" date [default: `now()`]
+
+  indexes {
+    (constituency_election_id)
+  }
 }
 
-ENTITY BundestagMember {
-  + memberId: Integer PK
-  --
-  electionId: Integer FK
-  candidateId: Integer FK
-  partyId: Integer FK
-  seatType: String
-  constituencyId: Integer FK
+Table "second_votes" {
+  "id" serial [pk, increment]
+  "party_list_id" integer [not null]
+  "constituency_election_id" integer [not null]
+  "is_valid" boolean [not null, default: true]
+  "created_at" date [default: `now()`]
+
+  indexes {
+    (constituency_election_id)
+  }
 }
 
-' Relationships
-FederalState "1" -- "0..*" Constituency : contains
-FederalState "1" -- "0..*" StatePartyList : has
-FederalState "1" -- "0..*" SecondVoteResult : records
-FederalState "1" -- "0..*" PartySeatAllocation : allocates
+Table "voting_codes" {
+  "code" varchar(64) [pk]
+  "is_used" boolean [not null, default: false]
+  "constituency_election_id" integer [not null]
+}
 
-Party "1" -- "0..*" Candidate : nominates
-Party "1" -- "0..*" StatePartyList : creates
-Party "1" -- "0..*" SecondVoteResult : receives
-Party "1" -- "0..*" PartySeatAllocation : allocated
-Party "1" -- "0..*" DirectMandate : wins
-Party "1" -- "0..*" BundestagMember : represents
+// ---------- Materialized Views (represented as Tables) ----------
 
-Election "1" -- "0..*" Constituency : defines
-Election "1" -- "0..*" Candidate : participates
-Election "1" -- "0..*" StatePartyList : submitted
-Election "1" -- "0..*" FirstVoteResult : recorded
-Election "1" -- "0..*" SecondVoteResult : recorded
-Election "1" -- "0..*" ConstituencyTurnout : measured
-Election "1" -- "0..*" DirectMandate : produces
-Election "1" -- "0..*" PartySeatAllocation : calculates
-Election "1" -- "0..*" BundestagMember : elects
+Table "mv_00_direct_candidacy_votes" {
+  "person_id" integer
+  "constituency_election_id" integer
+  "year" integer
+  "constituency_id" integer
+  "party_id" integer
+  "first_votes" bigint
+  Note: "Materialized View"
+}
 
-Constituency "1" -- "0..*" Candidate : contests
-Constituency "1" -- "0..*" FirstVoteResult : records
-Constituency "1" -- "0..*" ConstituencyTurnout : has
-Constituency "1" -- "0..*" DirectMandate : elects
+Table "mv_01_constituency_party_votes" {
+  "constituency_election_id" integer
+  "constituency_id" integer
+  "year" integer
+  "party_id" integer
+  "vote_type" integer
+  "votes" bigint
+  Note: "Materialized View"
+}
 
-Candidate "1" -- "0..*" FirstVoteResult : receives
-Candidate "1" -- "0..*" ListPosition : placed
-Candidate "1" -- "0..1" DirectMandate : wins
-Candidate "1" -- "0..1" BundestagMember : becomes
+Table "mv_02_party_list_votes" {
+  "party_list_id" integer
+  "party_id" integer
+  "state_id" integer
+  "year" integer
+  "second_votes" bigint
+  Note: "Materialized View"
+}
 
-StatePartyList "1" -- "1..*" ListPosition : contains
+Table "mv_03_constituency_elections" {
+  "constituency_election_id" integer
+  "constituency_id" integer
+  "year" integer
+  "valid_first" bigint
+  "valid_second" bigint
+  "invalid_first" bigint
+  "invalid_second" bigint
+  Note: "Materialized View"
+}
 
-@enduml
+Table "seat_allocation_cache" {
+  "id" integer
+  "year" integer
+  "person_id" integer
+  "party_id" integer
+  "state_id" integer
+  "seat_type" text
+  "constituency_name" text
+  "list_position" double
+  "percent_first_votes" double
+  "created_at" date
+  Note: "Materialized View"
+}
+
+// ---------- Relationships ----------
+
+Ref "fk_constituencies_state":"states"."id" < "constituencies"."state_id"
+
+Ref "fk_struct_data_bridge":"constituency_elections"."bridge_id" < "constituency_structural_data"."constituency_election_id"
+Ref "fk_struct_data_metric":"structural_metrics"."key" < "constituency_structural_data"."metric_key"
+
+Ref "fk_party_lists_year":"elections"."year" < "party_lists"."year"
+Ref "fk_party_lists_state":"states"."id" < "party_lists"."state_id"
+Ref "fk_party_lists_party":"parties"."id" < "party_lists"."party_id"
+
+Ref "fk_direct_candidacy_person":"persons"."id" < "direct_candidacy"."person_id"
+Ref "fk_direct_candidacy_party":"parties"."id" < "direct_candidacy"."party_id"
+Ref "fk_direct_candidacy_bridge":"constituency_elections"."bridge_id" < "direct_candidacy"."constituency_election_id"
+
+Ref "fk_party_list_candidacy_person":"persons"."id" < "party_list_candidacy"."person_id"
+Ref "fk_party_list_candidacy_list":"party_lists"."id" < "party_list_candidacy"."party_list_id"
+
+Ref "fk_constituency_elections_year":"elections"."year" < "constituency_elections"."year"
+Ref "fk_constituency_elections_constituency":"constituencies"."id" < "constituency_elections"."constituency_id"
+
+// Composite Foreign Key for First Votes
+Ref "fk_first_votes_direct_candidacy": "direct_candidacy".("person_id", "constituency_election_id") < "first_votes".("direct_person_id", "constituency_election_id")
+Ref "fk_second_votes_party_list":"party_lists"."id" < "second_votes"."party_list_id"
+Ref "fk_second_votes_bridge":"constituency_elections"."bridge_id" < "second_votes"."constituency_election_id"
+
+Ref "fk_voting_codes_election":"constituency_elections"."bridge_id" < "voting_codes"."constituency_election_id"
+
+
+  // ===========================================
+// MATERIALIZED VIEW RELATIONSHIPS (Logical)
+// ===========================================
+
+// // MV 00: Direct Candidacy Votes
+// Ref: "mv_00_direct_candidacy_votes"."person_id" > "persons"."id"
+// Ref: "mv_00_direct_candidacy_votes"."constituency_id" > "constituencies"."id"
+// Ref: "mv_00_direct_candidacy_votes"."party_id" > "parties"."id"
+// Ref: "mv_00_direct_candidacy_votes"."year" > "elections"."year"
+
+// // MV 01: Constituency Party Votes
+// Ref: "mv_01_constituency_party_votes"."constituency_id" > "constituencies"."id"
+// Ref: "mv_01_constituency_party_votes"."party_id" > "parties"."id"
+// Ref: "mv_01_constituency_party_votes"."year" > "elections"."year"
+
+// // MV 02: Party List Votes
+// Ref: "mv_02_party_list_votes"."party_list_id" > "party_lists"."id"
+// Ref: "mv_02_party_list_votes"."party_id" > "parties"."id"
+// Ref: "mv_02_party_list_votes"."state_id" > "states"."id"
+// Ref: "mv_02_party_list_votes"."year" > "elections"."year"
+
+// // MV 03: Constituency Elections (Aggregates)
+// Ref: "mv_03_constituency_elections"."constituency_id" > "constituencies"."id"
+// Ref: "mv_03_constituency_elections"."year" > "elections"."year"
+
+// // Seat Allocation Cache (Final Calculation)
+// Ref: "seat_allocation_cache"."person_id" > "persons"."id"
+// Ref: "seat_allocation_cache"."party_id" > "parties"."id"
+// Ref: "seat_allocation_cache"."state_id" > "states"."id"
+// Ref: "seat_allocation_cache"."year" > "elections"."year"
+
+// Ref: "mv_00_direct_candidacy_votes"."constituency_election_id" > "constituency_elections"."bridge_id"
+// Ref: "mv_01_constituency_party_votes"."constituency_election_id" > "constituency_elections"."bridge_id"
+// Ref: "mv_03_constituency_elections"."constituency_election_id" > "constituency_elections"."bridge_id"
