@@ -1,5 +1,7 @@
 # Bundestagswahl
 
+Documentation atifacts are explained in artifacts/DOCUMENTATION.md.
+
 ## Data
 
 - `kand2025.csv`: Kandidaten, Wahlkreise ("VerknGebietsname"), Partei, Listenplatz
