@@ -15,19 +15,17 @@ CREATE TABLE "constituency_elections" (
 );
 --> statement-breakpoint
 CREATE TABLE "constituency_structural_data" (
-	"constituency_id" integer NOT NULL,
-	"year" integer NOT NULL,
+	"constituency_election_id" integer NOT NULL,
 	"metric_key" varchar(120) NOT NULL,
 	"value" double precision,
-	CONSTRAINT "constituency_structural_data_constituency_id_year_metric_key_pk" PRIMARY KEY("constituency_id","year","metric_key")
+	CONSTRAINT "constituency_structural_data_constituency_election_id_metric_key_pk" PRIMARY KEY("constituency_election_id","metric_key")
 );
 --> statement-breakpoint
 CREATE TABLE "direct_candidacy" (
 	"person_id" integer NOT NULL,
-	"year" integer NOT NULL,
-	"constituency_id" integer NOT NULL,
+	"constituency_election_id" integer NOT NULL,
 	"party_id" integer NOT NULL,
-	CONSTRAINT "direct_candidacy_person_id_year_pk" PRIMARY KEY("person_id","year")
+	CONSTRAINT "direct_candidacy_person_id_constituency_election_id_pk" PRIMARY KEY("person_id","constituency_election_id")
 );
 --> statement-breakpoint
 CREATE TABLE "elections" (
@@ -38,8 +36,8 @@ CREATE TABLE "elections" (
 --> statement-breakpoint
 CREATE TABLE "first_votes" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"year" integer NOT NULL,
 	"direct_person_id" integer NOT NULL,
+	"constituency_election_id" integer NOT NULL,
 	"is_valid" boolean DEFAULT true NOT NULL,
 	"created_at" date DEFAULT now()
 );
@@ -85,7 +83,7 @@ CREATE TABLE "persons" (
 CREATE TABLE "second_votes" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"party_list_id" integer NOT NULL,
-	"constituency_id" integer NOT NULL,
+	"constituency_election_id" integer NOT NULL,
 	"is_valid" boolean DEFAULT true NOT NULL,
 	"created_at" date DEFAULT now()
 );
@@ -104,65 +102,81 @@ CREATE TABLE "structural_metrics" (
 	"unit" varchar(80)
 );
 --> statement-breakpoint
+CREATE TABLE "voting_codes" (
+	"code" varchar(64) PRIMARY KEY NOT NULL,
+	"is_used" boolean DEFAULT false NOT NULL,
+	"constituency_election_id" integer NOT NULL
+);
+--> statement-breakpoint
 ALTER TABLE "constituencies" ADD CONSTRAINT "constituencies_state_id_states_id_fk" FOREIGN KEY ("state_id") REFERENCES "public"."states"("id") ON DELETE restrict ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "constituency_elections" ADD CONSTRAINT "constituency_elections_year_elections_year_fk" FOREIGN KEY ("year") REFERENCES "public"."elections"("year") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "constituency_elections" ADD CONSTRAINT "constituency_elections_constituency_id_constituencies_id_fk" FOREIGN KEY ("constituency_id") REFERENCES "public"."constituencies"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "constituency_structural_data" ADD CONSTRAINT "constituency_structural_data_constituency_id_constituencies_id_fk" FOREIGN KEY ("constituency_id") REFERENCES "public"."constituencies"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "constituency_structural_data" ADD CONSTRAINT "constituency_structural_data_year_elections_year_fk" FOREIGN KEY ("year") REFERENCES "public"."elections"("year") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "constituency_structural_data" ADD CONSTRAINT "constituency_structural_data_constituency_election_id_constituency_elections_bridge_id_fk" FOREIGN KEY ("constituency_election_id") REFERENCES "public"."constituency_elections"("bridge_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "constituency_structural_data" ADD CONSTRAINT "constituency_structural_data_metric_key_structural_metrics_key_fk" FOREIGN KEY ("metric_key") REFERENCES "public"."structural_metrics"("key") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "direct_candidacy" ADD CONSTRAINT "direct_candidacy_person_id_persons_id_fk" FOREIGN KEY ("person_id") REFERENCES "public"."persons"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "direct_candidacy" ADD CONSTRAINT "direct_candidacy_year_elections_year_fk" FOREIGN KEY ("year") REFERENCES "public"."elections"("year") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "direct_candidacy" ADD CONSTRAINT "direct_candidacy_constituency_id_constituencies_id_fk" FOREIGN KEY ("constituency_id") REFERENCES "public"."constituencies"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "direct_candidacy" ADD CONSTRAINT "direct_candidacy_constituency_election_id_constituency_elections_bridge_id_fk" FOREIGN KEY ("constituency_election_id") REFERENCES "public"."constituency_elections"("bridge_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "direct_candidacy" ADD CONSTRAINT "direct_candidacy_party_id_parties_id_fk" FOREIGN KEY ("party_id") REFERENCES "public"."parties"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "first_votes" ADD CONSTRAINT "fk_first_vote_direct_cand" FOREIGN KEY ("direct_person_id","year") REFERENCES "public"."direct_candidacy"("person_id","year") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "first_votes" ADD CONSTRAINT "fk_first_vote_direct_cand" FOREIGN KEY ("direct_person_id","constituency_election_id") REFERENCES "public"."direct_candidacy"("person_id","constituency_election_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "party_list_candidacy" ADD CONSTRAINT "party_list_candidacy_person_id_persons_id_fk" FOREIGN KEY ("person_id") REFERENCES "public"."persons"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "party_list_candidacy" ADD CONSTRAINT "party_list_candidacy_party_list_id_party_lists_id_fk" FOREIGN KEY ("party_list_id") REFERENCES "public"."party_lists"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "party_lists" ADD CONSTRAINT "party_lists_year_elections_year_fk" FOREIGN KEY ("year") REFERENCES "public"."elections"("year") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "party_lists" ADD CONSTRAINT "party_lists_state_id_states_id_fk" FOREIGN KEY ("state_id") REFERENCES "public"."states"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "party_lists" ADD CONSTRAINT "party_lists_party_id_parties_id_fk" FOREIGN KEY ("party_id") REFERENCES "public"."parties"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "second_votes" ADD CONSTRAINT "second_votes_party_list_id_party_lists_id_fk" FOREIGN KEY ("party_list_id") REFERENCES "public"."party_lists"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "second_votes" ADD CONSTRAINT "second_votes_constituency_id_constituencies_id_fk" FOREIGN KEY ("constituency_id") REFERENCES "public"."constituencies"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "second_votes" ADD CONSTRAINT "second_votes_constituency_election_id_constituency_elections_bridge_id_fk" FOREIGN KEY ("constituency_election_id") REFERENCES "public"."constituency_elections"("bridge_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "voting_codes" ADD CONSTRAINT "voting_codes_constituency_election_id_constituency_elections_bridge_id_fk" FOREIGN KEY ("constituency_election_id") REFERENCES "public"."constituency_elections"("bridge_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "constituencies_state_idx" ON "constituencies" USING btree ("state_id");--> statement-breakpoint
-CREATE INDEX "structural_data_year_idx" ON "constituency_structural_data" USING btree ("year");--> statement-breakpoint
+CREATE INDEX "structural_data_constituency_election_idx" ON "constituency_structural_data" USING btree ("constituency_election_id");--> statement-breakpoint
 CREATE INDEX "structural_data_metric_idx" ON "constituency_structural_data" USING btree ("metric_key");--> statement-breakpoint
+CREATE INDEX "direct_candidacy_constituency_election_idx" ON "direct_candidacy" USING btree ("constituency_election_id");--> statement-breakpoint
+CREATE INDEX "first_votes_constituency_election_idx" ON "first_votes" USING btree ("constituency_election_id");--> statement-breakpoint
 CREATE INDEX "party_lists_state_idx" ON "party_lists" USING btree ("state_id");--> statement-breakpoint
 CREATE INDEX "second_votes_party_idx" ON "second_votes" USING btree ("party_list_id");--> statement-breakpoint
-CREATE INDEX "second_votes_constituency_idx" ON "second_votes" USING btree ("constituency_id");--> statement-breakpoint
+CREATE INDEX "second_votes_constituency_election_idx" ON "second_votes" USING btree ("constituency_election_id");--> statement-breakpoint
+CREATE INDEX "voting_codes_constituency_election_idx" ON "voting_codes" USING btree ("constituency_election_id");--> statement-breakpoint
 CREATE MATERIALIZED VIEW "public"."mv_00_direct_candidacy_votes" AS (
     SELECT
       dc.person_id,
-      dc.year,
-      dc.constituency_id,
+      dc.constituency_election_id,
+      ce.year,
+      ce.constituency_id,
       dc.party_id,
       COUNT(fv.id) FILTER (WHERE fv.is_valid) AS first_votes
     FROM direct_candidacy dc
+    JOIN constituency_elections ce
+      ON ce.bridge_id = dc.constituency_election_id
     LEFT JOIN first_votes fv
       ON fv.direct_person_id = dc.person_id
-     AND fv.year = dc.year
-    GROUP BY dc.person_id, dc.year, dc.constituency_id, dc.party_id
+     AND fv.constituency_election_id = dc.constituency_election_id
+    GROUP BY dc.person_id, dc.constituency_election_id, ce.year, ce.constituency_id, dc.party_id
   ) WITH NO DATA;--> statement-breakpoint
 CREATE MATERIALIZED VIEW "public"."mv_01_constituency_party_votes" AS (
     WITH first_party AS (
       SELECT
+        dcv.constituency_election_id,
         dcv.constituency_id,
         dcv.year,
         dcv.party_id,
         1::int AS vote_type,
         COALESCE(SUM(dcv.first_votes), 0) AS votes
       FROM mv_00_direct_candidacy_votes dcv
-      GROUP BY dcv.constituency_id, dcv.year, dcv.party_id
+      GROUP BY dcv.constituency_election_id, dcv.constituency_id, dcv.year, dcv.party_id
     ),
     second_party AS (
       SELECT
-        sv.constituency_id,
-        pl.year,
+        sv.constituency_election_id,
+        ce.constituency_id,
+        ce.year,
         pl.party_id,
         2::int AS vote_type,
         COUNT(sv.id) FILTER (WHERE sv.is_valid) AS votes
       FROM second_votes sv
+      JOIN constituency_elections ce
+        ON ce.bridge_id = sv.constituency_election_id
       JOIN party_lists pl
         ON pl.id = sv.party_list_id
-      GROUP BY sv.constituency_id, pl.year, pl.party_id
+       AND pl.year = ce.year
+      GROUP BY sv.constituency_election_id, ce.constituency_id, ce.year, pl.party_id
     )
     SELECT * FROM first_party
     UNION ALL
@@ -195,37 +209,43 @@ CREATE MATERIALIZED VIEW "public"."mv_02_party_list_votes" AS (
 CREATE MATERIALIZED VIEW "public"."mv_03_constituency_elections" AS (
     WITH valid_totals AS (
       SELECT
+        constituency_election_id,
         constituency_id,
         year,
         COALESCE(SUM(CASE WHEN vote_type = 1 THEN votes ELSE 0 END), 0) AS valid_first,
         COALESCE(SUM(CASE WHEN vote_type = 2 THEN votes ELSE 0 END), 0) AS valid_second
       FROM mv_01_constituency_party_votes
-      GROUP BY constituency_id, year
+      GROUP BY constituency_election_id, constituency_id, year
     ),
     invalid_first AS (
       SELECT
-        dc.constituency_id,
-        fv.year,
+        dc.constituency_election_id,
+        ce.constituency_id,
+        ce.year,
         COUNT(*) AS invalid_first
       FROM first_votes fv
       JOIN direct_candidacy dc
         ON dc.person_id = fv.direct_person_id
-       AND dc.year = fv.year
+       AND dc.constituency_election_id = fv.constituency_election_id
+      JOIN constituency_elections ce
+        ON ce.bridge_id = dc.constituency_election_id
       WHERE fv.is_valid = false
-      GROUP BY dc.constituency_id, fv.year
+      GROUP BY dc.constituency_election_id, ce.constituency_id, ce.year
     ),
     invalid_second AS (
       SELECT
-        sv.constituency_id,
-        pl.year,
+        sv.constituency_election_id,
+        ce.constituency_id,
+        ce.year,
         COUNT(*) AS invalid_second
       FROM second_votes sv
-      JOIN party_lists pl
-        ON pl.id = sv.party_list_id
+      JOIN constituency_elections ce
+        ON ce.bridge_id = sv.constituency_election_id
       WHERE sv.is_valid = false
-      GROUP BY sv.constituency_id, pl.year
+      GROUP BY sv.constituency_election_id, ce.constituency_id, ce.year
     )
     SELECT
+      COALESCE(vt.constituency_election_id, i1.constituency_election_id, i2.constituency_election_id) AS constituency_election_id,
       COALESCE(vt.constituency_id, i1.constituency_id, i2.constituency_id) AS constituency_id,
       COALESCE(vt.year, i1.year, i2.year) AS year,
       COALESCE(vt.valid_first, 0) AS valid_first,
@@ -234,11 +254,9 @@ CREATE MATERIALIZED VIEW "public"."mv_03_constituency_elections" AS (
       COALESCE(i2.invalid_second, 0) AS invalid_second
     FROM valid_totals vt
     FULL OUTER JOIN invalid_first i1
-      ON i1.constituency_id = vt.constituency_id
-     AND i1.year = vt.year
+      ON i1.constituency_election_id = vt.constituency_election_id
     FULL OUTER JOIN invalid_second i2
-      ON i2.constituency_id = COALESCE(vt.constituency_id, i1.constituency_id)
-     AND i2.year = COALESCE(vt.year, i1.year)
+      ON i2.constituency_election_id = COALESCE(vt.constituency_election_id, i1.constituency_election_id)
   ) WITH NO DATA;--> statement-breakpoint
 CREATE MATERIALIZED VIEW "public"."seat_allocation_cache" AS (
     WITH RECURSIVE

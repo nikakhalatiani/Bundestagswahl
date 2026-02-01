@@ -28,8 +28,8 @@ SELECT
   per.artist_name,
   per.birth_year,
   'direct' AS candidacy_type,
-  dc.year AS year,
-  dc.constituency_id,
+  ce.year AS year,
+  ce.constituency_id,
   c.number AS constituency_number,
   c.name AS constituency_name,
   dc.party_id,
@@ -37,9 +37,10 @@ SELECT
   NULL::integer AS party_list_id,
   NULL::double precision AS list_position
 FROM direct_candidacy dc
+JOIN constituency_elections ce ON ce.bridge_id = dc.constituency_election_id
 JOIN persons per ON per.id = dc.person_id
 JOIN parties p ON p.id = dc.party_id
-LEFT JOIN constituencies c ON c.id = dc.constituency_id
+LEFT JOIN constituencies c ON c.id = ce.constituency_id
 
 UNION ALL
 

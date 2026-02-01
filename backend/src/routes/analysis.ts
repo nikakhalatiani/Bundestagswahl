@@ -283,53 +283,75 @@ router.get('/party-constituency-strength', async (req, res) => {
  * GET /api/constituencies-single - Constituency overview based on individual votes.
  */
 router.get('/constituencies-single', async (req, res) => {
-    const year = req.query.year ? Number(req.query.year) : 2025;
     const idsParam = req.query.ids as string;
     const ids = idsParam ? idsParam.split(',').map(Number) : null;
+    const bridgeIdsParam = req.query.constituencyElectionIds as string;
+    const bridgeIds = bridgeIdsParam ? bridgeIdsParam.split(',').map(Number) : null;
+    let year = req.query.year ? Number(req.query.year) : 2025;
 
     try {
-        const idsFilter = ids ? 'AND c.number = ANY($2)' : '';
-        const params = ids ? [year, ids] : [year];
+        if (bridgeIds) {
+            const yearRes = await pool.query(
+                `SELECT DISTINCT year FROM constituency_elections WHERE bridge_id = ANY($1)`,
+                [bridgeIds]
+            );
+            if (!yearRes.rows.length) {
+                return res.status(404).json({ error: 'constituency_not_found' });
+            }
+            if (yearRes.rows.length > 1) {
+                return res.status(400).json({ error: 'mixed_years_not_supported' });
+            }
+            year = Number(yearRes.rows[0].year);
+        }
+
+        const idsFilter = bridgeIds
+            ? 'AND ce.bridge_id = ANY($2)'
+            : (ids ? 'AND c.number = ANY($2)' : '');
+        const params = (bridgeIds || ids) ? [year, bridgeIds ?? ids] : [year];
 
         // Combined query for both first and second votes
         const firstVotesRes = await pool.query(`
-      SELECT dc.constituency_id, c.name AS constituency_name, s.name AS state_name,
+      SELECT ce.constituency_id, ce.bridge_id AS constituency_election_id, c.name AS constituency_name, s.name AS state_name,
         dc.person_id, p.first_name || ' ' || p.last_name AS person_name, pt.short_name AS party_name,
-        COUNT(fv.id) AS vote_count, RANK() OVER (PARTITION BY dc.constituency_id ORDER BY COUNT(fv.id) DESC) AS rank
+        COUNT(fv.id) AS vote_count, RANK() OVER (PARTITION BY ce.constituency_id ORDER BY COUNT(fv.id) DESC) AS rank
       FROM first_votes fv
-      JOIN direct_candidacy dc ON dc.person_id = fv.direct_person_id AND dc.year = fv.year
+      JOIN direct_candidacy dc
+        ON dc.person_id = fv.direct_person_id
+       AND dc.constituency_election_id = fv.constituency_election_id
+      JOIN constituency_elections ce ON ce.bridge_id = fv.constituency_election_id
       JOIN persons p ON p.id = dc.person_id
       JOIN parties pt ON pt.id = dc.party_id
-      JOIN constituencies c ON c.id = dc.constituency_id
+      JOIN constituencies c ON c.id = ce.constituency_id
       JOIN states s ON s.id = c.state_id
-      WHERE fv.year = $1 AND fv.is_valid = true ${idsFilter}
-      GROUP BY dc.constituency_id, c.name, s.name, dc.person_id, p.first_name, p.last_name, pt.short_name
-      ORDER BY dc.constituency_id, vote_count DESC`, params);
+      WHERE ce.year = $1 AND fv.is_valid = true ${idsFilter}
+      GROUP BY ce.constituency_id, ce.bridge_id, c.name, s.name, dc.person_id, p.first_name, p.last_name, pt.short_name
+      ORDER BY ce.constituency_id, vote_count DESC`, params);
 
         const secondVotesRes = await pool.query(`
-      SELECT c.id AS constituency_id, c.name AS constituency_name, s.name AS state_name,
+      SELECT c.id AS constituency_id, ce.bridge_id AS constituency_election_id, c.name AS constituency_name, s.name AS state_name,
         pl.party_id, pt.short_name AS party_name, COUNT(sv.id) AS vote_count
       FROM second_votes sv
       JOIN party_lists pl ON pl.id = sv.party_list_id
       JOIN parties pt ON pt.id = pl.party_id
-      JOIN constituencies c ON c.id = sv.constituency_id
+      JOIN constituency_elections ce ON ce.bridge_id = sv.constituency_election_id
+      JOIN constituencies c ON c.id = ce.constituency_id
       JOIN states s ON s.id = c.state_id
-      WHERE pl.year = $1 AND sv.is_valid = true ${idsFilter}
-      GROUP BY c.id, c.name, s.name, pl.party_id, pt.short_name
+      WHERE pl.year = $1 AND ce.year = $1 AND sv.is_valid = true ${idsFilter}
+      GROUP BY c.id, ce.bridge_id, c.name, s.name, pl.party_id, pt.short_name
       ORDER BY c.id, vote_count DESC`, params);
 
-        type Entry = { constituency_id: number; constituency_name: string; state_name: string; candidates: any[]; party_second_votes: any[]; total_first_votes: number; total_second_votes: number };
+        type Entry = { constituency_id: number; constituency_election_id: number | null; constituency_name: string; state_name: string; candidates: any[]; party_second_votes: any[]; total_first_votes: number; total_second_votes: number };
         const map = new Map<number, Entry>();
 
         for (const r of firstVotesRes.rows) {
-            if (!map.has(r.constituency_id)) map.set(r.constituency_id, { constituency_id: r.constituency_id, constituency_name: r.constituency_name, state_name: r.state_name, candidates: [], party_second_votes: [], total_first_votes: 0, total_second_votes: 0 });
+            if (!map.has(r.constituency_id)) map.set(r.constituency_id, { constituency_id: r.constituency_id, constituency_election_id: r.constituency_election_id ?? null, constituency_name: r.constituency_name, state_name: r.state_name, candidates: [], party_second_votes: [], total_first_votes: 0, total_second_votes: 0 });
             const e = map.get(r.constituency_id)!;
             e.candidates.push({ person_name: r.person_name, party_name: r.party_name, vote_count: Number(r.vote_count), is_winner: Number(r.rank) === 1 });
             e.total_first_votes += Number(r.vote_count);
         }
 
         for (const r of secondVotesRes.rows) {
-            if (!map.has(r.constituency_id)) map.set(r.constituency_id, { constituency_id: r.constituency_id, constituency_name: r.constituency_name, state_name: r.state_name, candidates: [], party_second_votes: [], total_first_votes: 0, total_second_votes: 0 });
+            if (!map.has(r.constituency_id)) map.set(r.constituency_id, { constituency_id: r.constituency_id, constituency_election_id: r.constituency_election_id ?? null, constituency_name: r.constituency_name, state_name: r.state_name, candidates: [], party_second_votes: [], total_first_votes: 0, total_second_votes: 0 });
             const e = map.get(r.constituency_id)!;
             if (!e.party_second_votes.find(p => p.party_name === r.party_name)) {
                 e.party_second_votes.push({ party_name: r.party_name, vote_count: Number(r.vote_count) });

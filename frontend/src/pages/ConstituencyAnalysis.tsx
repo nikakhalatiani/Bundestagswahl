@@ -61,6 +61,7 @@ function truncatePartyName(text: string, maxLength: number = 12): string {
 export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
   const [constituencyId, setConstituencyId] = useState(1);
   const [constituencyNumber, setConstituencyNumber] = useState<number | null>(null);
+  const [constituencyElectionId, setConstituencyElectionId] = useState<number | null>(null);
   const [constituencyQuery, setConstituencyQuery] = useState('');
   const [showSingleVotes, setShowSingleVotes] = useState(false);
   const [mapVoteType, setMapVoteType] = useState<'first' | 'second'>('first');
@@ -77,7 +78,11 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
   const [closestPage, setClosestPage] = useState(1);
 
   const { data: constituencyList, isLoading: loadingConstituencyList, error: constituencyListError } = useConstituencyList(year);
-  const { data: overview, isLoading: loadingOverview } = useConstituencyOverview(constituencyId, year);
+  const { data: overview, isLoading: loadingOverview } = useConstituencyOverview(
+    constituencyId,
+    year,
+    constituencyElectionId ?? undefined
+  );
   const { data: winners } = useConstituencyWinners(year);
   const { data: votesBulk } = useConstituencyVotesBulk(year);
   const { data: closest } = useClosestWinners(year, CLOSEST_WINNERS_LIMIT);
@@ -92,9 +97,9 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
 
   // For Q7: Single votes
   const singleVoteIds = useMemo(() => {
-    if (!constituencyNumber) return undefined;
-    return String(constituencyNumber);
-  }, [constituencyNumber]);
+    if (!constituencyElectionId) return undefined;
+    return String(constituencyElectionId);
+  }, [constituencyElectionId]);
   const { data: singleVotesData, isLoading: loadingSingleVotes } = useConstituenciesSingle(year, singleVoteIds);
 
   const constituencyItems: ConstituencyListItem[] = constituencyList?.data ?? [];
@@ -145,6 +150,7 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
     const selected = constituencyItems.find((c) => c.id === constituencyId) ?? constituencyItems[0];
     setConstituencyId(selected.id);
     setConstituencyNumber(selected.number);
+    setConstituencyElectionId(selected.bridge_id);
     setConstituencyQuery(getConstituencyLabel(selected));
     setDidInitQuery(true);
   }, [constituencyId, constituencyItems, didInitQuery]);
@@ -171,6 +177,7 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
     if (item) {
       setConstituencyId(item.id);
       setConstituencyNumber(item.number);
+      setConstituencyElectionId(item.bridge_id);
       setConstituencyQuery(getConstituencyLabel(item));
     }
   };
@@ -301,6 +308,7 @@ export function ConstituencyAnalysis({ year }: ConstituencyAnalysisProps) {
                 onSelect={(item) => {
                   setConstituencyId(item.id);
                   setConstituencyNumber(item.number);
+                  setConstituencyElectionId(item.bridge_id);
                   setConstituencyQuery(getConstituencyLabel(item));
                 }}
                 getItemLabel={getConstituencyLabel}

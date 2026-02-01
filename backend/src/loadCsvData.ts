@@ -181,23 +181,33 @@ async function loadPartyLists() {
 
 async function loadDirectCandidacy() {
   const rows = readCsv<CsvRow>(path.join(DATA_DIR, "direct_candidacy.csv"));
+  const mappingRes = await pool.query(
+    `SELECT bridge_id, year, constituency_id
+     FROM constituency_elections`
+  );
+  const bridgeMap = new Map<string, number>();
+  for (const row of mappingRes.rows) {
+    bridgeMap.set(`${row.year}-${row.constituency_id}`, row.bridge_id);
+  }
   await transactionalInsert("Direct Candidacy", async (c) => {
     for (const r of rows) {
       // Skip if composite PK is missing
       const pId = num(r["PersonID"]);
       const year = num(r["Year"]);
+      const constituencyId = num(r["ConstituencyID"]);
       if (pId === null || year === null) continue;
+      if (constituencyId === null) continue;
+      const bridgeId = bridgeMap.get(`${year}-${constituencyId}`);
+      if (!bridgeId) continue;
 
       await c.query(
-        `INSERT INTO direct_candidacy (person_id, year, constituency_id, party_id)
-         VALUES ($1,$2,$3,$4)
-         ON CONFLICT (person_id, year) DO UPDATE
-         SET constituency_id=EXCLUDED.constituency_id,
-             party_id=EXCLUDED.party_id`,
+        `INSERT INTO direct_candidacy (person_id, constituency_election_id, party_id)
+         VALUES ($1,$2,$3)
+         ON CONFLICT (person_id, constituency_election_id) DO UPDATE
+         SET party_id=EXCLUDED.party_id`,
         [
           pId,
-          year,
-          num(r["ConstituencyID"]),
+          bridgeId,
           num(r["PartyID"])
         ]
       );
@@ -252,13 +262,13 @@ async function loadConstituencyElections() {
 async function loadStructuralData() {
   const rows = readCsv<CsvRow>(path.join(DATA_DIR, "strukturdaten.csv"));
   const mappingRes = await pool.query(
-    `SELECT c.id, c.number, ce.year
-     FROM constituencies c
-     JOIN constituency_elections ce ON ce.constituency_id = c.id`
+    `SELECT ce.bridge_id, ce.year, c.number
+     FROM constituency_elections ce
+     JOIN constituencies c ON c.id = ce.constituency_id`
   );
   const constituencyMap = new Map<string, number>();
   for (const row of mappingRes.rows) {
-    constituencyMap.set(`${row.year}-${row.number}`, row.id);
+    constituencyMap.set(`${row.year}-${row.number}`, row.bridge_id);
   }
 
   await transactionalInsert("Structural Data", async (c) => {
@@ -270,8 +280,8 @@ async function loadStructuralData() {
       const number = num(r["ConstituencyNumber"]);
       const metricKey = r["MetricKey"];
       if (!year || !number || !metricKey) continue;
-      const constituencyId = constituencyMap.get(`${year}-${number}`);
-      if (!constituencyId) continue;
+      const constituencyElectionId = constituencyMap.get(`${year}-${number}`);
+      if (!constituencyElectionId) continue;
 
       if (!seenMetrics.has(metricKey)) {
         seenMetrics.add(metricKey);
@@ -285,13 +295,12 @@ async function loadStructuralData() {
       }
 
       await c.query(
-        `INSERT INTO constituency_structural_data (constituency_id, year, metric_key, value)
-         VALUES ($1,$2,$3,$4)
-         ON CONFLICT (constituency_id, year, metric_key)
+        `INSERT INTO constituency_structural_data (constituency_election_id, metric_key, value)
+         VALUES ($1,$2,$3)
+         ON CONFLICT (constituency_election_id, metric_key)
          DO UPDATE SET value=EXCLUDED.value`,
         [
-          constituencyId,
-          year,
+          constituencyElectionId,
           metricKey,
           num(r["Value"]),
         ]
@@ -311,9 +320,9 @@ async function main() {
     await loadConstituencies();
     await loadPersons();
     await loadPartyLists();
+    await loadConstituencyElections();
     await loadDirectCandidacy();
     await loadPartyListCandidacy();
-    await loadConstituencyElections();
     await loadStructuralData();
     console.log("\nAll CSVs from data folder loaded successfully!");
   } finally {

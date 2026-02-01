@@ -176,6 +176,7 @@ export interface ConstituenciesSingleSecondVoteItem {
 
 export interface ConstituenciesSingleItem {
     constituency_id: number;
+    constituency_election_id?: number | null;
     constituency_name: string;
     state_name: string;
     candidates: ConstituenciesSingleCandidateItem[];

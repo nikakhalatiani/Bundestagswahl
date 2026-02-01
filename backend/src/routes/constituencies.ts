@@ -8,6 +8,19 @@ const { pool } = dbModule;
 
 const router = Router();
 
+async function resolveConstituencyElectionByBridgeId(bridgeId: number) {
+  const res = await pool.query(
+    `SELECT ce.bridge_id, ce.year, c.id AS constituency_id, c.number, c.name, c.state_id, s.name AS state_name
+     FROM constituency_elections ce
+     JOIN constituencies c ON c.id = ce.constituency_id
+     JOIN states s ON s.id = c.state_id
+     WHERE ce.bridge_id = $1
+     LIMIT 1`,
+    [bridgeId]
+  );
+  return res.rows[0] || null;
+}
+
 /**
  * GET /api/constituencies - List all constituencies for selection/autocomplete.
  */
@@ -67,15 +80,27 @@ router.get('/constituency/:id', async (req, res) => {
 router.get('/constituency/:id/overview', ensureCacheMiddleware, async (req, res) => {
   const constituencyId = Number(req.params.id);
   const year = req.query.year ? Number(req.query.year) : 2025;
+  const constituencyElectionId = req.query.constituencyElectionId ? Number(req.query.constituencyElectionId) : null;
 
   try {
+    let resolvedConstituencyId = constituencyId;
+    let resolvedYear = year;
+    if (constituencyElectionId) {
+      const ce = await resolveConstituencyElectionByBridgeId(constituencyElectionId);
+      if (!ce) {
+        return res.status(404).json({ error: 'constituency_not_found' });
+      }
+      resolvedConstituencyId = Number(ce.constituency_id);
+      resolvedYear = Number(ce.year);
+    }
+
     // 1. Basic constituency info
     const constRes = await pool.query(
       `SELECT c.id, c.number, c.name, s.name AS state
        FROM constituencies c
        JOIN states s ON s.id = c.state_id
        WHERE c.id = $1`,
-      [constituencyId]
+      [resolvedConstituencyId]
     );
     if (!constRes.rows.length) {
       return res.status(404).json({ error: 'constituency_not_found' });
@@ -99,7 +124,7 @@ router.get('/constituency/:id/overview', ensureCacheMiddleware, async (req, res)
          ON mce.constituency_id = ce.constituency_id
         AND mce.year = ce.year
        WHERE ce.constituency_id = $1 AND ce.year = $2`,
-      [constituencyId, year]
+      [resolvedConstituencyId, resolvedYear]
     );
 
     // 3. Winner info with seat status from cache
@@ -118,7 +143,7 @@ router.get('/constituency/:id/overview', ensureCacheMiddleware, async (req, res)
        WHERE dcv.constituency_id = $1 AND dcv.year = $2
        ORDER BY dcv.first_votes DESC
        LIMIT 1`,
-      [constituencyId, year]
+      [resolvedConstituencyId, resolvedYear]
     );
 
     // 4. Vote distribution by party (with diff from previous year)
@@ -177,12 +202,12 @@ router.get('/constituency/:id/overview', ensureCacheMiddleware, async (req, res)
        LEFT JOIN prev_totals pt ON true
        WHERE (cf.votes IS NOT NULL OR cs.votes IS NOT NULL)
        ORDER BY cs.votes DESC NULLS LAST`,
-      [constituencyId, year]
+      [resolvedConstituencyId, resolvedYear]
     );
 
     // 5. Comparison to previous election (if available)
     let comparison = null;
-    const prevYearRes = await pool.query(`SELECT MAX(year) as year FROM elections WHERE year < $1`, [year]);
+    const prevYearRes = await pool.query(`SELECT MAX(year) as year FROM elections WHERE year < $1`, [resolvedYear]);
     const prevYear = prevYearRes.rows[0]?.year;
 
     if (prevYear) {
@@ -223,7 +248,7 @@ router.get('/constituency/:id/overview', ensureCacheMiddleware, async (req, res)
          JOIN persons p ON p.id = dcv.person_id
          ORDER BY dcv.first_votes DESC
          LIMIT 1`,
-        [constituencyId, prevYear]
+        [resolvedConstituencyId, prevYear]
       );
 
       if (prevRes.rows.length > 0) {
@@ -278,6 +303,7 @@ router.get('/constituency-winners', ensureCacheMiddleware, async (req, res) => {
          s.name AS state_name,
          c.number AS constituency_number,
          c.name AS constituency_name,
+         ce.bridge_id AS constituency_election_id,
          p.first_name || ' ' || p.last_name AS winner_name,
          pt.short_name AS party_name,
          cw.first_votes,
@@ -285,6 +311,7 @@ router.get('/constituency-winners', ensureCacheMiddleware, async (req, res) => {
          CASE WHEN sac.id IS NOT NULL THEN true ELSE false END AS got_seat
        FROM ConstituencyWinners cw
        JOIN constituencies c ON c.id = cw.constituency_id
+       JOIN constituency_elections ce ON ce.constituency_id = cw.constituency_id AND ce.year = $1
        JOIN states s ON s.id = c.state_id
        JOIN persons p ON p.id = cw.person_id
        JOIN parties pt ON pt.id = cw.party_id

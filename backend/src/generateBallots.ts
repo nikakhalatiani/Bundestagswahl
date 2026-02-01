@@ -78,7 +78,7 @@ interface GenerationOptions {
   stateIds?: number[]; // Filter by specific state IDs (default: all)
 }
 
-type ConstituencyMappingRow = { id: number; number: number; name: string };
+type ConstituencyMappingRow = { id: number; number: number; name: string; year: number; bridge_id: number };
 
 type FirstVoteCount = {
   person_id: number;
@@ -186,19 +186,20 @@ async function generateBallots(options: GenerationOptions) {
 
     if (year !== undefined) {
       mappingQuery = `
-        SELECT DISTINCT c.id, c.number, c.name
-        FROM constituencies c
-        JOIN direct_candidacy dc ON dc.constituency_id = c.id
-        WHERE c.number = ANY($1) AND dc.year = $2
+        SELECT ce.bridge_id, ce.year, c.id, c.number, c.name
+        FROM constituency_elections ce
+        JOIN constituencies c ON c.id = ce.constituency_id
+        WHERE c.number = ANY($1) AND ce.year = $2
         ORDER BY c.number
       `;
       queryParams = [constituencyNumbers, year];
     } else {
       mappingQuery = `
-        SELECT id, number, name
-        FROM constituencies
-        WHERE number = ANY($1)
-        ORDER BY number
+        SELECT ce.bridge_id, ce.year, c.id, c.number, c.name
+        FROM constituency_elections ce
+        JOIN constituencies c ON c.id = ce.constituency_id
+        WHERE c.number = ANY($1)
+        ORDER BY c.number, ce.year
       `;
       queryParams = [constituencyNumbers];
     }
@@ -233,7 +234,7 @@ async function generateBallots(options: GenerationOptions) {
       console.warn(`Warning: Constituency numbers ${dupNumbers.join(", ")} exist in multiple election years`);
       console.warn(`   Generating ballots for ALL matching constituencies. Specify --year=YYYY to disambiguate.`);
       mappingRes.rows.forEach((r) => {
-        console.warn(`     - Constituency ${r.number}: "${r.name}" (id=${r.id})`);
+        console.warn(`     - Constituency ${r.number}: "${r.name}" (year=${r.year}, id=${r.id}, bridge_id=${r.bridge_id})`);
       });
     }
 
@@ -473,14 +474,27 @@ async function insertFirstVotes(
 
     await client.query(`
       WITH src AS (
-        SELECT person_id, year, votes
+        SELECT person_id, year, constituency_id, votes
         FROM tmp_first_vote_counts
         WHERE votes > 0
+      ),
+      mapped AS (
+        SELECT
+          src.person_id,
+          ce.bridge_id AS constituency_election_id,
+          src.votes
+        FROM src
+        JOIN direct_candidacy dc
+          ON dc.person_id = src.person_id
+        JOIN constituency_elections ce
+          ON ce.bridge_id = dc.constituency_election_id
+         AND ce.year = src.year
+         AND ce.constituency_id = src.constituency_id
       )
-      INSERT INTO first_votes (year, direct_person_id, is_valid, created_at)
-      SELECT src.year, src.person_id, true, CURRENT_DATE
-      FROM src
-      JOIN LATERAL generate_series(1, src.votes) gs(n) ON true;
+      INSERT INTO first_votes (direct_person_id, constituency_election_id, is_valid, created_at)
+      SELECT mapped.person_id, mapped.constituency_election_id, true, CURRENT_DATE
+      FROM mapped
+      JOIN LATERAL generate_series(1, mapped.votes) gs(n) ON true;
     `);
 
     if (invalidCounts.length > 0) {
@@ -492,17 +506,20 @@ async function insertFirstVotes(
         ),
         pick AS (
           SELECT
-            dc.constituency_id,
-            dc.year,
+            ce.bridge_id AS constituency_election_id,
+            ce.constituency_id,
+            ce.year,
             MIN(dc.person_id) AS person_id
           FROM direct_candidacy dc
+          JOIN constituency_elections ce
+            ON ce.bridge_id = dc.constituency_election_id
           JOIN invalid_src i
-            ON i.constituency_id = dc.constituency_id
-           AND i.year = dc.year
-          GROUP BY dc.constituency_id, dc.year
+            ON i.constituency_id = ce.constituency_id
+           AND i.year = ce.year
+          GROUP BY ce.bridge_id, ce.constituency_id, ce.year
         )
-        INSERT INTO first_votes (year, direct_person_id, is_valid, created_at)
-        SELECT i.year, p.person_id, false, CURRENT_DATE
+        INSERT INTO first_votes (direct_person_id, constituency_election_id, is_valid, created_at)
+        SELECT p.person_id, p.constituency_election_id, false, CURRENT_DATE
         FROM invalid_src i
         JOIN pick p
           ON p.constituency_id = i.constituency_id
@@ -513,18 +530,31 @@ async function insertFirstVotes(
 
     if (!options.skipVerification) {
       const mismatchRes = await client.query(`
+        WITH mapped AS (
+          SELECT
+            src.person_id,
+            src.year,
+            src.constituency_id,
+            src.votes,
+            ce.bridge_id AS constituency_election_id
+          FROM tmp_first_vote_counts src
+          JOIN constituency_elections ce
+            ON ce.constituency_id = src.constituency_id
+           AND ce.year = src.year
+        )
         SELECT
-          src.person_id,
-          src.year,
-          src.votes AS expected,
+          mapped.person_id,
+          mapped.year,
+          mapped.constituency_id,
+          mapped.votes AS expected,
           COUNT(fv.id)::bigint AS generated
-        FROM tmp_first_vote_counts src
+        FROM mapped
         LEFT JOIN first_votes fv
-          ON fv.direct_person_id = src.person_id
-         AND fv.year = src.year
+          ON fv.direct_person_id = mapped.person_id
+         AND fv.constituency_election_id = mapped.constituency_election_id
          AND fv.is_valid = true
-        GROUP BY src.person_id, src.year, src.votes
-        HAVING COUNT(fv.id)::bigint <> src.votes;
+        GROUP BY mapped.person_id, mapped.year, mapped.constituency_id, mapped.votes
+        HAVING COUNT(fv.id)::bigint <> mapped.votes;
       `);
 
       if (mismatchRes.rows.length) {
@@ -541,15 +571,14 @@ async function insertFirstVotes(
           ),
           got AS (
             SELECT
-              dc.constituency_id,
-              fv.year,
+              ce.constituency_id,
+              ce.year,
               COUNT(*)::bigint AS generated
             FROM first_votes fv
-            JOIN direct_candidacy dc
-              ON dc.person_id = fv.direct_person_id
-             AND dc.year = fv.year
+            JOIN constituency_elections ce
+              ON ce.bridge_id = fv.constituency_election_id
             WHERE fv.is_valid = false
-            GROUP BY dc.constituency_id, fv.year
+            GROUP BY ce.constituency_id, ce.year
           )
           SELECT i.constituency_id, i.year, i.votes AS expected, COALESCE(g.generated, 0) AS generated
           FROM invalid_src i
@@ -568,7 +597,9 @@ async function insertFirstVotes(
     }
 
     const countRes = await client.query(
-      `SELECT COUNT(*)::bigint AS cnt FROM first_votes ${options.year ? "WHERE year = $1" : ""}`,
+      `SELECT COUNT(*)::bigint AS cnt
+       FROM first_votes fv
+       ${options.year ? "JOIN constituency_elections ce ON ce.bridge_id = fv.constituency_election_id WHERE ce.year = $1" : ""}`,
       options.year ? [options.year] : []
     );
 
@@ -616,19 +647,23 @@ async function insertSecondVotes(
       ),
       mapped AS (
         SELECT
+          ce.bridge_id AS constituency_election_id,
           src.constituency_id,
           src.year,
           src.votes,
           pl.id AS party_list_id
         FROM src
-        JOIN constituencies c ON c.id = src.constituency_id
+        JOIN constituency_elections ce
+          ON ce.constituency_id = src.constituency_id
+         AND ce.year = src.year
+        JOIN constituencies c ON c.id = ce.constituency_id
         JOIN party_lists pl
           ON pl.party_id = src.party_id
          AND pl.state_id = c.state_id
-         AND pl.year = src.year
+         AND pl.year = ce.year
       )
-      INSERT INTO second_votes (party_list_id, constituency_id, is_valid, created_at)
-      SELECT mapped.party_list_id, mapped.constituency_id, true, CURRENT_DATE
+      INSERT INTO second_votes (party_list_id, constituency_election_id, is_valid, created_at)
+      SELECT mapped.party_list_id, mapped.constituency_election_id, true, CURRENT_DATE
       FROM mapped
       JOIN LATERAL generate_series(1, mapped.votes) gs(n) ON true;
     `);
@@ -642,18 +677,22 @@ async function insertSecondVotes(
         ),
         pick AS (
           SELECT
-            i.constituency_id,
-            i.year,
+            ce.bridge_id AS constituency_election_id,
+            ce.constituency_id,
+            ce.year,
             MIN(pl.id) AS party_list_id
           FROM invalid_src i
-          JOIN constituencies c ON c.id = i.constituency_id
+          JOIN constituency_elections ce
+            ON ce.constituency_id = i.constituency_id
+           AND ce.year = i.year
+          JOIN constituencies c ON c.id = ce.constituency_id
           JOIN party_lists pl
             ON pl.state_id = c.state_id
-           AND pl.year = i.year
-          GROUP BY i.constituency_id, i.year
+           AND pl.year = ce.year
+          GROUP BY ce.bridge_id, ce.constituency_id, ce.year
         )
-        INSERT INTO second_votes (party_list_id, constituency_id, is_valid, created_at)
-        SELECT p.party_list_id, p.constituency_id, false, CURRENT_DATE
+        INSERT INTO second_votes (party_list_id, constituency_election_id, is_valid, created_at)
+        SELECT p.party_list_id, p.constituency_election_id, false, CURRENT_DATE
         FROM invalid_src i
         JOIN pick p
           ON p.constituency_id = i.constituency_id
@@ -666,17 +705,21 @@ async function insertSecondVotes(
       const mismatchRes = await client.query(`
         WITH mapped AS (
           SELECT
+            ce.bridge_id AS constituency_election_id,
             src.constituency_id,
             src.year,
             src.party_id,
             src.votes,
             pl.id AS party_list_id
           FROM tmp_second_vote_counts src
-          JOIN constituencies c ON c.id = src.constituency_id
+          JOIN constituency_elections ce
+            ON ce.constituency_id = src.constituency_id
+           AND ce.year = src.year
+          JOIN constituencies c ON c.id = ce.constituency_id
           JOIN party_lists pl
             ON pl.party_id = src.party_id
            AND pl.state_id = c.state_id
-           AND pl.year = src.year
+           AND pl.year = ce.year
         )
         SELECT
           mapped.party_list_id,
@@ -687,7 +730,7 @@ async function insertSecondVotes(
         FROM mapped
         LEFT JOIN second_votes sv
           ON sv.party_list_id = mapped.party_list_id
-         AND sv.constituency_id = mapped.constituency_id
+         AND sv.constituency_election_id = mapped.constituency_election_id
          AND sv.is_valid = true
         GROUP BY mapped.party_list_id, mapped.constituency_id, mapped.year, mapped.votes
         HAVING COUNT(sv.id)::bigint <> mapped.votes;
@@ -707,13 +750,14 @@ async function insertSecondVotes(
           ),
           got AS (
             SELECT
-              sv.constituency_id,
-              pl.year,
+              ce.constituency_id,
+              ce.year,
               COUNT(*)::bigint AS generated
             FROM second_votes sv
-            JOIN party_lists pl ON pl.id = sv.party_list_id
+            JOIN constituency_elections ce
+              ON ce.bridge_id = sv.constituency_election_id
             WHERE sv.is_valid = false
-            GROUP BY sv.constituency_id, pl.year
+            GROUP BY ce.constituency_id, ce.year
           )
           SELECT i.constituency_id, i.year, i.votes AS expected, COALESCE(g.generated, 0) AS generated
           FROM invalid_src i
@@ -781,16 +825,16 @@ async function recreateIndexesAndFKs() {
   const idxStart = Date.now();
   await Promise.all([
     pool.query(`
-      CREATE INDEX IF NOT EXISTS idx_first_votes_person_year
-        ON first_votes(direct_person_id, year);
+      CREATE INDEX IF NOT EXISTS idx_first_votes_person_constituency_election
+        ON first_votes(direct_person_id, constituency_election_id);
     `),
     pool.query(`
       CREATE INDEX IF NOT EXISTS second_votes_party_idx
         ON second_votes(party_list_id);
     `),
     pool.query(`
-      CREATE INDEX IF NOT EXISTS second_votes_constituency_idx
-        ON second_votes(constituency_id);
+      CREATE INDEX IF NOT EXISTS second_votes_constituency_election_idx
+        ON second_votes(constituency_election_id);
     `)
   ]);
   const idxDur = ((Date.now() - idxStart) / 1000).toFixed(1);
@@ -804,8 +848,8 @@ async function recreateIndexesAndFKs() {
     pool.query(`
       ALTER TABLE first_votes
         ADD CONSTRAINT fk_first_vote_direct_cand
-        FOREIGN KEY (direct_person_id, year)
-        REFERENCES direct_candidacy(person_id, year)
+        FOREIGN KEY (direct_person_id, constituency_election_id)
+        REFERENCES direct_candidacy(person_id, constituency_election_id)
         ON DELETE CASCADE
         NOT VALID;
     `),
@@ -819,9 +863,9 @@ async function recreateIndexesAndFKs() {
     `),
     pool.query(`
       ALTER TABLE second_votes
-        ADD CONSTRAINT fk_second_vote_constituency
-        FOREIGN KEY (constituency_id)
-        REFERENCES constituencies(id)
+        ADD CONSTRAINT fk_second_vote_constituency_election
+        FOREIGN KEY (constituency_election_id)
+        REFERENCES constituency_elections(bridge_id)
         ON DELETE CASCADE
         NOT VALID;
     `)
@@ -830,7 +874,7 @@ async function recreateIndexesAndFKs() {
   await Promise.all([
     pool.query(`ALTER TABLE first_votes VALIDATE CONSTRAINT fk_first_vote_direct_cand;`),
     pool.query(`ALTER TABLE second_votes VALIDATE CONSTRAINT fk_second_vote_party_list;`),
-    pool.query(`ALTER TABLE second_votes VALIDATE CONSTRAINT fk_second_vote_constituency;`)
+    pool.query(`ALTER TABLE second_votes VALIDATE CONSTRAINT fk_second_vote_constituency_election;`)
   ]);
   const fkDur = ((Date.now() - fkStart) / 1000).toFixed(1);
   console.log(`  Foreign keys added and validated in ${fkDur}s`);

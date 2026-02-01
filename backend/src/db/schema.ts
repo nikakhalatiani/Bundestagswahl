@@ -51,6 +51,21 @@ export const constituencies = pgTable("constituencies", {
     index("constituencies_state_idx").on(table.state_id),
   ]);
 
+// ---------- Constituency Elections ----------
+export const constituencyElections = pgTable("constituency_elections", {
+  bridge_id: serial("bridge_id").primaryKey(),    // BridgeID
+  year: integer("year")
+    .notNull()
+    .references(() => elections.year, { onDelete: "cascade" }),
+  constituency_id: integer("constituency_id")
+    .notNull()
+    .references(() => constituencies.id, { onDelete: "cascade" }),
+  eligible_voters: doublePrecision("eligible_voters"),
+},
+  (table) => [
+    unique().on(table.constituency_id, table.year),
+  ]);
+
 // ---------- Structural Metrics ----------
 export const structuralMetrics = pgTable("structural_metrics", {
   key: varchar("key", { length: 120 }).primaryKey(),
@@ -59,20 +74,17 @@ export const structuralMetrics = pgTable("structural_metrics", {
 });
 
 export const constituencyStructuralData = pgTable("constituency_structural_data", {
-  constituency_id: integer("constituency_id")
+  constituency_election_id: integer("constituency_election_id")
     .notNull()
-    .references(() => constituencies.id, { onDelete: "cascade" }),
-  year: integer("year")
-    .notNull()
-    .references(() => elections.year, { onDelete: "cascade" }),
+    .references(() => constituencyElections.bridge_id, { onDelete: "cascade" }),
   metric_key: varchar("metric_key", { length: 120 })
     .notNull()
     .references(() => structuralMetrics.key, { onDelete: "cascade" }),
   value: doublePrecision("value"),
 },
   (table) => [
-    primaryKey({ columns: [table.constituency_id, table.year, table.metric_key] }),
-    index("structural_data_year_idx").on(table.year),
+    primaryKey({ columns: [table.constituency_election_id, table.metric_key] }),
+    index("structural_data_constituency_election_idx").on(table.constituency_election_id),
     index("structural_data_metric_idx").on(table.metric_key),
   ]);
 
@@ -117,18 +129,16 @@ export const directCandidacy = pgTable("direct_candidacy", {
   person_id: integer("person_id")
     .notNull()
     .references(() => persons.id, { onDelete: "cascade" }),
-  year: integer("year")
+  constituency_election_id: integer("constituency_election_id")
     .notNull()
-    .references(() => elections.year, { onDelete: "cascade" }),
-  constituency_id: integer("constituency_id")
-    .notNull()
-    .references(() => constituencies.id, { onDelete: "cascade" }),
+    .references(() => constituencyElections.bridge_id, { onDelete: "cascade" }),
   party_id: integer("party_id")
     .notNull()
     .references(() => parties.id, { onDelete: "cascade" }),
 },
   (table) => [
-    primaryKey({ columns: [table.person_id, table.year] }),
+    primaryKey({ columns: [table.person_id, table.constituency_election_id] }),
+    index("direct_candidacy_constituency_election_idx").on(table.constituency_election_id),
   ]);
 
 // ---------- Party List Candidacy ----------
@@ -145,39 +155,25 @@ export const partyListCandidacy = pgTable("party_list_candidacy", {
     primaryKey({ columns: [table.person_id, table.party_list_id] }),
   ]);
 
-// ---------- Constituency Elections ----------
-export const constituencyElections = pgTable("constituency_elections", {
-  bridge_id: serial("bridge_id").primaryKey(),    // BridgeID
-  year: integer("year")
-    .notNull()
-    .references(() => elections.year, { onDelete: "cascade" }),
-  constituency_id: integer("constituency_id")
-    .notNull()
-    .references(() => constituencies.id, { onDelete: "cascade" }),
-  eligible_voters: doublePrecision("eligible_voters"),
-},
-  (table) => [
-    unique().on(table.constituency_id, table.year),
-  ]);
-
 export const firstVotes = pgTable("first_votes", {
   id: serial("id").primaryKey(),
-  year: integer("year")
-    .notNull(),
   direct_person_id: integer("direct_person_id")
+    .notNull(),
+  constituency_election_id: integer("constituency_election_id")
     .notNull(),
   is_valid: boolean("is_valid").default(true).notNull(),
   created_at: date("created_at").defaultNow(),
 },
   (table) => [
     foreignKey({
-      columns: [table.direct_person_id, table.year],
+      columns: [table.direct_person_id, table.constituency_election_id],
       foreignColumns: [
         directCandidacy.person_id,
-        directCandidacy.year,
+        directCandidacy.constituency_election_id,
       ],
       name: "fk_first_vote_direct_cand",
     }),
+    index("first_votes_constituency_election_idx").on(table.constituency_election_id),
   ]
 
 );
@@ -188,15 +184,15 @@ export const secondVotes = pgTable("second_votes", {
   party_list_id: integer("party_list_id")
     .notNull()
     .references(() => partyLists.id, { onDelete: "cascade" }),
-  constituency_id: integer("constituency_id")
+  constituency_election_id: integer("constituency_election_id")
     .notNull()
-    .references(() => constituencies.id, { onDelete: "cascade" }),
+    .references(() => constituencyElections.bridge_id, { onDelete: "cascade" }),
   is_valid: boolean("is_valid").default(true).notNull(),
   created_at: date("created_at").defaultNow(),
 },
   (t) => [
     index("second_votes_party_idx").on(t.party_list_id),
-    index("second_votes_constituency_idx").on(t.constituency_id),
+    index("second_votes_constituency_election_idx").on(t.constituency_election_id),
   ]
 );
 
@@ -218,6 +214,7 @@ export const votingCodes = pgTable("voting_codes", {
 
 export const mv00DirectCandidacyVotes = pgMaterializedView("mv_00_direct_candidacy_votes", {
   person_id: integer("person_id"),
+  constituency_election_id: integer("constituency_election_id"),
   year: integer("year"),
   constituency_id: integer("constituency_id"),
   party_id: integer("party_id"),
@@ -227,18 +224,22 @@ export const mv00DirectCandidacyVotes = pgMaterializedView("mv_00_direct_candida
   .as(sql`
     SELECT
       dc.person_id,
-      dc.year,
-      dc.constituency_id,
+      dc.constituency_election_id,
+      ce.year,
+      ce.constituency_id,
       dc.party_id,
       COUNT(fv.id) FILTER (WHERE fv.is_valid) AS first_votes
     FROM direct_candidacy dc
+    JOIN constituency_elections ce
+      ON ce.bridge_id = dc.constituency_election_id
     LEFT JOIN first_votes fv
       ON fv.direct_person_id = dc.person_id
-     AND fv.year = dc.year
-    GROUP BY dc.person_id, dc.year, dc.constituency_id, dc.party_id
+     AND fv.constituency_election_id = dc.constituency_election_id
+    GROUP BY dc.person_id, dc.constituency_election_id, ce.year, ce.constituency_id, dc.party_id
   `);
 
 export const mv01ConstituencyPartyVotes = pgMaterializedView("mv_01_constituency_party_votes", {
+  constituency_election_id: integer("constituency_election_id"),
   constituency_id: integer("constituency_id"),
   year: integer("year"),
   party_id: integer("party_id"),
@@ -249,25 +250,30 @@ export const mv01ConstituencyPartyVotes = pgMaterializedView("mv_01_constituency
   .as(sql`
     WITH first_party AS (
       SELECT
+        dcv.constituency_election_id,
         dcv.constituency_id,
         dcv.year,
         dcv.party_id,
         1::int AS vote_type,
         COALESCE(SUM(dcv.first_votes), 0) AS votes
       FROM mv_00_direct_candidacy_votes dcv
-      GROUP BY dcv.constituency_id, dcv.year, dcv.party_id
+      GROUP BY dcv.constituency_election_id, dcv.constituency_id, dcv.year, dcv.party_id
     ),
     second_party AS (
       SELECT
-        sv.constituency_id,
-        pl.year,
+        sv.constituency_election_id,
+        ce.constituency_id,
+        ce.year,
         pl.party_id,
         2::int AS vote_type,
         COUNT(sv.id) FILTER (WHERE sv.is_valid) AS votes
       FROM second_votes sv
+      JOIN constituency_elections ce
+        ON ce.bridge_id = sv.constituency_election_id
       JOIN party_lists pl
         ON pl.id = sv.party_list_id
-      GROUP BY sv.constituency_id, pl.year, pl.party_id
+       AND pl.year = ce.year
+      GROUP BY sv.constituency_election_id, ce.constituency_id, ce.year, pl.party_id
     )
     SELECT * FROM first_party
     UNION ALL
@@ -308,6 +314,7 @@ export const mv02PartyListVotes = pgMaterializedView("mv_02_party_list_votes", {
   `);
 
 export const mv03ConstituencyElections = pgMaterializedView("mv_03_constituency_elections", {
+  constituency_election_id: integer("constituency_election_id"),
   constituency_id: integer("constituency_id"),
   year: integer("year"),
   valid_first: bigint("valid_first", { mode: "number" }),
@@ -319,37 +326,43 @@ export const mv03ConstituencyElections = pgMaterializedView("mv_03_constituency_
   .as(sql`
     WITH valid_totals AS (
       SELECT
+        constituency_election_id,
         constituency_id,
         year,
         COALESCE(SUM(CASE WHEN vote_type = 1 THEN votes ELSE 0 END), 0) AS valid_first,
         COALESCE(SUM(CASE WHEN vote_type = 2 THEN votes ELSE 0 END), 0) AS valid_second
       FROM mv_01_constituency_party_votes
-      GROUP BY constituency_id, year
+      GROUP BY constituency_election_id, constituency_id, year
     ),
     invalid_first AS (
       SELECT
-        dc.constituency_id,
-        fv.year,
+        dc.constituency_election_id,
+        ce.constituency_id,
+        ce.year,
         COUNT(*) AS invalid_first
       FROM first_votes fv
       JOIN direct_candidacy dc
         ON dc.person_id = fv.direct_person_id
-       AND dc.year = fv.year
+       AND dc.constituency_election_id = fv.constituency_election_id
+      JOIN constituency_elections ce
+        ON ce.bridge_id = dc.constituency_election_id
       WHERE fv.is_valid = false
-      GROUP BY dc.constituency_id, fv.year
+      GROUP BY dc.constituency_election_id, ce.constituency_id, ce.year
     ),
     invalid_second AS (
       SELECT
-        sv.constituency_id,
-        pl.year,
+        sv.constituency_election_id,
+        ce.constituency_id,
+        ce.year,
         COUNT(*) AS invalid_second
       FROM second_votes sv
-      JOIN party_lists pl
-        ON pl.id = sv.party_list_id
+      JOIN constituency_elections ce
+        ON ce.bridge_id = sv.constituency_election_id
       WHERE sv.is_valid = false
-      GROUP BY sv.constituency_id, pl.year
+      GROUP BY sv.constituency_election_id, ce.constituency_id, ce.year
     )
     SELECT
+      COALESCE(vt.constituency_election_id, i1.constituency_election_id, i2.constituency_election_id) AS constituency_election_id,
       COALESCE(vt.constituency_id, i1.constituency_id, i2.constituency_id) AS constituency_id,
       COALESCE(vt.year, i1.year, i2.year) AS year,
       COALESCE(vt.valid_first, 0) AS valid_first,
@@ -358,11 +371,9 @@ export const mv03ConstituencyElections = pgMaterializedView("mv_03_constituency_
       COALESCE(i2.invalid_second, 0) AS invalid_second
     FROM valid_totals vt
     FULL OUTER JOIN invalid_first i1
-      ON i1.constituency_id = vt.constituency_id
-     AND i1.year = vt.year
+      ON i1.constituency_election_id = vt.constituency_election_id
     FULL OUTER JOIN invalid_second i2
-      ON i2.constituency_id = COALESCE(vt.constituency_id, i1.constituency_id)
-     AND i2.year = COALESCE(vt.year, i1.year)
+      ON i2.constituency_election_id = COALESCE(vt.constituency_election_id, i1.constituency_election_id)
   `);
 
 export const seatAllocationCache = pgMaterializedView("seat_allocation_cache", {

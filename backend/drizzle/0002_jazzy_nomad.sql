@@ -1,3 +1,0 @@
-ALTER TABLE "voting_codes" ADD COLUMN "constituency_election_id" integer NOT NULL;--> statement-breakpoint
-ALTER TABLE "voting_codes" ADD CONSTRAINT "voting_codes_constituency_election_id_constituency_elections_bridge_id_fk" FOREIGN KEY ("constituency_election_id") REFERENCES "public"."constituency_elections"("bridge_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "voting_codes_constituency_election_idx" ON "voting_codes" USING btree ("constituency_election_id");

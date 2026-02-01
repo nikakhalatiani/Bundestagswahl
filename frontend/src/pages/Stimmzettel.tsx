@@ -20,6 +20,7 @@ export function Stimmzettel({ year, setYear }: { year: number; setYear: (y: numb
     const [candidates, setCandidates] = useState<any[]>([]);
     const [constituencyName, setConstituencyName] = useState<string | null>(null);
     const [constituencyNumber, setConstituencyNumber] = useState<number | null>(null);
+    const [constituencyElectionId, setConstituencyElectionId] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -83,13 +84,13 @@ export function Stimmzettel({ year, setYear }: { year: number; setYear: (y: numb
     useEffect(() => {
         let mounted = true;
         async function load() {
-            if (!authorized || !constituencyNumber) return;
+            if (!authorized || !constituencyNumber || !constituencyElectionId) return;
             setLoading(true);
             setError(null);
             try {
                 const [pRes, cRes, infoRes] = await Promise.all([
-                    fetch(`/api/constituency/${constituencyNumber}/parties?year=${year}`),
-                    fetch(`/api/constituency/${constituencyNumber}/candidates?year=${year}`),
+                    fetch(`/api/constituency/${constituencyNumber}/parties?constituencyElectionId=${constituencyElectionId}`),
+                    fetch(`/api/constituency/${constituencyNumber}/candidates?constituencyElectionId=${constituencyElectionId}`),
                     fetch(`/api/constituencies?year=${year}`),
                 ]);
                 const pJson = await pRes.json();
@@ -108,7 +109,7 @@ export function Stimmzettel({ year, setYear }: { year: number; setYear: (y: numb
         }
         load();
         return () => { mounted = false; };
-    }, [authorized, constituencyNumber, year]);
+    }, [authorized, constituencyNumber, constituencyElectionId, year]);
 
     async function submitBallot() {
         setSubmitResult(null);
@@ -162,15 +163,17 @@ export function Stimmzettel({ year, setYear }: { year: number; setYear: (y: numb
             });
             const json = await res.json();
             if (json.valid) {
-                if (!json.constituency || !json.year) {
+                if (!json.constituency || !json.year || !json.constituency_election_id) {
                     setCodeError('This voting code is missing constituency information.');
                     return;
                 }
                 const nextYear = Number(json.year);
                 const nextNumber = Number(json.constituency.number);
+                const nextConstituencyElectionId = Number(json.constituency_election_id);
                 setYear(nextYear);
                 setConstituencyNumber(nextNumber);
                 setConstituencyName(json.constituency.name || null);
+                setConstituencyElectionId(Number.isFinite(nextConstituencyElectionId) ? nextConstituencyElectionId : null);
                 setAuthorized(true);
                 setStep('select');
                 setSubmitResult(null);
@@ -202,6 +205,7 @@ export function Stimmzettel({ year, setYear }: { year: number; setYear: (y: numb
         setSelectedSecond(null);
         setConstituencyNumber(null);
         setConstituencyName(null);
+        setConstituencyElectionId(null);
         setSubmitResult(null);
         setCodeError(null);
         setTimeout(() => {

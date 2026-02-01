@@ -101,13 +101,13 @@ async function main() {
       dc.person_id, p.first_name, p.last_name,
       pa.short_name AS party,
       co.name AS constituency,
-      e.year
+      ce.year
     FROM direct_candidacy dc
+    JOIN constituency_elections ce ON ce.bridge_id = dc.constituency_election_id
     JOIN persons p ON dc.person_id = p.id
     JOIN parties pa ON dc.party_id = pa.id
-    JOIN constituencies co ON dc.constituency_id = co.id
-    JOIN elections e ON dc.year = e.year
-    ORDER BY e.year, dc.constituency_id
+    JOIN constituencies co ON ce.constituency_id = co.id
+    ORDER BY ce.year, ce.constituency_id
     LIMIT 5
   `);
   if (direct.rowCount === 0) console.log("  (No rows)");

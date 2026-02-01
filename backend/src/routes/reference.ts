@@ -41,8 +41,9 @@ router.get('/structural-data', async (req, res) => {
         const dataRes = await pool.query(
             `SELECT c.number AS constituency_number, c.name AS constituency_name, csd.metric_key, csd.value
        FROM constituency_structural_data csd
-       JOIN constituencies c ON c.id = csd.constituency_id
-       WHERE csd.year = $1
+       JOIN constituency_elections ce ON ce.bridge_id = csd.constituency_election_id
+       JOIN constituencies c ON c.id = ce.constituency_id
+       WHERE ce.year = $1
        ORDER BY c.number`,
             [year]
         );
