@@ -28,7 +28,7 @@ try:
     state_map = dict(zip(states_df["GebietLandAbk"], states_df["StateID"]))
 
     print(
-        f"📖 Loaded {len(elections)} elections, {len(state_map)} states, "
+        f"Loaded {len(elections)} elections, {len(state_map)} states, "
         f"{party_map_df['PartyID'].nunique()} distinct parties.\n"
     )
 
@@ -36,7 +36,7 @@ try:
 
     for file in state_parties_files:
         year = int(file.stem[-4:])
-        print(f"🗂 Reading {file.name} for {year}...")
+        print(f"Reading {file.name} for {year}...")
         df = pd.read_csv(file, sep=";", encoding="utf-8-sig")
         df.columns = [c.strip() for c in df.columns]
         required_cols = {"GebietLandAbk", "GruppennameKurz", "Anzahl"}
@@ -58,9 +58,9 @@ try:
 
         missing = df[df["PartyID"].isna()]["GruppennameKurz"].unique()
         if len(missing) > 0:
-            print(f"⚠ Unmapped parties in {file.name}: {missing}")
+            print(f"Unmapped parties in {file.name}: {missing}")
         else:
-            print("   ✅ All parties mapped for this year.")
+            print("   All parties mapped for this year.")
 
         df = df.dropna(subset=["StateID", "PartyID"])
         df = df.rename(columns={"Anzahl": "VoteCount"})
@@ -73,9 +73,9 @@ try:
 
     combined.to_csv(output_combined, sep=";", index=False, encoding="utf-8")
 
-    print(f"\n✅ Combined party lists saved → {output_combined.name} ({len(combined)} rows)\n")
+    print(f"\nCombined party lists saved → {output_combined.name} ({len(combined)} rows)\n")
 
 except FileNotFoundError as e:
-    print(f"❌ Missing file: {e.filename}")
+    print(f"Missing file: {e.filename}")
 except Exception as e:
-    print(f"❌ Unexpected error: {e}")
+    print(f"Unexpected error: {e}")

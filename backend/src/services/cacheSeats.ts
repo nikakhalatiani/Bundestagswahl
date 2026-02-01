@@ -1,3 +1,4 @@
+import { Request, Response, NextFunction } from 'express';
 import dbModule from '../db';
 const { pool } = dbModule;
 
@@ -16,7 +17,7 @@ async function refreshView(view: string): Promise<void> {
   const start = Date.now();
   await pool.query(`REFRESH MATERIALIZED VIEW ${view}`);
   const elapsed = Date.now() - start;
-  console.log(`  ✓ ${view} refreshed in ${elapsed}ms`);
+  console.log(`  [OK] ${view} refreshed in ${elapsed}ms`);
 }
 
 export async function refreshSeatCaches(): Promise<void> {
@@ -32,7 +33,7 @@ export async function refreshSeatCaches(): Promise<void> {
   await Promise.all(SEAT_VIEWS.map((view) => refreshView(view)));
 
   const elapsed = Date.now() - start;
-  console.log(`✅ Materialized views refreshed in ${elapsed}ms\n`);
+  console.log(`Materialized views refreshed in ${elapsed}ms\n`);
 }
 
 export async function isCacheValid(year: number): Promise<boolean> {
@@ -49,5 +50,20 @@ export async function ensureCacheExists(year: number): Promise<void> {
   if (!valid) {
     console.log(`Cache not found for year ${year}, refreshing materialized views...`);
     await refreshSeatCaches();
+  }
+}
+
+/**
+ * Express middleware: ensure cache exists for requested year before proceeding.
+ * Shared across routes that require seat allocation cache.
+ */
+export async function ensureCacheMiddleware(req: Request, res: Response, next: NextFunction) {
+  const year = req.query.year ? Number(req.query.year) : 2025;
+  try {
+    await ensureCacheExists(year);
+    next();
+  } catch (err) {
+    console.error('Cache population failed:', err);
+    res.status(500).json({ error: 'cache_error' });
   }
 }

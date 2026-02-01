@@ -15,7 +15,7 @@ try:
     # Read CSV (semicolon-delimited)
     df = pd.read_csv(input_filename, delimiter=";", encoding="utf-8")
 
-    # --- 1️⃣ Parties CSV ---
+    # --- Parties CSV ---
     # detect party columns for 2025 vs 2021 formats
     if "GruppennameKurz" in df.columns and "Gruppenname" in df.columns:
         short_col = "GruppennameKurz"
@@ -38,7 +38,7 @@ try:
     parties_df = parties_df.rename(columns={short_col: "GruppennameKurz", long_col: "Gruppenname"})
     parties_df.to_csv(parties_filename, sep=";", index=False, encoding="utf-8")
 
-    # --- 2️⃣ States CSV (only Gebietsart == 'Land') ---
+    # --- States CSV (only Gebietsart == 'Land') ---
     states_df = (
         df[df["Gebietsart"] == "Land"][["GebietLandAbk", "Gebietsname"]]
         .dropna()
@@ -47,7 +47,7 @@ try:
     )
     states_df.to_csv(states_filename, sep=";", index=False, encoding="utf-8")
 
-    # --- 3️⃣ Wahlkreis CSV (only Gebietsart == 'Wahlkreis') ---
+    # --- Wahlkreis CSV (only Gebietsart == 'Wahlkreis') ---
     wahlkreis_df = (
         df[df["Gebietsart"] == "Wahlkreis"][
             ["Gebietsnummer", "Gebietsname", "GebietLandAbk"]
@@ -59,14 +59,14 @@ try:
     wahlkreis_df.to_csv(wahlkreis_filename, sep=";", index=False, encoding="utf-8")
 
     # --- Summary ---
-    print("✅ CSVs successfully created:")
+    print("CSVs successfully created:")
     print(f"   • Parties: {len(parties_df)} entries -> {parties_filename.name}")
     print(f"   • States: {len(states_df)} entries -> {states_filename.name}")
     print(f"   • Wahlkreis: {len(wahlkreis_df)} entries -> {wahlkreis_filename.name}")
 
 except FileNotFoundError:
-    print(f"❌ Error: '{input_filename}' not found.")
+    print(f"Error: '{input_filename}' not found.")
 except KeyError as e:
-    print(f"❌ Missing expected column: {e}")
+    print(f"Missing expected column: {e}")
 except Exception as e:
-    print(f"❌ Unexpected error: {e}")
+    print(f"Unexpected error: {e}")

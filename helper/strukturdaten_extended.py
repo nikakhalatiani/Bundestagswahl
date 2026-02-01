@@ -183,7 +183,7 @@ def main():
 
     for year, input_file in inputs:
         if not os.path.exists(input_file):
-            print(f"⚠️ File not found: {input_file}")
+            print(f"File not found: {input_file}")
             continue
 
         with open(input_file, mode="r", encoding="utf-8-sig", newline="") as f_in:
@@ -240,7 +240,7 @@ def main():
                     })
 
     if not records:
-        print("⚠️ No records generated.")
+        print("No records generated.")
         return
 
     with open(output_file, mode="w", encoding="utf-8", newline="") as f_out:
@@ -249,8 +249,8 @@ def main():
         writer.writeheader()
         writer.writerows(records)
 
-    print(f"✅ Wrote {len(records)} rows to {output_file}")
-    print(f"✅ Metrics extracted: {len(metric_defs)}")
+    print(f"Wrote {len(records)} rows to {output_file}")
+    print(f"Metrics extracted: {len(metric_defs)}")
 
 
 if __name__ == "__main__":

@@ -59,14 +59,14 @@ def group_key_stats(df: pd.DataFrame, year: int):
     )
 
     print(
-        f"📊 Year {year}: raw KERG rows with votes={len(df)}, "
+        f"Year {year}: raw KERG rows with votes={len(df)}, "
         f"unique Wahlkreis–Partei/EB/Stimme (votes>0)={len(uniq)}"
     )
     return len(uniq)
 
 
 def main():
-    print("🧾 Loading KERG + rebuilt CPV ...")
+    print("Loading KERG + rebuilt CPV ...")
 
     k21 = load_kerg(KERG_2021, 2021)
     k25 = load_kerg(KERG_2025, 2025)
@@ -78,7 +78,7 @@ def main():
     cpv = pd.read_csv(CPV_REBUILT, sep=";", encoding="utf-8-sig")
     cpv["Year"] = None
     if "Year" not in cpv.columns:
-        print("🧩 No Year column in CPV; inferring from BridgeID mapping would be needed.")
+        print("No Year column in CPV; inferring from BridgeID mapping would be needed.")
     else:
         cpv["Year"] = pd.to_numeric(cpv["Year"], errors="coerce").astype("Int64")
         
@@ -86,7 +86,7 @@ def main():
 
     # --- Infer Year if missing ----------------------------------------
     if "Year" not in cpv.columns:
-        print("🧩 No 'Year' column in CPV, inferring from constituency_elections mapping ...")
+        print("No 'Year' column in CPV, inferring from constituency_elections mapping ...")
         elections = pd.read_csv("data/constituency_elections.csv", sep=";", encoding="utf-8-sig")
         year_map = elections[["BridgeID", "Year"]].drop_duplicates()
         cpv = cpv.merge(year_map, on="BridgeID", how="left")
@@ -96,7 +96,7 @@ def main():
 
     for year, n_kerg in [(2021, n_kerg_21), (2025, n_kerg_25)]:
         n_cpv = len(cpv[cpv["Year"] == year])
-        print(f"🔶 Year {year}: CPV rows={n_cpv}, KERG unique={n_kerg}, difference={n_cpv - n_kerg}")
+        print(f"Year {year}: CPV rows={n_cpv}, KERG unique={n_kerg}, difference={n_cpv - n_kerg}")
 
 
 if __name__ == "__main__":

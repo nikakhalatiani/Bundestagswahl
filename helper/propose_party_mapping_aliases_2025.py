@@ -51,7 +51,7 @@ def main():
         if len(ids) == 1:
             return list(ids)[0]
         if len(ids) > 1:
-            print(f"⚠️ Ambiguous exact match for '{name}' → {sorted(ids)}")
+            print(f"Ambiguous exact match for '{name}' → {sorted(ids)}")
         return None
 
     # Helper: unique PartyID by a safe "contains" rule (to handle regional variants)
@@ -114,12 +114,12 @@ def main():
         )
 
     if manual:
-        print("\n❌ Could not map these safely (manual):")
+        print("\nCould not map these safely (manual):")
         for x in manual:
             print(f"  - {x}")
 
     if not alias_rows:
-        print("\n✅ No alias rows to add.")
+        print("\nNo alias rows to add.")
         return
 
     alias_df = pd.DataFrame(alias_rows)
@@ -140,15 +140,15 @@ def main():
     alias_df = alias_df[~alias_df["NormShort"].isin(already)].drop(columns=["NormShort"])
 
     if alias_df.empty:
-        print("\n✅ All proposed aliases already exist in mapping.")
+        print("\nAll proposed aliases already exist in mapping.")
         return
 
     updated = pd.concat([pm, alias_df], ignore_index=True)
     updated.to_csv(MAP_OUT, sep=";", index=False, encoding="utf-8-sig")
 
-    print("\n✅ Proposed alias rows added:")
+    print("\nProposed alias rows added:")
     print(alias_df.to_string(index=False))
-    print(f"\n💾 Wrote updated mapping → {MAP_OUT}")
+    print(f"\nWrote updated mapping → {MAP_OUT}")
 
 
 if __name__ == "__main__":

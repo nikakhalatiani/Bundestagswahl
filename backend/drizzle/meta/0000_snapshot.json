@@ -1,5 +1,5 @@
 {
-  "id": "fae01f7d-cdde-4a5c-92b1-7c7438da219c",
+  "id": "3d58ced2-058d-40d8-9e16-c07d94235002",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -157,14 +157,8 @@
       "name": "constituency_structural_data",
       "schema": "",
       "columns": {
-        "constituency_id": {
-          "name": "constituency_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "year": {
-          "name": "year",
+        "constituency_election_id": {
+          "name": "constituency_election_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
@@ -183,11 +177,11 @@
         }
       },
       "indexes": {
-        "structural_data_year_idx": {
-          "name": "structural_data_year_idx",
+        "structural_data_constituency_election_idx": {
+          "name": "structural_data_constituency_election_idx",
           "columns": [
             {
-              "expression": "year",
+              "expression": "constituency_election_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -215,28 +209,15 @@
         }
       },
       "foreignKeys": {
-        "constituency_structural_data_constituency_id_constituencies_id_fk": {
-          "name": "constituency_structural_data_constituency_id_constituencies_id_fk",
+        "constituency_structural_data_constituency_election_id_constituency_elections_bridge_id_fk": {
+          "name": "constituency_structural_data_constituency_election_id_constituency_elections_bridge_id_fk",
           "tableFrom": "constituency_structural_data",
-          "tableTo": "constituencies",
+          "tableTo": "constituency_elections",
           "columnsFrom": [
-            "constituency_id"
+            "constituency_election_id"
           ],
           "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "constituency_structural_data_year_elections_year_fk": {
-          "name": "constituency_structural_data_year_elections_year_fk",
-          "tableFrom": "constituency_structural_data",
-          "tableTo": "elections",
-          "columnsFrom": [
-            "year"
-          ],
-          "columnsTo": [
-            "year"
+            "bridge_id"
           ],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -256,11 +237,10 @@
         }
       },
       "compositePrimaryKeys": {
-        "constituency_structural_data_constituency_id_year_metric_key_pk": {
-          "name": "constituency_structural_data_constituency_id_year_metric_key_pk",
+        "constituency_structural_data_constituency_election_id_metric_key_pk": {
+          "name": "constituency_structural_data_constituency_election_id_metric_key_pk",
           "columns": [
-            "constituency_id",
-            "year",
+            "constituency_election_id",
             "metric_key"
           ]
         }
@@ -280,14 +260,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "year": {
-          "name": "year",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "constituency_id": {
-          "name": "constituency_id",
+        "constituency_election_id": {
+          "name": "constituency_election_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
@@ -299,7 +273,23 @@
           "notNull": true
         }
       },
-      "indexes": {},
+      "indexes": {
+        "direct_candidacy_constituency_election_idx": {
+          "name": "direct_candidacy_constituency_election_idx",
+          "columns": [
+            {
+              "expression": "constituency_election_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "direct_candidacy_person_id_persons_id_fk": {
           "name": "direct_candidacy_person_id_persons_id_fk",
@@ -314,28 +304,15 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "direct_candidacy_year_elections_year_fk": {
-          "name": "direct_candidacy_year_elections_year_fk",
+        "direct_candidacy_constituency_election_id_constituency_elections_bridge_id_fk": {
+          "name": "direct_candidacy_constituency_election_id_constituency_elections_bridge_id_fk",
           "tableFrom": "direct_candidacy",
-          "tableTo": "elections",
+          "tableTo": "constituency_elections",
           "columnsFrom": [
-            "year"
+            "constituency_election_id"
           ],
           "columnsTo": [
-            "year"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "direct_candidacy_constituency_id_constituencies_id_fk": {
-          "name": "direct_candidacy_constituency_id_constituencies_id_fk",
-          "tableFrom": "direct_candidacy",
-          "tableTo": "constituencies",
-          "columnsFrom": [
-            "constituency_id"
-          ],
-          "columnsTo": [
-            "id"
+            "bridge_id"
           ],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -355,11 +332,11 @@
         }
       },
       "compositePrimaryKeys": {
-        "direct_candidacy_person_id_year_pk": {
-          "name": "direct_candidacy_person_id_year_pk",
+        "direct_candidacy_person_id_constituency_election_id_pk": {
+          "name": "direct_candidacy_person_id_constituency_election_id_pk",
           "columns": [
             "person_id",
-            "year"
+            "constituency_election_id"
           ]
         }
       },
@@ -411,14 +388,14 @@
           "primaryKey": true,
           "notNull": true
         },
-        "year": {
-          "name": "year",
+        "direct_person_id": {
+          "name": "direct_person_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
-        "direct_person_id": {
-          "name": "direct_person_id",
+        "constituency_election_id": {
+          "name": "constituency_election_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
@@ -438,7 +415,23 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "first_votes_constituency_election_idx": {
+          "name": "first_votes_constituency_election_idx",
+          "columns": [
+            {
+              "expression": "constituency_election_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "fk_first_vote_direct_cand": {
           "name": "fk_first_vote_direct_cand",
@@ -446,11 +439,11 @@
           "tableTo": "direct_candidacy",
           "columnsFrom": [
             "direct_person_id",
-            "year"
+            "constituency_election_id"
           ],
           "columnsTo": [
             "person_id",
-            "year"
+            "constituency_election_id"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
@@ -778,8 +771,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "constituency_id": {
-          "name": "constituency_id",
+        "constituency_election_id": {
+          "name": "constituency_election_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
@@ -815,11 +808,11 @@
           "method": "btree",
           "with": {}
         },
-        "second_votes_constituency_idx": {
-          "name": "second_votes_constituency_idx",
+        "second_votes_constituency_election_idx": {
+          "name": "second_votes_constituency_election_idx",
           "columns": [
             {
-              "expression": "constituency_id",
+              "expression": "constituency_election_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -845,15 +838,15 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "second_votes_constituency_id_constituencies_id_fk": {
-          "name": "second_votes_constituency_id_constituencies_id_fk",
+        "second_votes_constituency_election_id_constituency_elections_bridge_id_fk": {
+          "name": "second_votes_constituency_election_id_constituency_elections_bridge_id_fk",
           "tableFrom": "second_votes",
-          "tableTo": "constituencies",
+          "tableTo": "constituency_elections",
           "columnsFrom": [
-            "constituency_id"
+            "constituency_election_id"
           ],
           "columnsTo": [
-            "id"
+            "bridge_id"
           ],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -941,6 +934,68 @@
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
+    },
+    "public.voting_codes": {
+      "name": "voting_codes",
+      "schema": "",
+      "columns": {
+        "code": {
+          "name": "code",
+          "type": "varchar(64)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "is_used": {
+          "name": "is_used",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "constituency_election_id": {
+          "name": "constituency_election_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "voting_codes_constituency_election_idx": {
+          "name": "voting_codes_constituency_election_idx",
+          "columns": [
+            {
+              "expression": "constituency_election_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "voting_codes_constituency_election_id_constituency_elections_bridge_id_fk": {
+          "name": "voting_codes_constituency_election_id_constituency_elections_bridge_id_fk",
+          "tableFrom": "voting_codes",
+          "tableTo": "constituency_elections",
+          "columnsFrom": [
+            "constituency_election_id"
+          ],
+          "columnsTo": [
+            "bridge_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     }
   },
   "enums": {},
@@ -953,6 +1008,12 @@
       "columns": {
         "person_id": {
           "name": "person_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "constituency_election_id": {
+          "name": "constituency_election_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -982,7 +1043,7 @@
           "notNull": false
         }
       },
-      "definition": "\n    SELECT\n      dc.person_id,\n      dc.year,\n      dc.constituency_id,\n      dc.party_id,\n      COUNT(fv.id) FILTER (WHERE fv.is_valid) AS first_votes\n    FROM direct_candidacy dc\n    LEFT JOIN first_votes fv\n      ON fv.direct_person_id = dc.person_id\n     AND fv.year = dc.year\n    GROUP BY dc.person_id, dc.year, dc.constituency_id, dc.party_id\n  ",
+      "definition": "\n    SELECT\n      dc.person_id,\n      dc.constituency_election_id,\n      ce.year,\n      ce.constituency_id,\n      dc.party_id,\n      COUNT(fv.id) FILTER (WHERE fv.is_valid) AS first_votes\n    FROM direct_candidacy dc\n    JOIN constituency_elections ce\n      ON ce.bridge_id = dc.constituency_election_id\n    LEFT JOIN first_votes fv\n      ON fv.direct_person_id = dc.person_id\n     AND fv.constituency_election_id = dc.constituency_election_id\n    GROUP BY dc.person_id, dc.constituency_election_id, ce.year, ce.constituency_id, dc.party_id\n  ",
       "name": "mv_00_direct_candidacy_votes",
       "schema": "public",
       "isExisting": false,
@@ -991,6 +1052,12 @@
     },
     "public.mv_01_constituency_party_votes": {
       "columns": {
+        "constituency_election_id": {
+          "name": "constituency_election_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "constituency_id": {
           "name": "constituency_id",
           "type": "integer",
@@ -1022,7 +1089,7 @@
           "notNull": false
         }
       },
-      "definition": "\n    WITH first_party AS (\n      SELECT\n        dcv.constituency_id,\n        dcv.year,\n        dcv.party_id,\n        1::int AS vote_type,\n        COALESCE(SUM(dcv.first_votes), 0) AS votes\n      FROM mv_00_direct_candidacy_votes dcv\n      GROUP BY dcv.constituency_id, dcv.year, dcv.party_id\n    ),\n    second_party AS (\n      SELECT\n        sv.constituency_id,\n        pl.year,\n        pl.party_id,\n        2::int AS vote_type,\n        COUNT(sv.id) FILTER (WHERE sv.is_valid) AS votes\n      FROM second_votes sv\n      JOIN party_lists pl\n        ON pl.id = sv.party_list_id\n      GROUP BY sv.constituency_id, pl.year, pl.party_id\n    )\n    SELECT * FROM first_party\n    UNION ALL\n    SELECT * FROM second_party\n  ",
+      "definition": "\n    WITH first_party AS (\n      SELECT\n        dcv.constituency_election_id,\n        dcv.constituency_id,\n        dcv.year,\n        dcv.party_id,\n        1::int AS vote_type,\n        COALESCE(SUM(dcv.first_votes), 0) AS votes\n      FROM mv_00_direct_candidacy_votes dcv\n      GROUP BY dcv.constituency_election_id, dcv.constituency_id, dcv.year, dcv.party_id\n    ),\n    second_party AS (\n      SELECT\n        sv.constituency_election_id,\n        ce.constituency_id,\n        ce.year,\n        pl.party_id,\n        2::int AS vote_type,\n        COUNT(sv.id) FILTER (WHERE sv.is_valid) AS votes\n      FROM second_votes sv\n      JOIN constituency_elections ce\n        ON ce.bridge_id = sv.constituency_election_id\n      JOIN party_lists pl\n        ON pl.id = sv.party_list_id\n       AND pl.year = ce.year\n      GROUP BY sv.constituency_election_id, ce.constituency_id, ce.year, pl.party_id\n    )\n    SELECT * FROM first_party\n    UNION ALL\n    SELECT * FROM second_party\n  ",
       "name": "mv_01_constituency_party_votes",
       "schema": "public",
       "isExisting": false,
@@ -1071,6 +1138,12 @@
     },
     "public.mv_03_constituency_elections": {
       "columns": {
+        "constituency_election_id": {
+          "name": "constituency_election_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "constituency_id": {
           "name": "constituency_id",
           "type": "integer",
@@ -1108,7 +1181,7 @@
           "notNull": false
         }
       },
-      "definition": "\n    WITH valid_totals AS (\n      SELECT\n        constituency_id,\n        year,\n        COALESCE(SUM(CASE WHEN vote_type = 1 THEN votes ELSE 0 END), 0) AS valid_first,\n        COALESCE(SUM(CASE WHEN vote_type = 2 THEN votes ELSE 0 END), 0) AS valid_second\n      FROM mv_01_constituency_party_votes\n      GROUP BY constituency_id, year\n    ),\n    invalid_first AS (\n      SELECT\n        dc.constituency_id,\n        fv.year,\n        COUNT(*) AS invalid_first\n      FROM first_votes fv\n      JOIN direct_candidacy dc\n        ON dc.person_id = fv.direct_person_id\n       AND dc.year = fv.year\n      WHERE fv.is_valid = false\n      GROUP BY dc.constituency_id, fv.year\n    ),\n    invalid_second AS (\n      SELECT\n        sv.constituency_id,\n        pl.year,\n        COUNT(*) AS invalid_second\n      FROM second_votes sv\n      JOIN party_lists pl\n        ON pl.id = sv.party_list_id\n      WHERE sv.is_valid = false\n      GROUP BY sv.constituency_id, pl.year\n    )\n    SELECT\n      COALESCE(vt.constituency_id, i1.constituency_id, i2.constituency_id) AS constituency_id,\n      COALESCE(vt.year, i1.year, i2.year) AS year,\n      COALESCE(vt.valid_first, 0) AS valid_first,\n      COALESCE(vt.valid_second, 0) AS valid_second,\n      COALESCE(i1.invalid_first, 0) AS invalid_first,\n      COALESCE(i2.invalid_second, 0) AS invalid_second\n    FROM valid_totals vt\n    FULL OUTER JOIN invalid_first i1\n      ON i1.constituency_id = vt.constituency_id\n     AND i1.year = vt.year\n    FULL OUTER JOIN invalid_second i2\n      ON i2.constituency_id = COALESCE(vt.constituency_id, i1.constituency_id)\n     AND i2.year = COALESCE(vt.year, i1.year)\n  ",
+      "definition": "\n    WITH valid_totals AS (\n      SELECT\n        constituency_election_id,\n        constituency_id,\n        year,\n        COALESCE(SUM(CASE WHEN vote_type = 1 THEN votes ELSE 0 END), 0) AS valid_first,\n        COALESCE(SUM(CASE WHEN vote_type = 2 THEN votes ELSE 0 END), 0) AS valid_second\n      FROM mv_01_constituency_party_votes\n      GROUP BY constituency_election_id, constituency_id, year\n    ),\n    invalid_first AS (\n      SELECT\n        dc.constituency_election_id,\n        ce.constituency_id,\n        ce.year,\n        COUNT(*) AS invalid_first\n      FROM first_votes fv\n      JOIN direct_candidacy dc\n        ON dc.person_id = fv.direct_person_id\n       AND dc.constituency_election_id = fv.constituency_election_id\n      JOIN constituency_elections ce\n        ON ce.bridge_id = dc.constituency_election_id\n      WHERE fv.is_valid = false\n      GROUP BY dc.constituency_election_id, ce.constituency_id, ce.year\n    ),\n    invalid_second AS (\n      SELECT\n        sv.constituency_election_id,\n        ce.constituency_id,\n        ce.year,\n        COUNT(*) AS invalid_second\n      FROM second_votes sv\n      JOIN constituency_elections ce\n        ON ce.bridge_id = sv.constituency_election_id\n      WHERE sv.is_valid = false\n      GROUP BY sv.constituency_election_id, ce.constituency_id, ce.year\n    )\n    SELECT\n      COALESCE(vt.constituency_election_id, i1.constituency_election_id, i2.constituency_election_id) AS constituency_election_id,\n      COALESCE(vt.constituency_id, i1.constituency_id, i2.constituency_id) AS constituency_id,\n      COALESCE(vt.year, i1.year, i2.year) AS year,\n      COALESCE(vt.valid_first, 0) AS valid_first,\n      COALESCE(vt.valid_second, 0) AS valid_second,\n      COALESCE(i1.invalid_first, 0) AS invalid_first,\n      COALESCE(i2.invalid_second, 0) AS invalid_second\n    FROM valid_totals vt\n    FULL OUTER JOIN invalid_first i1\n      ON i1.constituency_election_id = vt.constituency_election_id\n    FULL OUTER JOIN invalid_second i2\n      ON i2.constituency_election_id = COALESCE(vt.constituency_election_id, i1.constituency_election_id)\n  ",
       "name": "mv_03_constituency_elections",
       "schema": "public",
       "isExisting": false,

@@ -71,13 +71,21 @@ export function useMembers(year: number) {
   });
 }
 
-export function useConstituencyOverview(constituencyId: number, year: number) {
+export function useConstituencyOverview(
+  constituencyId: number,
+  year: number,
+  constituencyElectionId?: number
+) {
   return useQuery({
-    queryKey: ['constituencyOverview', constituencyId, year],
+    queryKey: ['constituencyOverview', constituencyId, year, constituencyElectionId],
     queryFn: async () => {
-      return fetchJson<ConstituencyOverviewResponse>(`${API_BASE}/api/constituency/${constituencyId}/overview?year=${year}`);
+      const params = new URLSearchParams({ year: String(year) });
+      if (constituencyElectionId) {
+        params.set('constituencyElectionId', String(constituencyElectionId));
+      }
+      return fetchJson<ConstituencyOverviewResponse>(`${API_BASE}/api/constituency/${constituencyId}/overview?${params.toString()}`);
     },
-    enabled: constituencyId > 0,
+    enabled: constituencyId > 0 && Boolean(constituencyElectionId),
   });
 }
 
@@ -120,13 +128,14 @@ export function useNearMisses(year: number, limit: number = 5) {
   });
 }
 
-export function useConstituenciesSingle(year: number, ids?: string) {
+export function useConstituenciesSingle(year: number, constituencyElectionIds?: string, ids?: string) {
   return useQuery({
-    queryKey: ['constituenciesSingle', year, ids],
+    queryKey: ['constituenciesSingle', year, constituencyElectionIds, ids],
     queryFn: async () => {
-      const url = ids
-        ? `${API_BASE}/api/constituencies-single?year=${year}&ids=${ids}`
-        : `${API_BASE}/api/constituencies-single?year=${year}`;
+      const params = new URLSearchParams({ year: String(year) });
+      if (constituencyElectionIds) params.set('constituencyElectionIds', constituencyElectionIds);
+      else if (ids) params.set('ids', ids);
+      const url = `${API_BASE}/api/constituencies-single?${params.toString()}`;
       return fetchJson<{ data: ConstituenciesSingleItem[] }>(url);
     },
   });

@@ -43,9 +43,9 @@ async function test() {
       console.log(`  ${row.first_name} ${row.last_name} (${row.party}, ${row.state}) - ${row.seat_type}`);
     });
 
-    console.log('\n✅ Cache population test completed successfully!');
+    console.log('\nCache population test completed successfully!');
   } catch (err) {
-    console.error('❌ Test failed:', err);
+    console.error('Test failed:', err);
     process.exit(1);
   } finally {
     await pool.end();

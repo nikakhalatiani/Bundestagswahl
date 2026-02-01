@@ -15,7 +15,7 @@ def load_csv(path: Path) -> pd.DataFrame:
 
 def main():
     # ------------------------------------------------------------------
-    # 1️⃣ Direct‑candidacy (Erststimmen)
+    # 1 Direct‑candidacy (Erststimmen)
     # ------------------------------------------------------------------
     dc = load_csv(DC_FILE)
     dc = dc[dc["Erststimmen"].fillna(0) > 0]
@@ -26,12 +26,12 @@ def main():
                SumErststimmen=("Erststimmen", "sum"))
           .set_index("Year")
     )
-    print("\n📊 Direct‑candidacy (Erststimmen)")
+    print("\nDirect‑candidacy (Erststimmen)")
     print(dc_sum.to_string(float_format=lambda x: f"{x:,.0f}"))
     print()
 
     # ------------------------------------------------------------------
-    # 2️⃣ Constituency‑party‑votes (First + Second)
+    # 2 Constituency‑party‑votes (First + Second)
     # ------------------------------------------------------------------
     ce  = load_csv(CE_FILE)
     cpv = load_csv(CPV_FILE)
@@ -48,12 +48,12 @@ def main():
         for col, vt in cpv_sum.columns
     ]
     cpv_sum = cpv_sum.fillna(0)
-    print("📊 Constituency‑party‑votes (non‑zero)")
+    print("Constituency‑party‑votes (non‑zero)")
     print(cpv_sum.to_string(float_format=lambda x: f"{x:,.0f}"))
     print()
 
     # ------------------------------------------------------------------
-    # 3️⃣ Party‑lists (Zweitstimmen / second votes)
+    # 3 Party‑lists (Zweitstimmen / second votes)
     # ------------------------------------------------------------------
     pl = load_csv(PL_FILE)
     pl = pl[pl["VoteCount"].fillna(0) > 0]
@@ -64,26 +64,26 @@ def main():
                SumVoteCount=("VoteCount","sum"))
           .set_index("Year")
     )
-    print("📊 Party‑lists (Second‑vote totals from party_lists.csv)")
+    print("Party‑lists (Second‑vote totals from party_lists.csv)")
     print(pl_sum.to_string(float_format=lambda x: f"{x:,.0f}"))
     print()
 
     # ------------------------------------------------------------------
-    # 4️⃣ Constituency‑elections official valid votes
+    # 4 Constituency‑elections official valid votes
     # ------------------------------------------------------------------
     valid = (
         ce.groupby("Year", as_index=False)[["ValidFirst","ValidSecond"]]
           .sum()
           .set_index("Year")
     )
-    print("📊 Constituency‑elections valid‑vote totals")
+    print("Constituency‑elections valid‑vote totals")
     print(valid.to_string(float_format=lambda x: f"{x:,.0f}"))
     print()
 
     # ------------------------------------------------------------------
-    # 5️⃣ Combined comparison summary
+    # 5 Combined comparison summary
     # ------------------------------------------------------------------
-    print("📋 Yearly comparison summary\n")
+    print("Yearly comparison summary\n")
     combined = valid.copy()
     for vt,label in [(1,"First"),(2,"Second")]:
         combined[f"{label}_Rows"]     = cpv_sum.get(f"{label}_Rows",0).values
@@ -93,7 +93,7 @@ def main():
 
     print(combined.fillna(0).to_string(float_format=lambda x: f"{x:,.0f}"))
     print(
-        "\n✅ Consistency checks:\n"
+        "\nConsistency checks:\n"
         "  • CE.ValidFirst  ≈ CPV.First_SumVotes  ≈ DC_SumErststimmen\n"
         "  • CE.ValidSecond ≈ CPV.Second_SumVotes ≈ PL_SumVoteCount\n"
         "  All counts exclude zero‑vote entries."

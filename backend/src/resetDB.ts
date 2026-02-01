@@ -33,9 +33,9 @@ async function dropAllTables() {
 
       END $$;
     `);
-    console.log("✅ All public tables dropped.");
+    console.log("All public tables dropped.");
   } catch (err) {
-    console.error("⚠ Failed to drop tables:", err);
+    console.error("Failed to drop tables:", err);
   } finally {
     await disconnect();
   }

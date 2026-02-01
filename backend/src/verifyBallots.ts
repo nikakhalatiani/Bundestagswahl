@@ -41,7 +41,8 @@ async function verifyBallots(options: VerificationOptions = {}) {
     `
     SELECT COUNT(*)::bigint AS cnt
     FROM first_votes fv
-    WHERE fv.year = $1
+    JOIN constituency_elections ce ON ce.bridge_id = fv.constituency_election_id
+    WHERE ce.year = $1
   `,
     [year]
   );
@@ -59,8 +60,9 @@ async function verifyBallots(options: VerificationOptions = {}) {
   const invalidFirstRes = await pool.query(
     `
     SELECT COUNT(*)::bigint AS cnt
-    FROM first_votes
-    WHERE year = $1 AND is_valid = false
+    FROM first_votes fv
+    JOIN constituency_elections ce ON ce.bridge_id = fv.constituency_election_id
+    WHERE ce.year = $1 AND fv.is_valid = false
   `,
     [year]
   );
@@ -100,14 +102,14 @@ async function verifyBallots(options: VerificationOptions = {}) {
   let totalFirstVoteMismatches = 0;
   let totalSecondVoteMismatches = 0;
 
-  // Precompute: second-vote ballot counts per party (year-filtered)
-  // Compare against expected from mv_02_party_list_votes (year-filtered)
+  // Precompute: second-vote VALID ballot counts per party (year-filtered)
+  // Compare against expected from mv_02_party_list_votes (valid votes only)
   const secondBallotsByPartyRes = await pool.query(
     `
     SELECT pl.party_id, COUNT(*)::bigint AS cnt
     FROM second_votes sv
     JOIN party_lists pl ON pl.id = sv.party_list_id
-    WHERE pl.year = $1
+    WHERE pl.year = $1 AND sv.is_valid = true
     GROUP BY pl.party_id
   `,
     [year]
@@ -181,11 +183,11 @@ async function verifyBallots(options: VerificationOptions = {}) {
       `
       SELECT COUNT(*)::bigint AS cnt
       FROM first_votes fv
-      JOIN direct_candidacy dc
-        ON dc.person_id = fv.direct_person_id
-       AND dc.year = fv.year
-      WHERE dc.constituency_id = $1
-        AND fv.year = $2
+      JOIN constituency_elections ce
+        ON ce.bridge_id = fv.constituency_election_id
+      WHERE ce.constituency_id = $1
+        AND ce.year = $2
+        AND fv.is_valid = true
     `,
       [constituency.id, year]
     );
@@ -199,7 +201,7 @@ async function verifyBallots(options: VerificationOptions = {}) {
     }
 
     console.log(
-      `Total first votes (ballots): ${Number(firstVotesCount).toLocaleString()}`
+      `Total first votes (valid ballots): ${Number(firstVotesCount).toLocaleString()}`
     );
 
     // Candidate expected votes for this constituency/year
@@ -243,12 +245,12 @@ async function verifyBallots(options: VerificationOptions = {}) {
         fv.direct_person_id AS person_id,
         COUNT(*)::bigint AS cnt
       FROM first_votes fv
-      JOIN direct_candidacy dc
-        ON dc.person_id = fv.direct_person_id
-       AND dc.year = fv.year
+      JOIN constituency_elections ce
+        ON ce.bridge_id = fv.constituency_election_id
       JOIN top_candidates tc ON tc.person_id = fv.direct_person_id
-      WHERE dc.constituency_id = $1
-        AND fv.year = $2
+      WHERE ce.constituency_id = $1
+        AND ce.year = $2
+        AND fv.is_valid = true
       GROUP BY fv.direct_person_id
     `,
       [constituency.id, year, topN]
@@ -294,11 +296,11 @@ async function verifyBallots(options: VerificationOptions = {}) {
           fv.direct_person_id AS person_id,
           COUNT(*)::bigint AS got
         FROM first_votes fv
-        JOIN direct_candidacy dc
-          ON dc.person_id = fv.direct_person_id
-         AND dc.year = fv.year
-        WHERE dc.constituency_id = $1
-          AND fv.year = $2
+        JOIN constituency_elections ce
+          ON ce.bridge_id = fv.constituency_election_id
+        WHERE ce.constituency_id = $1
+          AND ce.year = $2
+          AND fv.is_valid = true
         GROUP BY fv.direct_person_id
       )
       SELECT COUNT(*)::int AS mismatches
@@ -314,7 +316,7 @@ async function verifyBallots(options: VerificationOptions = {}) {
     if (mismatchesFull > 0) {
       totalFirstVoteMismatches += mismatchesFull;
       console.log(
-        `\n⚠ ${mismatchesFull} total first-vote mismatches found in this constituency/year`
+        `\n${mismatchesFull} total first-vote mismatches found in this constituency/year`
       );
     } else {
       console.log("\n✓ All first votes match perfectly in this constituency/year!");
@@ -330,9 +332,9 @@ async function verifyBallots(options: VerificationOptions = {}) {
   );
 
   if (totalFirstVoteMismatches === 0 && totalSecondVoteMismatches === 0) {
-    console.log("✅ All ballots match the original aggregated data!");
+    console.log("All ballots match the original aggregated data!");
   } else {
-    console.log("⚠ Some mismatches found (see above).");
+    console.log("Some mismatches found (see above).");
   }
 }
 
