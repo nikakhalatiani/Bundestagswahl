@@ -54,7 +54,7 @@ async function main() {
 }
 
 main()
-  .catch((err) => console.error("❌ Error showing rows:", err))
+  .catch((err) => console.error("Error showing rows:", err))
   .finally(async () => {
     await disconnect();
     console.log("\nDatabase connection closed.");

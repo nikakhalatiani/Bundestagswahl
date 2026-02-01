@@ -686,7 +686,7 @@ export function ConstituencyMap({
                         </span>
                     </div>
                     <div className="mb-2 pb-1 text-[0.7rem] uppercase tracking-[0.05em] text-ink-faint">
-                        {voteType === 'first' ? 'First Votes (Erststimmen)' : 'Second Votes (Zweitstimmen)'}
+                        {voteType === 'first' ? 'First votes' : 'Second votes'}
                     </div>
                     {isStrongholds ? (() => {
                         const item = strongholdDataMap.get(hoveredNumber);

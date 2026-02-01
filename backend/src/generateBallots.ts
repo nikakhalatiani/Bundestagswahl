@@ -206,10 +206,10 @@ async function generateBallots(options: GenerationOptions) {
     const mappingRes = await pool.query<ConstituencyMappingRow>(mappingQuery, queryParams);
 
     if (mappingRes.rows.length === 0) {
-      console.error(`❌ Error: No constituencies found with numbers: ${constituencyNumbers.join(", ")}${year ? ` for year ${year}` : ""}`);
+      console.error(`Error: No constituencies found with numbers: ${constituencyNumbers.join(", ")}${year ? ` for year ${year}` : ""}`);
       console.error(`   Valid constituency numbers range from 1-299 (use the "Number" column, not the database ID)`);
       if (!year) {
-        console.error(`   💡 Tip: Specify --year=YYYY to avoid ambiguity with constituency numbers that changed between elections`);
+        console.error(`   Tip: Specify --year=YYYY to avoid ambiguity with constituency numbers that changed between elections`);
       }
       process.exit(1);
     }
@@ -217,7 +217,7 @@ async function generateBallots(options: GenerationOptions) {
     if (mappingRes.rows.length < constituencyNumbers.length) {
       const foundNumbers = mappingRes.rows.map((r) => r.number);
       const missingNumbers = constituencyNumbers.filter((n) => !foundNumbers.includes(n));
-      console.warn(`⚠️  Warning: Some constituency numbers not found: ${missingNumbers.join(", ")}${year ? ` for year ${year}` : ""}`);
+      console.warn(`Warning: Some constituency numbers not found: ${missingNumbers.join(", ")}${year ? ` for year ${year}` : ""}`);
       console.warn(`   Will generate ballots for: ${foundNumbers.join(", ")}`);
     }
 
@@ -230,7 +230,7 @@ async function generateBallots(options: GenerationOptions) {
 
     if (duplicates.length > 0 && !year) {
       const dupNumbers = duplicates.map(([num]) => num);
-      console.warn(`⚠️  Warning: Constituency numbers ${dupNumbers.join(", ")} exist in multiple election years`);
+      console.warn(`Warning: Constituency numbers ${dupNumbers.join(", ")} exist in multiple election years`);
       console.warn(`   Generating ballots for ALL matching constituencies. Specify --year=YYYY to disambiguate.`);
       mappingRes.rows.forEach((r) => {
         console.warn(`     - Constituency ${r.number}: "${r.name}" (id=${r.id})`);
@@ -276,13 +276,13 @@ async function generateBallots(options: GenerationOptions) {
   ]);
 
   const votesDur = ((Date.now() - startVotes) / 1000).toFixed(1);
-  console.log(`✓ Both vote types generated in ${votesDur}s (parallel execution)`);
+  console.log(`Both vote types generated in ${votesDur}s (parallel execution)`);
 
   console.log("\nRecreating indexes and foreign keys...");
   await recreateIndexesAndFKs();
 
   const total = ((Date.now() - start) / 1000).toFixed(1);
-  console.log(`✅ Ballot generation complete in ${total}s`);
+  console.log(`Ballot generation complete in ${total}s`);
 }
 
 async function ensureVoteTablesExist() {
@@ -528,9 +528,9 @@ async function insertFirstVotes(
       `);
 
       if (mismatchRes.rows.length) {
-        console.log(` ⚠ Found ${mismatchRes.rows.length} mismatched direct candidates`);
+        console.log(` Found ${mismatchRes.rows.length} mismatched direct candidates`);
       } else {
-        console.log(" ✅ First votes consistent with CSV counts");
+        console.log(" First votes consistent with CSV counts");
       }
 
       if (invalidCounts.length > 0) {
@@ -560,9 +560,9 @@ async function insertFirstVotes(
         `);
 
         if (invalidMismatchRes.rows.length) {
-          console.log(` ⚠ Found ${invalidMismatchRes.rows.length} mismatched invalid first-vote counts`);
+          console.log(` Warning: Found ${invalidMismatchRes.rows.length} mismatched invalid first-vote counts`);
         } else {
-          console.log(" ✅ Invalid first votes consistent with CSV counts");
+          console.log(" Invalid first votes consistent with CSV counts");
         }
       }
     }
@@ -579,7 +579,7 @@ async function insertFirstVotes(
       await resetSessionSettings(client);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      console.warn(` ⚠ Failed to reset session settings: ${message}`);
+      console.warn(` Warning: Failed to reset session settings: ${message}`);
     }
     client.release();
   }
@@ -694,9 +694,9 @@ async function insertSecondVotes(
       `);
 
       if (mismatchRes.rows.length) {
-        console.log(` ⚠ Found ${mismatchRes.rows.length} mismatched party/constituency second-vote rows`);
+        console.log(` Warning: Found ${mismatchRes.rows.length} mismatched party/constituency second-vote rows`);
       } else {
-        console.log(" ✅ Second votes consistent with CSV counts");
+        console.log(" Second votes consistent with CSV counts");
       }
 
       if (invalidCounts.length > 0) {
@@ -724,9 +724,9 @@ async function insertSecondVotes(
         `);
 
         if (invalidMismatchRes.rows.length) {
-          console.log(` ⚠ Found ${invalidMismatchRes.rows.length} mismatched invalid second-vote counts`);
+          console.log(` Warning: Found ${invalidMismatchRes.rows.length} mismatched invalid second-vote counts`);
         } else {
-          console.log(" ✅ Invalid second votes consistent with CSV counts");
+          console.log(" Invalid second votes consistent with CSV counts");
         }
       }
     }
@@ -742,7 +742,7 @@ async function insertSecondVotes(
       await resetSessionSettings(client);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      console.warn(` ⚠ Failed to reset session settings: ${message}`);
+      console.warn(` Warning: Failed to reset session settings: ${message}`);
     }
     client.release();
   }
@@ -794,7 +794,7 @@ async function recreateIndexesAndFKs() {
     `)
   ]);
   const idxDur = ((Date.now() - idxStart) / 1000).toFixed(1);
-  console.log(`  ✓ Indexes created in ${idxDur}s`);
+  console.log(`  Indexes created in ${idxDur}s`);
 
   console.log("  Adding foreign key constraints...");
   const fkStart = Date.now();
@@ -833,7 +833,7 @@ async function recreateIndexesAndFKs() {
     pool.query(`ALTER TABLE second_votes VALIDATE CONSTRAINT fk_second_vote_constituency;`)
   ]);
   const fkDur = ((Date.now() - fkStart) / 1000).toFixed(1);
-  console.log(`  ✓ Foreign keys added and validated in ${fkDur}s`);
+  console.log(`  Foreign keys added and validated in ${fkDur}s`);
 }
 
 async function dropIndexesAndFKs() {

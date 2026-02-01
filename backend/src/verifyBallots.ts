@@ -314,7 +314,7 @@ async function verifyBallots(options: VerificationOptions = {}) {
     if (mismatchesFull > 0) {
       totalFirstVoteMismatches += mismatchesFull;
       console.log(
-        `\n⚠ ${mismatchesFull} total first-vote mismatches found in this constituency/year`
+        `\n${mismatchesFull} total first-vote mismatches found in this constituency/year`
       );
     } else {
       console.log("\n✓ All first votes match perfectly in this constituency/year!");
@@ -330,9 +330,9 @@ async function verifyBallots(options: VerificationOptions = {}) {
   );
 
   if (totalFirstVoteMismatches === 0 && totalSecondVoteMismatches === 0) {
-    console.log("✅ All ballots match the original aggregated data!");
+    console.log("All ballots match the original aggregated data!");
   } else {
-    console.log("⚠ Some mismatches found (see above).");
+    console.log("Some mismatches found (see above).");
   }
 }
 

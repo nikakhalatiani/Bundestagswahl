@@ -48,7 +48,7 @@ async function transactionalInsert(label: string, run: (client: PoolClient) => P
     console.log(`✓ ${label} loaded.`);
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error(`⚠ Failed loading ${label}:`, err);
+    console.error(`Failed loading ${label}:`, err);
   } finally {
     client.release();
   }
@@ -315,7 +315,7 @@ async function main() {
     await loadPartyListCandidacy();
     await loadConstituencyElections();
     await loadStructuralData();
-    console.log("\n✅ All CSVs from data folder loaded successfully!");
+    console.log("\nAll CSVs from data folder loaded successfully!");
   } finally {
     await disconnect();
   }
